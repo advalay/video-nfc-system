@@ -1,0 +1,28 @@
+# Railway Environment Variables
+# 以下の環境変数をRailwayダッシュボードで設定してください
+
+# JWT認証
+JWT_SECRET=advalay-super-secret-jwt-key-2025-production
+
+# Google OAuth (後で設定)
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+GOOGLE_REDIRECT_URI=https://your-app-name.railway.app/api/v1/channels/oauth/callback
+
+# トークン暗号化
+TOKEN_ENCRYPTION_KEY=021a0669be01d776472ee57a356215c022186501d41f6ec6cf59a6cc14422bc8
+
+# AWS設定 (オプション)
+AWS_REGION=us-east-1
+AWS_ACCESS_KEY_ID=your-aws-access-key
+AWS_SECRET_ACCESS_KEY=your-aws-secret-key
+S3_BUCKET_NAME=advalay-video-uploads
+
+# メール設定 (オプション)
+SES_FROM_EMAIL=noreply@advalay.com
+
+# セキュリティ設定
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
+
+# 注意: DATABASE_URLはRailway PostgreSQLアドオンが自動で設定します
