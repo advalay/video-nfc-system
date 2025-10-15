@@ -1,0 +1,21 @@
+{
+  "version": "48.0.0",
+  "files": {
+    "6a5d75c3dd90b059db2cb02a05d5771854d0764ba1fd8f33f07b0591fd033a9e": {
+      "displayName": "video-nfc-database-dev Template",
+      "source": {
+        "path": "VideoNfcDatabaseStack-dev.template.json",
+        "packaging": "file"
+      },
+      "destinations": {
+        "271633506783-ap-northeast-1-906e2093": {
+          "bucketName": "cdk-hnb659fds-assets-271633506783-ap-northeast-1",
+          "objectKey": "6a5d75c3dd90b059db2cb02a05d5771854d0764ba1fd8f33f07b0591fd033a9e.json",
+          "region": "ap-northeast-1",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::271633506783:role/cdk-hnb659fds-file-publishing-role-271633506783-ap-northeast-1"
+        }
+      }
+    }
+  },
+  "dockerImages": {}
+}
