@@ -1,0 +1,40 @@
+{
+  "video-nfc-storage-dev": {
+    "ExportsOutputFnGetAttDistribution830FAC52DomainNameBEB09E30": "d1wjaq76zbo052.cloudfront.net",
+    "VideoBucketName": "video-nfc-videos-dev-271633506783",
+    "ExportsOutputRefAssetBucket1D0250868713D7D0": "video-nfc-assets-dev-271633506783",
+    "ExportsOutputRefVideoBucket6ED8E1AF864760DE": "video-nfc-videos-dev-271633506783",
+    "AssetBucketName": "video-nfc-assets-dev-271633506783",
+    "CloudFrontDistributionId": "E3T1MBYIDONJET",
+    "ExportsOutputFnGetAttAssetBucket1D025086Arn5988FF07": "arn:aws:s3:::video-nfc-assets-dev-271633506783",
+    "CloudFrontDomain": "d1wjaq76zbo052.cloudfront.net",
+    "ExportsOutputFnGetAttVideoBucket6ED8E1AFArn892B0DD6": "arn:aws:s3:::video-nfc-videos-dev-271633506783"
+  },
+  "video-nfc-database-dev": {
+    "VideoMetadataTableStreamArn": "arn:aws:dynamodb:ap-northeast-1:271633506783:table/video-nfc-VideoMetadata-dev/stream/2025-10-07T16:33:55.251",
+    "ExportsOutputRefVideoMetadataTable0E75C188A8FBFADA": "video-nfc-VideoMetadata-dev",
+    "ExportsOutputRefBillingTableC3F396AA0CA38283": "video-nfc-Billing-dev",
+    "ExportsOutputRefOrganizationTableEB2ED67CAB7DAF7D": "video-nfc-Organization-dev",
+    "BillingTableName": "video-nfc-Billing-dev",
+    "OrganizationTableName": "video-nfc-Organization-dev",
+    "ExportsOutputRefShopTable66489897B4F69EEF": "video-nfc-Shop-dev",
+    "ShopTableName": "video-nfc-Shop-dev",
+    "ExportsOutputRefApprovalRequestTable754DE8BFCE5E306A": "video-nfc-ApprovalRequest-dev",
+    "ApprovalRequestTableName": "video-nfc-ApprovalRequest-dev",
+    "VideoMetadataTableName": "video-nfc-VideoMetadata-dev"
+  },
+  "video-nfc-auth-dev": {
+    "UserPoolClientId": "6o0knadh7s8v164r6a8kvp7m0n",
+    "ShopUserGroupName": "shop-user",
+    "UserPoolId": "ap-northeast-1_gtvMJ70ot",
+    "OrganizationAdminGroupName": "organization-admin",
+    "ExportsOutputRefUserPool6BA7E5F296FD7236": "ap-northeast-1_gtvMJ70ot",
+    "ExportsOutputRefUserPoolUserPoolClient40176907044A36CF": "6o0knadh7s8v164r6a8kvp7m0n",
+    "SystemAdminGroupName": "system-admin",
+    "UserPoolArn": "arn:aws:cognito-idp:ap-northeast-1:271633506783:userpool/ap-northeast-1_gtvMJ70ot"
+  },
+  "video-nfc-monitoring-dev": {
+    "AlertTopicArn": "arn:aws:sns:ap-northeast-1:271633506783:video-nfc-alerts-dev",
+    "ExportsOutputRefAlertTopic2720D5359ADB6D3E": "arn:aws:sns:ap-northeast-1:271633506783:video-nfc-alerts-dev"
+  }
+}

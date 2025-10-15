@@ -1,0 +1,28 @@
+{
+  "name": "video-nfc-lambda",
+  "version": "1.0.0",
+  "description": "Lambda functions for Video NFC Admin",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "clean": "rm -rf dist",
+    "copy:modules": "cp -R node_modules dist/node_modules"
+  },
+  "dependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3.906.0",
+    "@aws-sdk/client-dynamodb": "^3.621.0",
+    "@aws-sdk/client-s3": "^3.621.0",
+    "@aws-sdk/client-sns": "^3.906.0",
+    "@aws-sdk/lib-dynamodb": "^3.621.0",
+    "@aws-sdk/s3-request-presigner": "^3.621.0",
+    "aws-sdk": "^2.1692.0",
+    "uuid": "^10.0.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.145",
+    "@types/node": "^20.14.10",
+    "@types/uuid": "^10.0.0",
+    "typescript": "^5.5.3"
+  }
+}

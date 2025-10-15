@@ -1,0 +1,36 @@
+{
+  "version": "48.0.0",
+  "files": {
+    "faa95a81ae7d7373f3e1f242268f904eb748d8d0fdd306e8a6fe515a1905a7d6": {
+      "displayName": "VideoNfcStorageStack-dev/Custom::S3AutoDeleteObjectsCustomResourceProvider Code",
+      "source": {
+        "path": "asset.faa95a81ae7d7373f3e1f242268f904eb748d8d0fdd306e8a6fe515a1905a7d6",
+        "packaging": "zip"
+      },
+      "destinations": {
+        "271633506783-ap-northeast-1-38a33e15": {
+          "bucketName": "cdk-hnb659fds-assets-271633506783-ap-northeast-1",
+          "objectKey": "faa95a81ae7d7373f3e1f242268f904eb748d8d0fdd306e8a6fe515a1905a7d6.zip",
+          "region": "ap-northeast-1",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::271633506783:role/cdk-hnb659fds-file-publishing-role-271633506783-ap-northeast-1"
+        }
+      }
+    },
+    "9ab45385f0d65adef25c10d664e54705d01f0da1fae65241d43875d0f4b97b71": {
+      "displayName": "video-nfc-storage-dev Template",
+      "source": {
+        "path": "VideoNfcStorageStack-dev.template.json",
+        "packaging": "file"
+      },
+      "destinations": {
+        "271633506783-ap-northeast-1-32e7b389": {
+          "bucketName": "cdk-hnb659fds-assets-271633506783-ap-northeast-1",
+          "objectKey": "9ab45385f0d65adef25c10d664e54705d01f0da1fae65241d43875d0f4b97b71.json",
+          "region": "ap-northeast-1",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::271633506783:role/cdk-hnb659fds-file-publishing-role-271633506783-ap-northeast-1"
+        }
+      }
+    }
+  },
+  "dockerImages": {}
+}

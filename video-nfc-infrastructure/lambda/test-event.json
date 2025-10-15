@@ -1,0 +1,1 @@
+{"httpMethod":"GET","headers":{"Authorization":"Bearer test"},"requestContext":{"requestId":"test-request-id","authorizer":{"claims":{"sub":"test-user","groups":["system-admin"]}}}}

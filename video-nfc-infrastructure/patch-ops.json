@@ -1,0 +1,16 @@
+[
+  {
+    "op": "replace",
+    "path": "/authorizationType",
+    "value": "COGNITO_USER_POOLS"
+  },
+  {
+    "op": "replace",
+    "path": "/authorizerId",
+    "value": "k29vos"
+  }
+]
+
+
+
+

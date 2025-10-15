@@ -1,0 +1,381 @@
+{
+ "Description": "NFCタグ付きキーホルダー向け動画配信システム - 認証スタック (dev)",
+ "Resources": {
+  "UserPoolsmsRole4EA729DD": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Condition": {
+        "StringEquals": {
+         "sts:ExternalId": "VideoNfcAuthStackdevUserPool2AC36A1D"
+        }
+       },
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "cognito-idp.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "Policies": [
+     {
+      "PolicyDocument": {
+       "Statement": [
+        {
+         "Action": "sns:Publish",
+         "Effect": "Allow",
+         "Resource": "*"
+        }
+       ],
+       "Version": "2012-10-17"
+      },
+      "PolicyName": "sns-publish"
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Project",
+      "Value": "video-nfc"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "VideoNfcAuthStack-dev/UserPool/smsRole/Resource"
+   }
+  },
+  "UserPool6BA7E5F2": {
+   "Type": "AWS::Cognito::UserPool",
+   "Properties": {
+    "AccountRecoverySetting": {
+     "RecoveryMechanisms": [
+      {
+       "Name": "verified_email",
+       "Priority": 1
+      }
+     ]
+    },
+    "AdminCreateUserConfig": {
+     "AllowAdminCreateUserOnly": true
+    },
+    "AutoVerifiedAttributes": [
+     "email"
+    ],
+    "EmailVerificationMessage": "The verification code to your new account is {####}",
+    "EmailVerificationSubject": "Verify your new account",
+    "EnabledMfas": [
+     "SMS_MFA"
+    ],
+    "MfaConfiguration": "OPTIONAL",
+    "Policies": {
+     "PasswordPolicy": {
+      "MinimumLength": 8,
+      "RequireLowercase": true,
+      "RequireNumbers": true,
+      "RequireSymbols": true,
+      "RequireUppercase": true
+     }
+    },
+    "Schema": [
+     {
+      "AttributeDataType": "String",
+      "Mutable": true,
+      "Name": "agencyId",
+      "StringAttributeConstraints": {
+       "MaxLength": "256",
+       "MinLength": "1"
+      }
+     },
+     {
+      "AttributeDataType": "String",
+      "Mutable": true,
+      "Name": "organizationId",
+      "StringAttributeConstraints": {
+       "MaxLength": "256",
+       "MinLength": "1"
+      }
+     },
+     {
+      "AttributeDataType": "String",
+      "Mutable": true,
+      "Name": "shopId",
+      "StringAttributeConstraints": {
+       "MaxLength": "256",
+       "MinLength": "1"
+      }
+     },
+     {
+      "AttributeDataType": "String",
+      "Mutable": true,
+      "Name": "role",
+      "StringAttributeConstraints": {
+       "MaxLength": "50",
+       "MinLength": "1"
+      }
+     },
+     {
+      "AttributeDataType": "String",
+      "Mutable": true,
+      "Name": "organizationName",
+      "StringAttributeConstraints": {
+       "MaxLength": "256",
+       "MinLength": "1"
+      }
+     },
+     {
+      "AttributeDataType": "String",
+      "Mutable": true,
+      "Name": "shopName",
+      "StringAttributeConstraints": {
+       "MaxLength": "256",
+       "MinLength": "1"
+      }
+     }
+    ],
+    "SmsConfiguration": {
+     "ExternalId": "VideoNfcAuthStackdevUserPool2AC36A1D",
+     "SnsCallerArn": {
+      "Fn::GetAtt": [
+       "UserPoolsmsRole4EA729DD",
+       "Arn"
+      ]
+     }
+    },
+    "SmsVerificationMessage": "The verification code to your new account is {####}",
+    "UserPoolName": "video-nfc-dev-users",
+    "UserPoolTags": {
+     "Environment": "dev",
+     "ManagedBy": "CDK",
+     "Project": "video-nfc"
+    },
+    "UsernameAttributes": [
+     "email"
+    ],
+    "VerificationMessageTemplate": {
+     "DefaultEmailOption": "CONFIRM_WITH_CODE",
+     "EmailMessage": "The verification code to your new account is {####}",
+     "EmailSubject": "Verify your new account",
+     "SmsMessage": "The verification code to your new account is {####}"
+    }
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "VideoNfcAuthStack-dev/UserPool/Resource"
+   }
+  },
+  "UserPoolUserPoolClient40176907": {
+   "Type": "AWS::Cognito::UserPoolClient",
+   "Properties": {
+    "AccessTokenValidity": 1440,
+    "AllowedOAuthFlows": [
+     "implicit",
+     "code"
+    ],
+    "AllowedOAuthFlowsUserPoolClient": true,
+    "AllowedOAuthScopes": [
+     "profile",
+     "phone",
+     "email",
+     "openid",
+     "aws.cognito.signin.user.admin"
+    ],
+    "AuthSessionValidity": 3,
+    "CallbackURLs": [
+     "https://example.com"
+    ],
+    "ClientName": "video-nfc-dev-client",
+    "EnableTokenRevocation": true,
+    "ExplicitAuthFlows": [
+     "ALLOW_USER_PASSWORD_AUTH",
+     "ALLOW_ADMIN_USER_PASSWORD_AUTH",
+     "ALLOW_USER_SRP_AUTH",
+     "ALLOW_REFRESH_TOKEN_AUTH"
+    ],
+    "GenerateSecret": false,
+    "IdTokenValidity": 1440,
+    "PreventUserExistenceErrors": "ENABLED",
+    "RefreshTokenValidity": 43200,
+    "SupportedIdentityProviders": [
+     "COGNITO"
+    ],
+    "TokenValidityUnits": {
+     "AccessToken": "minutes",
+     "IdToken": "minutes",
+     "RefreshToken": "minutes"
+    },
+    "UserPoolId": {
+     "Ref": "UserPool6BA7E5F2"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "VideoNfcAuthStack-dev/UserPool/UserPoolClient/Resource"
+   }
+  },
+  "SystemAdminGroup": {
+   "Type": "AWS::Cognito::UserPoolGroup",
+   "Properties": {
+    "Description": "システム管理者グループ（全権限）",
+    "GroupName": "system-admin",
+    "Precedence": 1,
+    "UserPoolId": {
+     "Ref": "UserPool6BA7E5F2"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "VideoNfcAuthStack-dev/SystemAdminGroup"
+   }
+  },
+  "OrganizationAdminGroup": {
+   "Type": "AWS::Cognito::UserPoolGroup",
+   "Properties": {
+    "Description": "代理店管理者グループ（配下の全販売店を管理）",
+    "GroupName": "organization-admin",
+    "Precedence": 2,
+    "UserPoolId": {
+     "Ref": "UserPool6BA7E5F2"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "VideoNfcAuthStack-dev/OrganizationAdminGroup"
+   }
+  },
+  "ShopUserGroup": {
+   "Type": "AWS::Cognito::UserPoolGroup",
+   "Properties": {
+    "Description": "販売店ユーザーグループ（自店舗のみ管理）",
+    "GroupName": "shop-user",
+    "Precedence": 3,
+    "UserPoolId": {
+     "Ref": "UserPool6BA7E5F2"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "VideoNfcAuthStack-dev/ShopUserGroup"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/2WOsQ7CIBRFv8WdPlucnDs4ajDOBima11JeAw8dCP9uq9GYOJ2bc5YrQTZbqFf6ESvTDZXDC+QjazOIWZ2zoZtHJsinaMOByIn26r/7M1qH1vNv+je7QGkqAvUIWZGzS1tYilA2UgrmpfaJp8RFeOos9HF9lxto6vlhHxGrkDzjaEG9+QReFn5AvgAAAA=="
+   },
+   "Metadata": {
+    "aws:cdk:path": "VideoNfcAuthStack-dev/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "UserPoolId": {
+   "Description": "Cognito User Pool ID",
+   "Value": {
+    "Ref": "UserPool6BA7E5F2"
+   },
+   "Export": {
+    "Name": "dev-UserPoolId"
+   }
+  },
+  "UserPoolArn": {
+   "Description": "Cognito User Pool ARN",
+   "Value": {
+    "Fn::GetAtt": [
+     "UserPool6BA7E5F2",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "dev-UserPoolArn"
+   }
+  },
+  "UserPoolClientId": {
+   "Description": "Cognito User Pool Client ID",
+   "Value": {
+    "Ref": "UserPoolUserPoolClient40176907"
+   },
+   "Export": {
+    "Name": "dev-UserPoolClientId"
+   }
+  },
+  "SystemAdminGroupName": {
+   "Description": "システム管理者グループ名",
+   "Value": "system-admin",
+   "Export": {
+    "Name": "dev-SystemAdminGroupName"
+   }
+  },
+  "OrganizationAdminGroupName": {
+   "Description": "代理店管理者グループ名",
+   "Value": "organization-admin",
+   "Export": {
+    "Name": "dev-OrganizationAdminGroupName"
+   }
+  },
+  "ShopUserGroupName": {
+   "Description": "販売店ユーザーグループ名",
+   "Value": "shop-user",
+   "Export": {
+    "Name": "dev-ShopUserGroupName"
+   }
+  },
+  "ExportsOutputRefUserPool6BA7E5F296FD7236": {
+   "Value": {
+    "Ref": "UserPool6BA7E5F2"
+   },
+   "Export": {
+    "Name": "video-nfc-auth-dev:ExportsOutputRefUserPool6BA7E5F296FD7236"
+   }
+  },
+  "ExportsOutputRefUserPoolUserPoolClient40176907044A36CF": {
+   "Value": {
+    "Ref": "UserPoolUserPoolClient40176907"
+   },
+   "Export": {
+    "Name": "video-nfc-auth-dev:ExportsOutputRefUserPoolUserPoolClient40176907044A36CF"
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

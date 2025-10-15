@@ -1,0 +1,35 @@
+{
+  "name": "video-nfc-infrastructure",
+  "version": "1.0.0",
+  "description": "NFCタグ付きキーホルダー向け動画配信システムのAWSインフラ",
+  "bin": {
+    "video-nfc-infrastructure": "bin/app.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "cdk": "cdk",
+    "deploy": "cdk deploy --all",
+    "deploy:dev": "ENV=dev cdk deploy --all",
+    "deploy:prod": "ENV=prod cdk deploy --all --require-approval never",
+    "destroy": "cdk destroy --all",
+    "synth": "cdk synth",
+    "diff": "cdk diff"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/aws-lambda": "^8.10.129",
+    "aws-cdk": "^2.110.0",
+    "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.110.0",
+    "constructs": "^10.3.0",
+    "dotenv": "^16.3.1",
+    "@aws-sdk/client-s3": "^3.637.0",
+    "@aws-sdk/s3-request-presigner": "^3.637.0",
+    "@aws-sdk/client-dynamodb": "^3.637.0",
+    "@aws-sdk/lib-dynamodb": "^3.637.0"
+  }
+}
+

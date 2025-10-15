@@ -1,0 +1,108 @@
+{
+ "Description": "NFCタグ付きキーホルダー向け動画配信システム - 監視スタック (dev)",
+ "Resources": {
+  "AlertTopic2720D535": {
+   "Type": "AWS::SNS::Topic",
+   "Properties": {
+    "DisplayName": "Video NFC Alerts - dev",
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Project",
+      "Value": "video-nfc"
+     },
+     {
+      "Key": "Stack",
+      "Value": "Monitoring"
+     }
+    ],
+    "TopicName": "video-nfc-alerts-dev"
+   },
+   "Metadata": {
+    "aws:cdk:path": "VideoNfcMonitoringStack-dev/AlertTopic/Resource"
+   }
+  },
+  "EmailSubscriptionBC065AF0": {
+   "Type": "AWS::SNS::Subscription",
+   "Properties": {
+    "Endpoint": "k.shibayama@advalay.jp",
+    "Protocol": "email",
+    "TopicArn": {
+     "Ref": "AlertTopic2720D535"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "VideoNfcMonitoringStack-dev/EmailSubscription/Resource"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/zPSMzK01DNQTCwv1k1OydbNyUzSqw4uSUzO1gEKxRfnFetVh+QXZCbrOKflQRjBpUnFyUWZBSWZ+XkgUWR+LUjAv7SkoLSkVicvPyVVL6tYv8zIWM/QAGhJVnFmpm5RaV5JZm6qXhCEBgAGT63tgQAAAA=="
+   },
+   "Metadata": {
+    "aws:cdk:path": "VideoNfcMonitoringStack-dev/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "AlertTopicArn": {
+   "Description": "SNS Alert Topic ARN",
+   "Value": {
+    "Ref": "AlertTopic2720D535"
+   },
+   "Export": {
+    "Name": "dev-AlertTopicArn"
+   }
+  },
+  "ExportsOutputRefAlertTopic2720D5359ADB6D3E": {
+   "Value": {
+    "Ref": "AlertTopic2720D535"
+   },
+   "Export": {
+    "Name": "video-nfc-monitoring-dev:ExportsOutputRefAlertTopic2720D5359ADB6D3E"
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}
