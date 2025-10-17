@@ -20,17 +20,17 @@ interface ErrorLog {
 
 export default function ErrorDashboardPage() {
   const router = useRouter();
-  const { user, isLoading: authLoading } = useAuth();
+  const { user } = useAuth();
   const [errors, setErrors] = useState<ErrorLog[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   // 権限チェック
   useEffect(() => {
-    if (!authLoading && (!user || !user.groups?.includes('system-admin'))) {
+    if (!user || !user.groups?.includes('system-admin')) {
       router.push('/videos');
     }
-  }, [user, authLoading, router]);
+  }, [user, router]);
 
   // CloudWatch ダッシュボードへのリンク
   const cloudWatchDashboardUrl = `https://console.aws.amazon.com/cloudwatch/home?region=ap-northeast-1#dashboards:name=video-nfc-dev-errors`;
@@ -65,13 +65,7 @@ export default function ErrorDashboardPage() {
     error.requestId.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  if (authLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
+  // ローディング状態は不要（ユーザーコンテキストは即座に利用可能）
 
   return (
     <ProtectedRoute allowedRoles={['system-admin']}>
