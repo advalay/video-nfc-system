@@ -23,12 +23,12 @@ export function useAuth(): UseAuthResult {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // 認証をスキップしてパートナー親のユーザー情報を設定
-    console.log('Setting partner parent user for testing');
+    // 認証をスキップしてデモユーザー情報を設定
+    console.log('Setting demo user for testing');
     setUser({
-      id: 'orga-admin-001',
-      email: 'orga-admin@example.com',
-      groups: ['organization-admin']
+      id: 'demo-user-001',
+      email: 'demo@example.com',
+      groups: ['system-admin']
     });
     setIsLoading(false);
   }, []);
