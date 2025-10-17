@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Amplifyデプロイ用の出力モード
+  output: 'standalone',
+
   // TypeScript設定を明示的に有効化
   typescript: {
     // 型チェックをビルド時に実行
