@@ -6,6 +6,8 @@ frontend:
         # Node.js 18以上を使用
         - node -v
         - npm -v
+        - pwd
+        - ls -la
         # 依存関係のインストール（devDependenciesを含む）
         - npm ci
     build:
