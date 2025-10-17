@@ -33,6 +33,42 @@ export function useAuth(): UseAuthResult {
     setIsLoading(false);
   }, []);
 
+  // Layoutの状態変更を監視して同期
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const currentUserType = localStorage.getItem('currentUserType') || 'system-admin';
+      const userMap = {
+        'system-admin': {
+          id: 'system-admin-001',
+          email: 'system-admin@example.com',
+          groups: ['system-admin']
+        },
+        'organization-admin': {
+          id: 'orga-admin-001',
+          email: 'orga-admin@example.com',
+          groups: ['organization-admin']
+        },
+        'shop-user': {
+          id: 'shop-a1-001',
+          email: 'shop-a1@example.com',
+          groups: ['shop-user']
+        }
+      };
+      
+      setUser(userMap[currentUserType as keyof typeof userMap]);
+    };
+
+    // 初回読み込み
+    handleStorageChange();
+    
+    // ストレージ変更を監視
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
+
   const login = async (email: string, password: string) => {
     try {
       configureAmplify();

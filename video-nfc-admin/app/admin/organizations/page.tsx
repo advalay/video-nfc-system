@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback, memo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '../../../hooks/useAuth';
 import { Layout } from '../../../components/Layout';
 import { ProtectedRoute } from '../../../components/ProtectedRoute';
 import { Building2, Plus, Edit, Trash2, Store, ChevronDown, ChevronRight, Key, Copy, Eye, EyeOff } from 'lucide-react';
@@ -328,7 +329,7 @@ const OrganizationRow = memo(function OrganizationRow({
 
 export default function OrganizationsPage() {
   const router = useRouter();
-  const userInfo = { groups: ['system-admin'] };
+  const { user } = useAuth();
 
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -339,7 +340,7 @@ export default function OrganizationsPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   // システム管理者の権限チェック
-  const isSystemAdmin = userInfo?.groups?.includes('system-admin');
+  const isSystemAdmin = user?.groups?.includes('system-admin');
 
   // 組織データを取得
   useEffect(() => {

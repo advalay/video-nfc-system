@@ -27,7 +27,7 @@ export function Layout({ children }: LayoutProps) {
   const pathname = usePathname();
 
   // 動的ユーザー切り替え（テスト用）
-  const [currentUserType, setCurrentUserType] = useState<'system-admin' | 'organization-admin' | 'shop-user'>('organization-admin');
+  const [currentUserType, setCurrentUserType] = useState<'system-admin' | 'organization-admin' | 'shop-user'>('system-admin');
   
   const userInfo = {
     'system-admin': {
@@ -158,7 +158,11 @@ export function Layout({ children }: LayoutProps) {
           {/* ユーザー切り替えボタン（テスト用） */}
           <div className="mt-3 space-y-1">
             <button
-              onClick={() => setCurrentUserType('system-admin')}
+              onClick={() => {
+                setCurrentUserType('system-admin');
+                localStorage.setItem('currentUserType', 'system-admin');
+                window.dispatchEvent(new Event('storage'));
+              }}
               className={`w-full text-left px-2 py-1 text-xs rounded ${
                 currentUserType === 'system-admin' 
                   ? 'bg-blue-100 text-blue-700' 
@@ -168,7 +172,11 @@ export function Layout({ children }: LayoutProps) {
               システム管理者
             </button>
             <button
-              onClick={() => setCurrentUserType('organization-admin')}
+              onClick={() => {
+                setCurrentUserType('organization-admin');
+                localStorage.setItem('currentUserType', 'organization-admin');
+                window.dispatchEvent(new Event('storage'));
+              }}
               className={`w-full text-left px-2 py-1 text-xs rounded ${
                 currentUserType === 'organization-admin' 
                   ? 'bg-blue-100 text-blue-700' 
@@ -178,7 +186,11 @@ export function Layout({ children }: LayoutProps) {
               パートナー親
             </button>
             <button
-              onClick={() => setCurrentUserType('shop-user')}
+              onClick={() => {
+                setCurrentUserType('shop-user');
+                localStorage.setItem('currentUserType', 'shop-user');
+                window.dispatchEvent(new Event('storage'));
+              }}
               className={`w-full text-left px-2 py-1 text-xs rounded ${
                 currentUserType === 'shop-user' 
                   ? 'bg-blue-100 text-blue-700' 
