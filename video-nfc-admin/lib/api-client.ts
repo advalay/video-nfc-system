@@ -142,3 +142,4 @@ export async function apiDelete<T>(endpoint: string): Promise<T> {
   return apiClient<T>(endpoint, { method: 'DELETE' });
 }
 
+// Force rebuild Sat Oct 18 00:17:19 JST 2025
