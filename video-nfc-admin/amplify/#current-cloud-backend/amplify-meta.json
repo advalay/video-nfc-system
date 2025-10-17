@@ -1,0 +1,15 @@
+{
+  "providers": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-videonfcadmin-dev-020d5-authRole",
+      "UnauthRoleArn": "arn:aws:iam::271633506783:role/amplify-videonfcadmin-dev-020d5-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::271633506783:role/amplify-videonfcadmin-dev-020d5-authRole",
+      "Region": "ap-northeast-1",
+      "DeploymentBucketName": "amplify-videonfcadmin-dev-020d5-deployment",
+      "UnauthRoleName": "amplify-videonfcadmin-dev-020d5-unauthRole",
+      "StackName": "amplify-videonfcadmin-dev-020d5",
+      "StackId": "arn:aws:cloudformation:ap-northeast-1:271633506783:stack/amplify-videonfcadmin-dev-020d5/88c15690-aa46-11f0-8ee5-0a3b6506f1e9",
+      "AmplifyAppId": "d1ev0n2ma4sc0y"
+    }
+  }
+}
