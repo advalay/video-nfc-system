@@ -12,22 +12,8 @@ function buildConfig() {
 
   const base: any = { ssr: true };
 
-  // 開発環境では認証を無効化
-  if (hasAuth && !isDevelopment) {
-    base.Auth = {
-      Cognito: {
-        userPoolId,
-        userPoolClientId,
-        region,
-      },
-    };
-  } else if (!isDevelopment) {
-    // 本番環境で未設定だとログイン不可のため警告
-    console.warn('Amplify Auth is not configured. Set NEXT_PUBLIC_USER_POOL_ID and NEXT_PUBLIC_USER_POOL_CLIENT_ID.');
-  } else {
-    console.log('Development mode: Amplify Auth disabled');
-  }
-
+  // 強制的に認証を無効化（開発用）
+  console.log('Force disabling Amplify Auth for development');
   return base;
 }
 
