@@ -22,18 +22,7 @@ export function useAuth(): UseAuthResult {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    // 認証をスキップしてデモユーザー情報を設定
-    console.log('Setting demo user for testing');
-    setUser({
-      id: 'demo-user-001',
-      email: 'demo@example.com',
-      groups: ['system-admin']
-    });
-    setIsLoading(false);
-  }, []);
-
-  // Layoutの状態変更を監視して同期
+  // ユーザー情報の初期化と同期
   useEffect(() => {
     const handleStorageChange = () => {
       const currentUserType = localStorage.getItem('currentUserType') || 'system-admin';
@@ -55,17 +44,21 @@ export function useAuth(): UseAuthResult {
         }
       };
       
+      console.log('Setting user for type:', currentUserType);
       setUser(userMap[currentUserType as keyof typeof userMap]);
+      setIsLoading(false);
     };
 
     // 初回読み込み
     handleStorageChange();
     
-    // ストレージ変更を監視
+    // ストレージ変更とカスタムイベントを監視
     window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('userTypeChanged', handleStorageChange);
     
     return () => {
       window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('userTypeChanged', handleStorageChange);
     };
   }, []);
 

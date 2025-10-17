@@ -161,7 +161,7 @@ export function Layout({ children }: LayoutProps) {
               onClick={() => {
                 setCurrentUserType('system-admin');
                 localStorage.setItem('currentUserType', 'system-admin');
-                window.dispatchEvent(new Event('storage'));
+                window.dispatchEvent(new Event('userTypeChanged'));
               }}
               className={`w-full text-left px-2 py-1 text-xs rounded ${
                 currentUserType === 'system-admin' 
@@ -175,7 +175,7 @@ export function Layout({ children }: LayoutProps) {
               onClick={() => {
                 setCurrentUserType('organization-admin');
                 localStorage.setItem('currentUserType', 'organization-admin');
-                window.dispatchEvent(new Event('storage'));
+                window.dispatchEvent(new Event('userTypeChanged'));
               }}
               className={`w-full text-left px-2 py-1 text-xs rounded ${
                 currentUserType === 'organization-admin' 
@@ -189,7 +189,7 @@ export function Layout({ children }: LayoutProps) {
               onClick={() => {
                 setCurrentUserType('shop-user');
                 localStorage.setItem('currentUserType', 'shop-user');
-                window.dispatchEvent(new Event('storage'));
+                window.dispatchEvent(new Event('userTypeChanged'));
               }}
               className={`w-full text-left px-2 py-1 text-xs rounded ${
                 currentUserType === 'shop-user' 
