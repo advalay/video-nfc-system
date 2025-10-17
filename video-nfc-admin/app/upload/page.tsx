@@ -82,7 +82,7 @@ export default function UploadPage() {
     if (!selectedFile) return;
     
     configureAmplify();
-    await upload(selectedFile, title || undefined, description || undefined);
+    await upload(selectedFile, title || '', description || '');
   };
 
   const handleCopyUrl = async () => {
