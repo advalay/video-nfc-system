@@ -5,7 +5,7 @@ let configured = false;
 function buildConfig() {
   // 認証を完全に無効化（本番環境でも）
   console.log('Disabling Amplify Auth completely');
-  return { ssr: true };
+  return { ssr: true } as any;
 }
 
 export function configureAmplify(): void {
