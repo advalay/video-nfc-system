@@ -141,7 +141,7 @@ export function DateRangePicker({
               day_disabled: {
                 color: '#d1d5db', // gray-300
               },
-            }}
+            } as any}
           />
           {(startDate || endDate) && (
             <div className="flex justify-end mt-2">
