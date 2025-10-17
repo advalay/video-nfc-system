@@ -1,20 +1,39 @@
 import { Amplify } from 'aws-amplify';
 
-// Amplify設定（必要に応じて環境変数から上書き）
-const amplifyConfig = {
-  ssr: true,
-};
-
 let configured = false;
+
+function buildConfig() {
+  const region = process.env.NEXT_PUBLIC_AWS_REGION || 'ap-northeast-1';
+  const userPoolId = process.env.NEXT_PUBLIC_USER_POOL_ID;
+  const userPoolClientId = process.env.NEXT_PUBLIC_USER_POOL_CLIENT_ID;
+
+  const hasAuth = Boolean(userPoolId && userPoolClientId);
+
+  const base: any = { ssr: true };
+
+  if (hasAuth) {
+    base.Auth = {
+      Cognito: {
+        userPoolId,
+        userPoolClientId,
+        region,
+      },
+    };
+  } else {
+    // 本番環境で未設定だとログイン不可のため警告
+    console.warn('Amplify Auth is not configured. Set NEXT_PUBLIC_USER_POOL_ID and NEXT_PUBLIC_USER_POOL_CLIENT_ID.');
+  }
+
+  return base;
+}
 
 export function configureAmplify(): void {
   if (configured) return;
   try {
-    // 型の厳格さを避けるため最小構成をキャスト
-    Amplify.configure(amplifyConfig as any);
+    const config = buildConfig();
+    Amplify.configure(config);
     configured = true;
   } catch (error) {
-    // 実行環境により未設定でも問題ないためログのみ
     console.error('Amplify configure error:', error);
   }
 }
