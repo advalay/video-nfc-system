@@ -79,12 +79,12 @@ export default function ShopStatsPage() {
     }
   };
 
-  if (!user?.groups?.includes('shop-user')) {
+  if (!user?.groups?.includes('shop-user') && !user?.groups?.includes('organization-admin')) {
     return (
       <ProtectedRoute>
         <Layout>
           <div className="text-center py-8">
-            <p className="text-gray-600">このページは販売店ユーザーのみアクセス可能です。</p>
+            <p className="text-gray-600">このページは販売店ユーザーまたはパートナー親のみアクセス可能です。</p>
           </div>
         </Layout>
       </ProtectedRoute>
