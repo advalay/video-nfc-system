@@ -20,10 +20,6 @@ export class ApiError extends Error {
 async function getAuthToken(): Promise<string | null> {
   try {
     configureAmplify();
-    // 開発中はトークンを付与しない（APIは x-development-mode で判定）
-    if (process.env.NODE_ENV === 'development') {
-      return null;
-    }
     
     const session = await fetchAuthSession();
     return session.tokens?.idToken?.toString() || null;
@@ -51,6 +47,11 @@ export async function apiClient<T>(
   if (process.env.NODE_ENV === 'development') {
     (headers as any)['x-development-mode'] = 'true';
     console.log('Development mode: Adding x-development-mode header');
+  } else {
+    // 本番環境では認証トークンが必須
+    if (!token) {
+      throw new ApiError('Authentication required', 401, 'UNAUTHORIZED');
+    }
   }
 
   // 認証トークンがあれば追加
