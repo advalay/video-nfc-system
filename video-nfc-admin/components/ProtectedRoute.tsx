@@ -38,7 +38,7 @@ export function ProtectedRoute({ children, allowedRoles = [] }: ProtectedRoutePr
         
         // ロールチェック
         if (allowedRoles.length > 0) {
-          const userGroups = currentUser.signInUserSession?.idToken?.payload?.['cognito:groups'] || [];
+          const userGroups = (currentUser as any).signInUserSession?.idToken?.payload?.['cognito:groups'] || [];
           const hasRequiredRole = allowedRoles.some(role => userGroups.includes(role));
           
           if (!hasRequiredRole) {

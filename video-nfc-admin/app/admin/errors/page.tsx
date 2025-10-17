@@ -20,17 +20,17 @@ interface ErrorLog {
 
 export default function ErrorDashboardPage() {
   const router = useRouter();
-  const { userInfo, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const [errors, setErrors] = useState<ErrorLog[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   // 権限チェック
   useEffect(() => {
-    if (!authLoading && (!userInfo || !userInfo.groups?.includes('system-admin'))) {
+    if (!authLoading && (!user || !user.groups?.includes('system-admin'))) {
       router.push('/videos');
     }
-  }, [userInfo, authLoading, router]);
+  }, [user, authLoading, router]);
 
   // CloudWatch ダッシュボードへのリンク
   const cloudWatchDashboardUrl = `https://console.aws.amazon.com/cloudwatch/home?region=ap-northeast-1#dashboards:name=video-nfc-dev-errors`;

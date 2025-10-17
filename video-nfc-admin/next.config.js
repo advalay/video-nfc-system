@@ -2,19 +2,15 @@
 const nextConfig = {
   // ワークスペースルートを明示的に指定
   outputFileTracingRoot: '/Users/kosuke/video-nfc-admin',
-  // 静的エクスポート用設定
-  output: 'export',
-  trailingSlash: true,
   
   // 実験的な機能
   experimental: {
     // 必要に応じて追加
   },
   
-  // 画像最適化（静的エクスポート時は無効化）
+  // 画像最適化
   images: {
     domains: ['via.placeholder.com', 'example.com'],
-    unoptimized: true,
   },
   async headers() {
     // 本番のみ強化ヘッダー

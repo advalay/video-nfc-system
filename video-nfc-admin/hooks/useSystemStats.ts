@@ -4,6 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { SystemStats, OrganizationStat, Organization, Shop } from '../types/shared';
 import { apiGet } from '../lib/api-client';
 
+export type { OrganizationStat };
+
 // バックエンドのレスポンスをフロントエンドの型に変換
 function transformBackendResponse(backendData: any): SystemStats {
   return {
