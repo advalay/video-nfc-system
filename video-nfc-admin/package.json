@@ -1,17 +1,24 @@
 {
   "name": "video-nfc-system",
   "version": "1.0.0",
-  "description": "Video NFC System - Monorepo",
+  "description": "Video NFC System",
   "private": true,
-  "workspaces": [
-    "video-nfc-admin"
-  ],
   "scripts": {
-    "build": "cd video-nfc-admin && npm run build",
-    "dev": "cd video-nfc-admin && npm run dev",
-    "start": "cd video-nfc-admin && npm run start"
+    "build": "next build",
+    "dev": "next dev",
+    "start": "next start"
   },
-  "devDependencies": {},
+  "dependencies": {
+    "next": "^15.5.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "typescript": "^5.0.0"
+  },
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=8.0.0"
