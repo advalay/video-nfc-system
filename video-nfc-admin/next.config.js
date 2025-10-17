@@ -12,6 +12,23 @@ const nextConfig = {
   images: {
     domains: ['via.placeholder.com', 'example.com'],
   },
+  async headers() {
+    // 本番のみ強化ヘッダー
+    if (process.env.NODE_ENV !== 'production') return [];
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+          // 最低限のCSP（必要に応じて拡張）
+          { key: 'Content-Security-Policy', value: "default-src 'self'; img-src 'self' data: https:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https:" },
+        ],
+      },
+    ];
+  },
 }
 
 module.exports = nextConfig
