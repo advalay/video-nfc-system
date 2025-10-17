@@ -1,10 +1,11 @@
 import WatchClient from './WatchClient';
 
 // 静的エクスポート用: 空のパラメータ生成
-export function generateStaticParams() {
+export async function generateStaticParams() {
   return [];
 }
 
-export default function WatchPage({ params }: { params: { videoId: string } }) {
-  return <WatchClient videoId={params.videoId} />;
+export default async function WatchPage({ params }: { params: Promise<{ videoId: string }> }) {
+  const { videoId } = await params;
+  return <WatchClient videoId={videoId} />;
 }
