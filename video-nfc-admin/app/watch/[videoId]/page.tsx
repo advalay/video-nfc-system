@@ -13,8 +13,10 @@ interface VideoDetail {
   organizationId?: string;
 }
 
-// 動的ルートのため、静的生成を無効化
-export const dynamic = 'force-dynamic';
+// 静的エクスポート用: 空のパラメータを生成（実際のデータはクライアントサイドで取得）
+export function generateStaticParams() {
+  return [];
+}
 
 export default function WatchPage() {
   const params = useParams();
