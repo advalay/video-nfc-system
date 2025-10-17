@@ -13,11 +13,10 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, logout, switchUser } = useAuth();
+  const { user, logout } = useAuth();
 
   const isSystemAdmin = user?.groups?.includes('system-admin');
   const isOrganizationAdmin = user?.groups?.includes('organization-admin');
-  const enableUserSwitching = process.env.NEXT_PUBLIC_ENABLE_USER_SWITCHING === 'true';
 
   const navItems = [
     {
@@ -98,43 +97,6 @@ export function Layout({ children }: LayoutProps) {
               <p className="text-xs text-gray-500">{user.email}</p>
             </div>
           </div>
-          
-          {/* ユーザー切り替えボタン（テスト用） */}
-          {enableUserSwitching && (
-            <div className="mt-3 space-y-1">
-              <p className="text-xs text-gray-500 mb-2">テストユーザー切り替え</p>
-              <button
-                onClick={() => switchUser('system-admin')}
-                className={`w-full text-left px-2 py-1 text-xs rounded ${
-                  user.groups.includes('system-admin')
-                    ? 'bg-blue-100 text-blue-700' 
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                システム管理者
-              </button>
-              <button
-                onClick={() => switchUser('organization-admin')}
-                className={`w-full text-left px-2 py-1 text-xs rounded ${
-                  user.groups.includes('organization-admin')
-                    ? 'bg-blue-100 text-blue-700' 
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                パートナー親
-              </button>
-              <button
-                onClick={() => switchUser('shop-user')}
-                className={`w-full text-left px-2 py-1 text-xs rounded ${
-                  user.groups.includes('shop-user')
-                    ? 'bg-blue-100 text-blue-700' 
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                販売店ユーザー
-              </button>
-            </div>
-          )}
         </div>
 
         {/* ナビゲーション */}

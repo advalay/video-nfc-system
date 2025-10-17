@@ -12,21 +12,11 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
   const router = useRouter();
   const { user, isLoading } = useAuth();
-  const isMockMode = process.env.NEXT_PUBLIC_AUTH_MODE === 'mock';
 
   useEffect(() => {
     if (isLoading) return;
 
-    // Mock modeの場合は認証チェックをスキップ
-    if (isMockMode) {
-      // allowedRolesチェックのみ実施
-      if (allowedRoles && user && !allowedRoles.some(role => user.groups.includes(role))) {
-        router.push('/videos');
-      }
-      return;
-    }
-
-    // Cognito認証モード: 未認証の場合はログインページにリダイレクト
+    // 未認証の場合はログインページにリダイレクト
     if (!user) {
       router.push('/login');
       return;
@@ -36,7 +26,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     if (allowedRoles && !allowedRoles.some(role => user.groups.includes(role))) {
       router.push('/videos');
     }
-  }, [user, isLoading, router, allowedRoles, isMockMode]);
+  }, [user, isLoading, router, allowedRoles]);
 
   if (isLoading) {
     return (
@@ -46,8 +36,8 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     );
   }
 
-  // Mock modeまたは認証済み
-  if (isMockMode || user) {
+  // 認証済みの場合のみ表示
+  if (user) {
     return <>{children}</>;
   }
 

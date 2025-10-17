@@ -216,21 +216,6 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* デモアカウント情報（Mock modeのみ） */}
-        {process.env.NEXT_PUBLIC_AUTH_MODE === 'mock' && (
-          <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <p className="text-xs font-semibold text-yellow-800 mb-2">
-              🧪 テストモード
-            </p>
-            <div className="text-xs text-yellow-700 space-y-1">
-              <p>• システム管理者: system-admin@example.com</p>
-              <p>• パートナー親: orga-admin@example.com</p>
-              <p>• 販売店ユーザー: shop-a1@example.com</p>
-              <p className="mt-2 font-medium">パスワード: 任意（テストモード）</p>
-            </div>
-          </div>
-        )}
-
         {/* フッター */}
         <p className="mt-8 text-center text-xs text-gray-500">
           © 2025 動画配信システム. All rights reserved.
