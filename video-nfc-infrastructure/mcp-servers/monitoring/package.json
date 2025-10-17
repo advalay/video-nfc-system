@@ -1,0 +1,13 @@
+{
+  "name": "monitoring-mcp-server",
+  "version": "1.0.0",
+  "description": "監視・モニタリングMCPサーバー",
+  "main": "index.js",
+  "type": "commonjs",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@aws-sdk/client-cloudwatch": "^3.637.0",
+    "@aws-sdk/client-cloudwatch-logs": "^3.637.0"
+  }
+}
+

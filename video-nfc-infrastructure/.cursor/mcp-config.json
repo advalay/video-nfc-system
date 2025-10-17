@@ -1,0 +1,40 @@
+{
+  "mcpServers": {
+    "aws-integration": {
+      "command": "node",
+      "args": [
+        "/Users/kosuke/video-nfc-infrastructure/mcp-servers/aws-integration/index.js"
+      ],
+      "env": {
+        "AWS_REGION": "ap-northeast-1",
+        "AWS_ACCOUNT_ID": "271633506783"
+      }
+    },
+    "dynamodb-manager": {
+      "command": "node",
+      "args": [
+        "/Users/kosuke/video-nfc-infrastructure/mcp-servers/dynamodb-manager/index.js"
+      ],
+      "env": {
+        "AWS_REGION": "ap-northeast-1",
+        "TABLE_PREFIX": "video-nfc"
+      }
+    },
+    "dev-tools": {
+      "command": "node",
+      "args": [
+        "/Users/kosuke/video-nfc-infrastructure/mcp-servers/dev-tools/index.js"
+      ]
+    },
+    "monitoring": {
+      "command": "node",
+      "args": [
+        "/Users/kosuke/video-nfc-infrastructure/mcp-servers/monitoring/index.js"
+      ],
+      "env": {
+        "AWS_REGION": "ap-northeast-1"
+      }
+    }
+  }
+}
+

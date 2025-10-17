@@ -14,7 +14,14 @@
     "deploy:prod": "ENV=prod cdk deploy --all --require-approval never",
     "destroy": "cdk destroy --all",
     "synth": "cdk synth",
-    "diff": "cdk diff"
+    "diff": "cdk diff",
+    "mcp:setup": "./scripts/setup-mcp.sh",
+    "mcp:install": "cd mcp-servers/aws-integration && npm install && cd ../dynamodb-manager && npm install && cd ../dev-tools && npm install && cd ../monitoring && npm install",
+    "mcp:test:aws": "node mcp-servers/aws-integration/index.js",
+    "mcp:test:db": "node mcp-servers/dynamodb-manager/index.js",
+    "mcp:test:dev": "node mcp-servers/dev-tools/index.js",
+    "mcp:test:monitor": "node mcp-servers/monitoring/index.js",
+    "mcp:update": "npm update && npm run mcp:install"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
@@ -29,7 +36,11 @@
     "@aws-sdk/client-s3": "^3.637.0",
     "@aws-sdk/s3-request-presigner": "^3.637.0",
     "@aws-sdk/client-dynamodb": "^3.637.0",
-    "@aws-sdk/lib-dynamodb": "^3.637.0"
+    "@aws-sdk/lib-dynamodb": "^3.637.0",
+    "@aws-sdk/client-lambda": "^3.637.0",
+    "@aws-sdk/client-cloudwatch": "^3.637.0",
+    "@aws-sdk/client-cloudwatch-logs": "^3.637.0",
+    "@modelcontextprotocol/sdk": "^1.0.0"
   }
 }
 
