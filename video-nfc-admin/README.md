@@ -243,3 +243,4 @@ https://console.aws.amazon.com/amplify/
 **このREADMEを印刷して、デスクに置いておくことをおすすめします！** 📖✨
 
 何か困ったことがあれば、まず [NON_ENGINEER_GUIDE.md](./NON_ENGINEER_GUIDE.md) を読んでください。
+# Force Amplify to reload amplify.yml
