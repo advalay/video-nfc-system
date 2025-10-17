@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Amplifyデプロイ用の出力モード
-  output: 'standalone',
+  // Amplifyデプロイ用の静的エクスポート
+  output: 'export',
 
   // TypeScript設定を明示的に有効化
   typescript: {
