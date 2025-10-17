@@ -17,8 +17,8 @@ export function ProtectedRoute({ children, allowedRoles = [] }: ProtectedRoutePr
 
   useEffect(() => {
     const checkUser = async () => {
-      // 強制的に認証をスキップ（Amplifyでは常にproductionとして動作するため）
-      console.log('Force skipping authentication for all environments');
+      // 認証を完全にスキップ（本番環境でも）
+      console.log('Skipping authentication completely');
       setUser({ username: 'demo-user', groups: ['system-admin'] });
       setLoading(false);
       return;
