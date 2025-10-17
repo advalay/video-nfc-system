@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { getCurrentUser, fetchAuthSession, signIn, signOut } from 'aws-amplify/auth';
+import { configureAmplify } from '../lib/amplify-config';
 
 interface User {
   id: string;
@@ -21,24 +23,61 @@ export function useAuth(): UseAuthResult {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // 開発環境ではモックユーザーを設定
-    if (process.env.NODE_ENV === 'development') {
-      setUser({
-        id: 'dev-user',
-        email: 'dev@example.com',
-        groups: ['system-admin']
-      });
-    }
-    setIsLoading(false);
+    const checkAuth = async () => {
+      try {
+        configureAmplify();
+        const session = await fetchAuthSession().catch(() => null);
+        
+        if (session?.tokens) {
+          const currentUser = await getCurrentUser();
+          const groups = (currentUser as any).signInUserSession?.idToken?.payload?.['cognito:groups'] || [];
+          
+          setUser({
+            id: currentUser.username,
+            email: currentUser.username,
+            groups: groups
+          });
+        } else {
+          setUser(null);
+        }
+      } catch (error) {
+        setUser(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAuth();
   }, []);
 
   const login = async (email: string, password: string) => {
-    // 実際の認証ロジックを実装
-    console.log('Login attempt:', email);
+    try {
+      configureAmplify();
+      await signIn({ username: email, password });
+      
+      // ログイン成功後、ユーザー情報を再取得
+      const currentUser = await getCurrentUser();
+      const groups = (currentUser as any).signInUserSession?.idToken?.payload?.['cognito:groups'] || [];
+      
+      setUser({
+        id: currentUser.username,
+        email: currentUser.username,
+        groups: groups
+      });
+    } catch (error) {
+      throw error;
+    }
   };
 
-  const logout = () => {
-    setUser(null);
+  const logout = async () => {
+    try {
+      configureAmplify();
+      await signOut();
+      setUser(null);
+    } catch (error) {
+      console.error('Logout error:', error);
+      setUser(null);
+    }
   };
 
   return {
