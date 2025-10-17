@@ -1,0 +1,11 @@
+{
+  "name": "dev-tools-mcp-server",
+  "version": "1.0.0",
+  "description": "開発ツール統合MCPサーバー",
+  "main": "index.js",
+  "type": "commonjs",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  }
+}
+

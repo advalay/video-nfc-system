@@ -471,12 +471,12 @@ export class ApiStack extends cdk.Stack {
       'GET',
       new apigateway.LambdaIntegration(listVideosFn, lambdaIntegrationOptions),
       {
-        authorizationType: apigateway.AuthorizationType.NONE,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+        authorizer: authorizer,
         requestParameters: {
           'method.request.querystring.limit': false,
           'method.request.querystring.lastEvaluatedKey': false,
           'method.request.querystring.search': false,
-          'method.request.header.X-Development-Mode': false,
         },
       }
     );
@@ -484,15 +484,15 @@ export class ApiStack extends cdk.Stack {
     // /videos/{videoId}
     const videoIdResource = videosResource.addResource('{videoId}');
 
-    // GET /videos/{videoId} - 開発環境では認証をスキップ
+    // GET /videos/{videoId} - 認証必須
     videoIdResource.addMethod(
       'GET',
       new apigateway.LambdaIntegration(getVideoDetailFn, lambdaIntegrationOptions),
       {
-        authorizationType: apigateway.AuthorizationType.NONE,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+        authorizer: authorizer,
         requestParameters: {
           'method.request.path.videoId': true,
-          'method.request.header.X-Development-Mode': false,
         },
       }
     );
@@ -527,16 +527,14 @@ export class ApiStack extends cdk.Stack {
     // 管理者用ルート: /admin
     const adminResource = this.restApi.root.addResource('admin');
 
-    // GET /admin/stats - 開発環境では認証をスキップ
+    // GET /admin/stats - 認証必須（システム管理者のみ）
     const statsResource = adminResource.addResource('stats');
     statsResource.addMethod(
       'GET',
       new apigateway.LambdaIntegration(getAdminStatsFn, lambdaIntegrationOptions),
       {
-        authorizationType: apigateway.AuthorizationType.NONE,
-        requestParameters: {
-          'method.request.header.X-Development-Mode': false,
-        },
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+        authorizer: authorizer,
       }
     );
 
@@ -711,10 +709,8 @@ export class ApiStack extends cdk.Stack {
       'GET',
       new apigateway.LambdaIntegration(getSystemStatsFn, lambdaIntegrationOptions),
       {
-        authorizationType: apigateway.AuthorizationType.NONE,
-        requestParameters: {
-          'method.request.header.X-Development-Mode': false,
-        },
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+        authorizer: authorizer,
       }
     );
 

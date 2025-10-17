@@ -1,0 +1,13 @@
+{
+  "name": "dynamodb-manager-mcp-server",
+  "version": "1.0.0",
+  "description": "DynamoDB管理MCPサーバー",
+  "main": "index.js",
+  "type": "commonjs",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@aws-sdk/client-dynamodb": "^3.637.0",
+    "@aws-sdk/lib-dynamodb": "^3.637.0"
+  }
+}
+

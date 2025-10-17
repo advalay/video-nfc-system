@@ -1,1 +1,0 @@
-{"version":3,"file":"listOrganizations.d.ts","sourceRoot":"","sources":["../../src/handlers/listOrganizations.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,oBAAoB,EAAE,qBAAqB,EAAE,MAAM,YAAY,CAAC;AASzE,eAAO,MAAM,OAAO,GAAU,OAAO,oBAAoB,KAAG,OAAO,CAAC,qBAAqB,CA0FxF,CAAC"}

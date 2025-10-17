@@ -9,6 +9,7 @@
 - [プロジェクト構成](#プロジェクト構成)
 - [構築されるAWSリソース](#構築されるawsリソース)
 - [承認ワークフロー](#承認ワークフロー)
+- [Claude MCP統合](#claude-mcp統合)
 - [セットアップ手順](#セットアップ手順)
 - [デプロイ](#デプロイ)
 - [初回セットアップ](#初回セットアップ)
@@ -172,6 +173,62 @@ video-nfc-infrastructure/
 ### 3. 組織階層
 - **パートナー企業** (organizationType: 'agency')
   - **販売店** (organizationType: 'store', parentId: パートナー企業のID)
+
+## 🤖 Claude MCP統合
+
+このプロジェクトは Claude の Model Context Protocol (MCP) と統合されており、AI支援による開発のクオリティ向上を実現しています。
+
+### 実装されたMCPサーバー
+
+#### 1. **AWS統合サーバー** (`aws-integration`)
+- DynamoDBクエリ実行
+- Lambda関数の直接呼び出し
+- S3オブジェクト一覧取得
+- CloudWatch Logsの取得
+
+#### 2. **DynamoDB管理サーバー** (`dynamodb-manager`)
+- 組織情報の取得・一覧表示
+- 承認申請の管理
+- 動画メタデータの検索
+- データ整合性チェック
+
+#### 3. **開発ツールサーバー** (`dev-tools`)
+- コードリンティング
+- プロジェクトビルド
+- 依存パッケージチェック
+- バンドルサイズ分析
+- インフラ定義の検証
+
+#### 4. **監視サーバー** (`monitoring`)
+- Lambda/API Gateway/DynamoDBメトリクス取得
+- ログ検索とエラーログ取得
+- CloudWatchアラーム状態確認
+- パフォーマンス分析
+
+### MCPのセットアップ
+
+```bash
+# 自動セットアップスクリプトを実行
+./scripts/setup-mcp.sh
+
+# または手動でインストール
+npm run mcp:install
+```
+
+詳細は [`MCP_INTEGRATION_GUIDE.md`](./MCP_INTEGRATION_GUIDE.md) をご覧ください。
+
+### Claude との対話例
+
+```
+ユーザー: 「dev環境の組織一覧を表示して」
+Claude: MCPサーバーを使用して組織データを取得します...
+
+ユーザー: 「コードをリントして」
+Claude: リンティングを実行します...
+
+ユーザー: 「過去24時間のエラーログを確認して」
+Claude: CloudWatch Logsからエラーを検索します...
+```
 
 ## 🚀 セットアップ手順
 

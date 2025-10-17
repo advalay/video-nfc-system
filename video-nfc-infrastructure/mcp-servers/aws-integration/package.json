@@ -1,0 +1,15 @@
+{
+  "name": "aws-integration-mcp-server",
+  "version": "1.0.0",
+  "description": "AWS統合MCPサーバー",
+  "main": "index.js",
+  "type": "commonjs",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@aws-sdk/client-dynamodb": "^3.637.0",
+    "@aws-sdk/client-lambda": "^3.637.0",
+    "@aws-sdk/client-s3": "^3.637.0",
+    "@aws-sdk/client-cloudwatch-logs": "^3.637.0"
+  }
+}
+
