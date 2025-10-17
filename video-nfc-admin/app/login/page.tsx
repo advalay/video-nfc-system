@@ -16,6 +16,12 @@ export default function LoginPage() {
 
   // 既にログイン済みかチェック（一時的に無効化）
   useEffect(() => {
+    // 開発環境では直接動画ページにリダイレクト
+    if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV !== 'production') {
+      console.log('Development mode: Redirecting to videos page');
+      window.location.href = '/videos';
+      return;
+    }
     // 認証チェックを一時的にスキップしてログインフォームを表示
     setIsCheckingAuth(false);
   }, []);
