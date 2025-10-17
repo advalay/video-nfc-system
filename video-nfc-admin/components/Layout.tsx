@@ -1,11 +1,22 @@
 'use client';
 
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, createContext, useContext } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { signOut } from 'aws-amplify/auth';
 import { configureAmplify } from '../lib/amplify-config';
 import toast from 'react-hot-toast';
 import { LogOut, Video, Building2, Upload, BarChart3, AlertTriangle, Users } from 'lucide-react';
+
+// ユーザーコンテキスト
+const UserContext = createContext<any>(null);
+
+export const useUser = () => {
+  const context = useContext(UserContext);
+  if (!context) {
+    throw new Error('useUser must be used within a UserProvider');
+  }
+  return context;
+};
 
 interface LayoutProps {
   children: ReactNode;
@@ -123,9 +134,10 @@ export function Layout({ children }: LayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* サイドバー */}
-      <div className="fixed inset-y-0 left-0 w-64 bg-white shadow-lg">
+    <UserContext.Provider value={userInfo}>
+      <div className="min-h-screen bg-gray-50">
+        {/* サイドバー */}
+        <div className="fixed inset-y-0 left-0 w-64 bg-white shadow-lg">
         <div className="p-6">
           <h1 className="text-xl font-bold text-gray-900">動画配信システム</h1>
           <p className="text-sm text-gray-600 mt-1">管理画面</p>
@@ -204,12 +216,13 @@ export function Layout({ children }: LayoutProps) {
         </nav>
       </div>
 
-      {/* メインコンテンツ */}
-      <div className="ml-64">
-        <div className="p-8">
-          {children}
+        {/* メインコンテンツ */}
+        <div className="ml-64">
+          <div className="p-8">
+            {children}
+          </div>
         </div>
       </div>
-    </div>
+    </UserContext.Provider>
   );
 }
