@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useEffect, useState, useRef, Suspense } from 'react';
 import Image from 'next/image';
-import { getBrandingConfig, BrandingConfig } from '../../../lib/branding-config';
+import { getBrandingConfig, BrandingConfig } from '../../lib/branding-config';
 
 interface VideoDetail {
   videoUrl: string;
@@ -12,7 +13,10 @@ interface VideoDetail {
   organizationId?: string;
 }
 
-export default function WatchClient({ videoId }: { videoId: string }) {
+function WatchContent() {
+  const searchParams = useSearchParams();
+  const videoId = searchParams.get('id');
+  
   const [videoData, setVideoData] = useState<VideoDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +25,11 @@ export default function WatchClient({ videoId }: { videoId: string }) {
   const [branding, setBranding] = useState<BrandingConfig>(getBrandingConfig());
 
   useEffect(() => {
-    if (!videoId) return;
+    if (!videoId) {
+      setError('動画IDが指定されていません');
+      setLoading(false);
+      return;
+    }
 
     const fetchVideo = async () => {
       try {
@@ -42,15 +50,18 @@ export default function WatchClient({ videoId }: { videoId: string }) {
 
         if (data.success) {
           setVideoData(data.data);
-
+          
+          // 組織IDがあればブランディング設定を更新
           if (data.data.organizationId) {
             setBranding(getBrandingConfig(data.data.organizationId));
           }
-
+          
           setLoading(false);
 
+          // 自動再生試行（1秒後）
           setTimeout(() => {
             videoRef.current?.play().catch(() => {
+              // 自動再生失敗(iOS Safariなど)
               console.log('Auto-play failed - user interaction required');
             });
           }, 1000);
@@ -68,6 +79,7 @@ export default function WatchClient({ videoId }: { videoId: string }) {
     fetchVideo();
   }, [videoId]);
 
+  // 動画の再生状態を監視
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -84,6 +96,7 @@ export default function WatchClient({ videoId }: { videoId: string }) {
     };
   }, [videoData]);
 
+  // ローディング表示
   if (loading) {
     return (
       <div className="min-h-screen bg-black flex flex-col items-center justify-center text-white p-4">
@@ -98,6 +111,7 @@ export default function WatchClient({ videoId }: { videoId: string }) {
     );
   }
 
+  // エラー表示
   if (error) {
     return (
       <div className="min-h-screen bg-black flex flex-col items-center justify-center text-white p-8">
@@ -118,16 +132,18 @@ export default function WatchClient({ videoId }: { videoId: string }) {
     );
   }
 
+  // 動画プレイヤー表示
   return (
-    <div
+    <div 
       className="min-h-screen flex flex-col items-center justify-center p-0"
-      style={{
+      style={{ 
         backgroundColor: branding.colors.background,
         color: branding.colors.text,
       }}
     >
+      {/* ロゴ（設定されている場合） */}
       {branding.logo.enabled && branding.logo.imageUrl && (
-        <div
+        <div 
           className={`absolute z-20 p-4 ${
             branding.logo.position === 'top-left' ? 'top-0 left-0' :
             branding.logo.position === 'top-center' ? 'top-0 left-1/2 -translate-x-1/2' :
@@ -147,8 +163,9 @@ export default function WatchClient({ videoId }: { videoId: string }) {
         </div>
       )}
 
+      {/* 企業名（設定されている場合） */}
       {branding.companyName.enabled && (
-        <div
+        <div 
           className={`absolute z-20 p-4 ${
             branding.companyName.position === 'top-left' ? 'top-0 left-0' :
             branding.companyName.position === 'top-center' ? 'top-0 left-1/2 -translate-x-1/2' :
@@ -158,7 +175,7 @@ export default function WatchClient({ videoId }: { videoId: string }) {
             'bottom-0 right-0'
           }`}
         >
-          <p
+          <p 
             className={`font-bold text-${branding.companyName.fontSize}`}
             style={{ color: branding.colors.text }}
           >
@@ -167,8 +184,9 @@ export default function WatchClient({ videoId }: { videoId: string }) {
         </div>
       )}
 
+      {/* ウォーターマーク（設定されている場合） */}
       {branding.watermark.enabled && (
-        <div
+        <div 
           className={`absolute z-20 p-4 pointer-events-none ${
             branding.watermark.position === 'top-left' ? 'top-0 left-0' :
             branding.watermark.position === 'top-right' ? 'top-0 right-0' :
@@ -183,9 +201,10 @@ export default function WatchClient({ videoId }: { videoId: string }) {
         </div>
       )}
 
+      {/* 動画タイトル（左上） */}
       {videoData?.title && (
         <div className="absolute top-4 left-4 z-20 bg-black/60 rounded-lg px-3 py-2">
-          <h1
+          <h1 
             className="text-sm font-medium"
             style={{ color: branding.colors.text }}
           >
@@ -194,6 +213,7 @@ export default function WatchClient({ videoId }: { videoId: string }) {
         </div>
       )}
 
+      {/* 動画プレイヤー */}
       <div className="w-full max-w-7xl mx-auto flex items-center justify-center">
         <video
           ref={videoRef}
@@ -213,6 +233,7 @@ export default function WatchClient({ videoId }: { videoId: string }) {
         </video>
       </div>
 
+      {/* 大きな再生/一時停止ボタン（ビデオ上にオーバーレイ） */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         {!isPlaying && videoData && (
           <button
@@ -231,6 +252,7 @@ export default function WatchClient({ videoId }: { videoId: string }) {
         )}
       </div>
 
+      {/* 下部: 追加情報またはフッター */}
       <div className="w-full bg-gradient-to-t from-black/80 to-transparent py-6 px-8 absolute bottom-0 z-10">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           {branding.footer.enabled ? (
@@ -258,9 +280,25 @@ export default function WatchClient({ videoId }: { videoId: string }) {
         </div>
       </div>
 
+      {/* カスタムCSS（設定されている場合） */}
       {branding.customStyles && (
         <style dangerouslySetInnerHTML={{ __html: branding.customStyles }} />
       )}
     </div>
+  );
+}
+
+export default function WatchPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center text-white p-4">
+        <div className="animate-spin rounded-full h-32 w-32 border-8 border-white border-t-transparent mb-12"></div>
+        <p className="text-4xl md:text-5xl font-bold text-center">
+          読み込み中...
+        </p>
+      </div>
+    }>
+      <WatchContent />
+    </Suspense>
   );
 }

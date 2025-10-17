@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // 静的エクスポート（Amplify対応）- 動的ルートのため無効化
-  // output: 'export',
+  // 静的エクスポート（Amplify対応）
+  output: 'export',
   // トレーリングスラッシュを追加
   trailingSlash: true,
   // 画像最適化を無効化（静的エクスポート時に必要）
