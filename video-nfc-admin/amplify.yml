@@ -3,22 +3,17 @@ frontend:
   phases:
     preBuild:
       commands:
-        - echo "Current directory:"
-        - pwd
-        - echo "Directory contents:"
-        - ls -la
-        - echo "Checking for package.json:"
-        - cat package.json
+        - cd video-nfc-admin
         - npm ci
     build:
       commands:
         - npm run type-check
         - npm run build
   artifacts:
-    baseDirectory: .next
+    baseDirectory: video-nfc-admin/out
     files:
       - '**/*'
   cache:
     paths:
-      - node_modules/**/*
-      - .next/cache/**/*
+      - video-nfc-admin/node_modules/**/*
+      - video-nfc-admin/.next/cache/**/*
