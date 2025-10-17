@@ -23,31 +23,14 @@ export function useAuth(): UseAuthResult {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        configureAmplify();
-        const session = await fetchAuthSession().catch(() => null);
-        
-        if (session?.tokens) {
-          const currentUser = await getCurrentUser();
-          const groups = (currentUser as any).signInUserSession?.idToken?.payload?.['cognito:groups'] || [];
-          
-          setUser({
-            id: currentUser.username,
-            email: currentUser.username,
-            groups: groups
-          });
-        } else {
-          setUser(null);
-        }
-      } catch (error) {
-        setUser(null);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkAuth();
+    // 認証をスキップしてパートナー親のユーザー情報を設定
+    console.log('Setting partner parent user for testing');
+    setUser({
+      id: 'orga-admin-001',
+      email: 'orga-admin@example.com',
+      groups: ['organization-admin']
+    });
+    setIsLoading(false);
   }, []);
 
   const login = async (email: string, password: string) => {
