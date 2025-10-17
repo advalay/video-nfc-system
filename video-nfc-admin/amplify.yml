@@ -9,7 +9,7 @@ frontend:
       commands:
         - npm run build
   artifacts:
-    baseDirectory: video-nfc-admin/out
+    baseDirectory: out
     files:
       - '**/*'
   cache:
