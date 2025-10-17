@@ -3,16 +3,15 @@ frontend:
   phases:
     preBuild:
       commands:
-        - cd video-nfc-admin
         - npm ci
     build:
       commands:
         - npm run build
   artifacts:
-    baseDirectory: video-nfc-admin/out
+    baseDirectory: out
     files:
       - '**/*'
   cache:
     paths:
-      - video-nfc-admin/node_modules/**/*
-      - video-nfc-admin/.next/cache/**/*
+      - node_modules/**/*
+      - .next/cache/**/*
