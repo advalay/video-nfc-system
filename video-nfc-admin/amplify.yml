@@ -1,28 +1,28 @@
 version: 1
-frontend:
-  phases:
-    preBuild:
-      commands:
-        # Node.js 18以上を使用
-        - node -v
-        - npm -v
-        - pwd
-        - ls -la
-        # 依存関係のインストール（devDependenciesを含む）
-        - npm ci
-    build:
-      commands:
-        # TypeScriptの型チェック
-        - npm run type-check
-        # Next.jsビルド
-        - npm run build
-  artifacts:
-    # Next.js静的エクスポート（.nextディレクトリ）
-    baseDirectory: .next
-    files:
-      - '**/*'
-  cache:
-    paths:
-      # node_modulesとNext.jsキャッシュをキャッシュ
-      - node_modules/**/*
-      - .next/cache/**/*
+applications:
+  - appRoot: video-nfc-admin
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            # Node.js 18以上を使用
+            - node -v
+            - npm -v
+            # 依存関係のインストール（devDependenciesを含む）
+            - npm ci
+        build:
+          commands:
+            # TypeScriptの型チェック
+            - npm run type-check
+            # Next.jsビルド
+            - npm run build
+      artifacts:
+        # Next.js静的エクスポート（.nextディレクトリ）
+        baseDirectory: .next
+        files:
+          - '**/*'
+      cache:
+        paths:
+          # node_modulesとNext.jsキャッシュをキャッシュ
+          - node_modules/**/*
+          - .next/cache/**/*
