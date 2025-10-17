@@ -13,6 +13,9 @@ interface VideoDetail {
   organizationId?: string;
 }
 
+// 静的エクスポート用: 動的セグメントを有効化
+export const dynamicParams = true;
+
 export default function WatchPage() {
   const params = useParams();
   const videoId = params.videoId as string;
