@@ -1,42 +1,19 @@
 {
-  "name": "video-nfc-admin",
-  "version": "0.1.0",
+  "name": "video-nfc-system",
+  "version": "1.0.0",
+  "description": "Video NFC System - Monorepo",
   "private": true,
+  "workspaces": [
+    "video-nfc-admin"
+  ],
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "build": "cd video-nfc-admin && npm run build",
+    "dev": "cd video-nfc-admin && npm run dev",
+    "start": "cd video-nfc-admin && npm run start"
   },
-  "dependencies": {
-    "@tanstack/react-query": "^5.90.2",
-    "@types/react-datepicker": "^6.2.0",
-    "autoprefixer": "^10.4.21",
-    "aws-amplify": "^6.15.7",
-    "date-fns": "^4.1.0",
-    "lucide-react": "^0.545.0",
-    "next": "15.5.4",
-    "postcss": "^8.4.0",
-    "qrcode": "^1.5.4",
-    "qrcode.react": "^4.2.0",
-    "react": "19.1.0",
-    "react-datepicker": "^8.7.0",
-    "react-day-picker": "^9.4.4",
-    "react-dom": "19.1.0",
-    "react-hot-toast": "^2.6.0",
-    "react-qr-code": "^2.0.18",
-    "recharts": "^3.2.1",
-    "tailwindcss": "^3.4.0"
-  },
-  "devDependencies": {
-    "@eslint/eslintrc": "^3",
-    "@types/node": "^20",
-    "@types/qrcode": "^1.5.5",
-    "@types/qrcode.react": "^1.0.5",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "15.5.4",
-    "typescript": "^5"
+  "devDependencies": {},
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
   }
 }

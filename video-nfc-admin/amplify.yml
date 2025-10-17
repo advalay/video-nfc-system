@@ -1,20 +1,20 @@
 version: 1
-applications:
-  - appRoot: video-nfc-admin
-    frontend:
-      phases:
-        preBuild:
-          commands:
-            - npm ci
-        build:
-          commands:
-            - npm run build
-      artifacts:
-        baseDirectory: .next
-        files:
-          - '**/*'
-      cache:
-        paths:
-          - node_modules/**/*
-          - .next/cache/**/*
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - cd video-nfc-admin
+        - npm ci
+    build:
+      commands:
+        - cd video-nfc-admin
+        - npm run build
+  artifacts:
+    baseDirectory: video-nfc-admin/.next
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - video-nfc-admin/node_modules/**/*
+      - video-nfc-admin/.next/cache/**/*
 
