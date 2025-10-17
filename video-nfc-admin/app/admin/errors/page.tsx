@@ -27,7 +27,7 @@ export default function ErrorDashboardPage() {
 
   // 権限チェック
   useEffect(() => {
-    if (!user || !user.groups?.includes('system-admin')) {
+    if (user && !user.groups?.includes('system-admin')) {
       router.push('/videos');
     }
   }, [user, router]);
