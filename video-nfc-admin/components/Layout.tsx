@@ -15,18 +15,19 @@ export function Layout({ children }: LayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
 
-  // モックユーザー情報
+  // パートナー親のユーザー情報（テスト用）
   const userInfo = {
-    email: 'system-admin@example.com',
-    groups: ['system-admin'],
-    organizationId: 'SYSTEM',
+    email: 'orga-admin@example.com',
+    groups: ['organization-admin'],
+    organizationId: 'ORG_A',
     shopId: '',
-    role: 'system-admin',
-    organizationName: 'SYSTEM',
-    userId: 'system-admin-001'
+    role: 'organization-admin',
+    organizationName: 'パートナー企業A',
+    userId: 'orga-admin-001'
   };
 
   const isSystemAdmin = userInfo?.groups?.includes('system-admin');
+  const isOrganizationAdmin = userInfo?.groups?.includes('organization-admin');
 
   const navItems = [
     {
@@ -41,6 +42,13 @@ export function Layout({ children }: LayoutProps) {
       label: '動画アップロード',
       icon: Upload,
       show: true,
+      disabled: false
+    },
+    {
+      href: '/shop/stats',
+      label: '販売店統計',
+      icon: BarChart3,
+      show: isOrganizationAdmin,
       disabled: false
     },
     {
