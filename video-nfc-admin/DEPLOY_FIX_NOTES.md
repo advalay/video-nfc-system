@@ -148,4 +148,59 @@ Route (app)                                 Size  First Load JS
 ƒ  (Dynamic)  server-rendered on demand をローカルで確認
 5. コミット＆プッシュ → Amplify 自動デプロイ
 
-以上で、今回の “同じところで落ちる” 系のビルド失敗は解消できました。
+以上で、今回の "同じところで落ちる" 系のビルド失敗は解消できました。
+
+## 9) モノレポ構造での404エラー解決（2024年10月）
+
+### 問題の概要
+- 症状: ビルドは成功するが、サイトアクセス時に404エラーが発生
+- 原因: モノレポ構造でAmplifyが正しいビルド成果物を見つけられない
+- 影響: デプロイは成功するが、実際のサイトが表示されない
+
+### 根本原因
+1. **リポジトリ構造の誤解**
+   - Gitリポジトリのルート: `/Users/kosuke/`
+   - Next.jsアプリの場所: `/Users/kosuke/video-nfc-admin/`
+   - Amplifyが期待する場所: リポジトリルート直下
+
+2. **amplify.ymlの設定ミス**
+   - 初期設定: `baseDirectory: out` ❌
+   - 正しい設定: `baseDirectory: video-nfc-admin/out` ✅
+
+### 解決方法
+```yaml
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - cd video-nfc-admin  # ← サブディレクトリに移動
+        - npm ci
+    build:
+      commands:
+        - cd video-nfc-admin  # ← サブディレクトリに移動
+        - npm run build
+  artifacts:
+    baseDirectory: video-nfc-admin/out  # ← 正しいパス
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - video-nfc-admin/node_modules/**/*  # ← 正しいキャッシュパス
+      - video-nfc-admin/.next/cache/**/*
+```
+
+### 重要なポイント
+- **ディレクトリ移動**: preBuildとbuildの両方で`cd video-nfc-admin`が必要
+- **baseDirectory**: リポジトリルートからの相対パスで指定
+- **キャッシュパス**: サブディレクトリを考慮したパスに修正
+
+### チェックリスト
+- [ ] `amplify.yml`で`cd video-nfc-admin`が設定されている
+- [ ] `baseDirectory: video-nfc-admin/out`が設定されている
+- [ ] キャッシュパスが`video-nfc-admin/`で始まっている
+- [ ] ローカルで`npm run build`が成功する
+- [ ] `out/`ディレクトリにビルド成果物が生成される
+
+### 関連ドキュメント
+- [AMPLIFY_MONOREPO_TROUBLESHOOTING.md](./AMPLIFY_MONOREPO_TROUBLESHOOTING.md) - 詳細な解決ガイド
