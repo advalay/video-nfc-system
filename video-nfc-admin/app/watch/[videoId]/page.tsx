@@ -13,11 +13,6 @@ interface VideoDetail {
   organizationId?: string;
 }
 
-// 静的エクスポート用: 空のパラメータを生成（実際のデータはクライアントサイドで取得）
-export function generateStaticParams() {
-  return [];
-}
-
 export default function WatchPage() {
   const params = useParams();
   const videoId = params.videoId as string;
