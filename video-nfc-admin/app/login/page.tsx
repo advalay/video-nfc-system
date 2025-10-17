@@ -3,7 +3,7 @@
 import { useState, FormEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn, getCurrentUser } from 'aws-amplify/auth';
-import { configureAmplify } from '../../lib/amplify-config';
+import { configureAmplify } from '../lib/amplify-config';
 import toast from 'react-hot-toast';
 
 export default function LoginPage() {
