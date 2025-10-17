@@ -8,10 +8,12 @@ function buildConfig() {
   const userPoolClientId = process.env.NEXT_PUBLIC_USER_POOL_CLIENT_ID;
 
   const hasAuth = Boolean(userPoolId && userPoolClientId);
+  const isDevelopment = process.env.NODE_ENV === 'development' || process.env.NODE_ENV !== 'production';
 
   const base: any = { ssr: true };
 
-  if (hasAuth) {
+  // 開発環境では認証を無効化
+  if (hasAuth && !isDevelopment) {
     base.Auth = {
       Cognito: {
         userPoolId,
@@ -19,9 +21,11 @@ function buildConfig() {
         region,
       },
     };
-  } else {
+  } else if (!isDevelopment) {
     // 本番環境で未設定だとログイン不可のため警告
     console.warn('Amplify Auth is not configured. Set NEXT_PUBLIC_USER_POOL_ID and NEXT_PUBLIC_USER_POOL_CLIENT_ID.');
+  } else {
+    console.log('Development mode: Amplify Auth disabled');
   }
 
   return base;
