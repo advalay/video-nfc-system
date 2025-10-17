@@ -80,17 +80,10 @@ export default function VideosPage() {
                setIsLoading(true);
                setError(null);
                
-               // 開発環境ではモックデータを使用
-               if (process.env.NODE_ENV === 'development') {
-                 console.log('Development mode: Using mock video data');
-                 setVideos(getMockVideos());
-                 return;
-               }
-               
-               // 本番環境ではAPI呼び出し
+               // API呼び出し（開発環境でも実際のAPIを使用）
                const { apiGet } = await import('../../lib/api-client');
-               const response = await apiGet<{items: any[]}>('/videos');
-               setVideos(response.items || []);
+               const response = await apiGet<{videos: any[], totalCount: number}>('/videos');
+               setVideos(response.videos || []);
              } catch (err: any) {
                console.error('Error fetching videos:', err);
                setError(err.message || '動画一覧の取得に失敗しました。しばらく時間をおいて再度お試しください。');
