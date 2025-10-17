@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '../hooks/useAuth';
-import { useShopStats } from '../hooks/useShopStats';
-import { Layout } from '../components/Layout';
-import { ProtectedRoute } from '../components/ProtectedRoute';
+import { useAuth } from '../../../hooks/useAuth';
+import { useShopStats } from '../../../hooks/useShopStats';
+import { Layout } from '../../../components/Layout';
+import { ProtectedRoute } from '../../../components/ProtectedRoute';
 import { 
   Video, 
   Upload, 
@@ -21,14 +21,14 @@ import {
 
 export default function ShopStatsPage() {
   const router = useRouter();
-  const { userInfo } = useAuth();
+  const { user } = useAuth();
   
   // 期間選択の状態
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [showFilter, setShowFilter] = useState(false);
   
-  const { data: stats, isLoading, error, refetch } = useShopStats(startDate, endDate);
+  const { stats, isLoading, error, refetch } = useShopStats();
 
   // 期間フィルターのリセット
   const resetFilter = () => {
@@ -64,7 +64,7 @@ export default function ShopStatsPage() {
     return `${diffInWeeks}週間前`;
   };
 
-  if (userInfo?.role !== 'shop-user') {
+  if (!user?.groups?.includes('shop-user')) {
     return (
       <ProtectedRoute>
         <Layout>
@@ -94,7 +94,7 @@ export default function ShopStatsPage() {
       <ProtectedRoute>
         <Layout>
           <div className="text-center py-8">
-            <p className="text-red-600 mb-4">{error.message || '統計データの取得に失敗しました'}</p>
+            <p className="text-red-600 mb-4">{error || '統計データの取得に失敗しました'}</p>
             <div className="text-sm text-gray-600 mb-4">
               <p>エラーの詳細:</p>
               <pre className="text-left bg-gray-100 p-2 rounded mt-2 overflow-auto">

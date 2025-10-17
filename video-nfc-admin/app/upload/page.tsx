@@ -86,12 +86,12 @@ export default function UploadPage() {
   };
 
   const handleCopyUrl = async () => {
-    const url = result?.publicUrl || result?.url;
+    const url = result?.videoUrl;
     if (url) {
-      const success = await copyToClipboard(url);
-      if (success) {
+      try {
+        await copyToClipboard(url);
         toast.success('URLをコピーしました！');
-      } else {
+      } catch (error) {
         toast.error('コピーに失敗しました');
       }
     } else {
@@ -326,11 +326,11 @@ export default function UploadPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">ファイル名:</span>
-                  <span className="font-medium text-gray-900">{result.fileName || selectedFile?.name || 'ファイル名なし'}</span>
+                  <span className="font-medium text-gray-900">{selectedFile?.name || 'ファイル名なし'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">サイズ:</span>
-                  <span className="font-medium text-gray-900">{formatFileSize(result.fileSize || selectedFile?.size)}</span>
+                  <span className="font-medium text-gray-900">{formatFileSize(result.size || selectedFile?.size || 0)}</span>
                 </div>
                 {(description || result.description) && (
                   <div className="flex justify-between">
@@ -350,7 +350,7 @@ export default function UploadPage() {
                 <div className="flex items-center space-x-2">
                   <input
                     type="text"
-                    value={result.publicUrl || result.url || 'URLを取得中...'}
+                    value={result.videoUrl || 'URLを取得中...'}
                     readOnly
                     className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm text-gray-700 font-mono"
                   />
@@ -365,15 +365,15 @@ export default function UploadPage() {
                 <div className="flex space-x-3">
                   <button
                     onClick={() => setShowQRModal(true)}
-                    disabled={!result.publicUrl && !result.url}
+                    disabled={!result.videoUrl}
                     className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     <QrCode className="w-4 h-4" />
                     <span>QRコード表示</span>
                   </button>
                   <button
-                    onClick={() => window.open(result.publicUrl || result.url, '_blank')}
-                    disabled={!result.publicUrl && !result.url}
+                    onClick={() => window.open(result.videoUrl, '_blank')}
+                    disabled={!result.videoUrl}
                     className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     <Download className="w-4 h-4" />
@@ -408,8 +408,8 @@ export default function UploadPage() {
         <QRModal
           isOpen={showQRModal}
           onClose={() => setShowQRModal(false)}
-          url={result.publicUrl || result.url || ''}
-          title={title || result.title || selectedFile?.name || '動画QRコード'}
+          videoId={result.videoId}
+          videoUrl={result.videoUrl || ''}
         />
       )}
       </Layout>

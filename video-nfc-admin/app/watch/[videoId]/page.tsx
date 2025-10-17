@@ -13,6 +13,9 @@ interface VideoDetail {
   organizationId?: string;
 }
 
+// 動的ルートのため、静的生成を無効化
+export const dynamic = 'force-dynamic';
+
 export default function WatchPage() {
   const params = useParams();
   const videoId = params.videoId as string;

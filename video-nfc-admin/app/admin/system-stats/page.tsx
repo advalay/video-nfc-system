@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback, memo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../hooks/useAuth';
 import { useSystemStats, OrganizationStat } from '../../../hooks/useSystemStats';
+import { Organization } from '../../../types/shared';
 import { Layout } from '../../../components/Layout';
 import { ProtectedRoute } from '../../../components/ProtectedRoute';
 import {
@@ -33,7 +34,7 @@ const formatFileSize = (bytes: number): string => {
 };
 
 type OrgRowProps = {
-  org: OrganizationStat;
+  org: Organization;
   expanded: boolean;
   onToggle: (orgId: string) => void;
 };
@@ -134,7 +135,7 @@ const OrganizationRow = memo(function OrganizationRow({ org, expanded, onToggle 
 
 export default function SystemStatsPage() {
   const router = useRouter();
-  const { userInfo } = useAuth();
+  const { user } = useAuth();
 
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
@@ -165,7 +166,7 @@ export default function SystemStatsPage() {
     });
   }, []);
 
-  if (userInfo?.role !== 'system-admin' && !userInfo?.groups?.includes('system-admin')) {
+  if (!user?.groups?.includes('system-admin')) {
     return (
       <ProtectedRoute>
         <Layout>

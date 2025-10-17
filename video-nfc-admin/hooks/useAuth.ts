@@ -1,70 +1,51 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 
-interface UserInfo {
+interface User {
+  id: string;
   email: string;
   groups: string[];
-  organizationId: string;
-  shopId: string;
-  role: string;
-  organizationName?: string;
-  shopName?: string;
-  userId: string;
 }
 
 interface UseAuthResult {
-  userInfo: UserInfo | null;
-  isLoadingAuth: boolean;
-  error: string | null;
-  signOut: () => Promise<void>;
+  user: User | null;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => void;
 }
 
 export function useAuth(): UseAuthResult {
-  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
-  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const loadUserInfo = async () => {
-      try {
-        setIsLoadingAuth(true);
-        setError(null);
-
-        // モックのユーザー情報
-        const mockUserInfo: UserInfo = {
-          email: 'system-admin@example.com',
-          groups: ['system-admin'],
-          organizationId: 'SYSTEM',
-          shopId: '',
-          role: 'system-admin',
-          organizationName: 'SYSTEM',
-          userId: 'system-admin-001'
-        };
-
-        setUserInfo(mockUserInfo);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : '認証情報の取得に失敗しました');
-      } finally {
-        setIsLoadingAuth(false);
-      }
-    };
-
-    loadUserInfo();
+    // 開発環境ではモックユーザーを設定
+    if (process.env.NODE_ENV === 'development') {
+      setUser({
+        id: 'dev-user',
+        email: 'dev@example.com',
+        groups: ['system-admin']
+      });
+    }
+    setIsLoading(false);
   }, []);
 
-  const signOut = async () => {
-    try {
-      setUserInfo(null);
-      // 実際のアプリでは、ここでAmplifyのsignOutを呼び出す
-      console.log('Signing out...');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'ログアウトに失敗しました');
-    }
+  const login = async (email: string, password: string) => {
+    // 実際の認証ロジックを実装
+    console.log('Login attempt:', email);
+  };
+
+  const logout = () => {
+    setUser(null);
   };
 
   return {
-    userInfo,
-    isLoadingAuth,
-    error,
-    signOut,
+    user,
+    isLoading,
+    isAuthenticated: !!user,
+    login,
+    logout
   };
 }
