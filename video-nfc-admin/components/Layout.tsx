@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { signOut } from 'aws-amplify/auth';
 import { configureAmplify } from '../lib/amplify-config';
@@ -15,16 +15,38 @@ export function Layout({ children }: LayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
 
-  // パートナー親のユーザー情報（テスト用）
+  // 動的ユーザー切り替え（テスト用）
+  const [currentUserType, setCurrentUserType] = useState<'system-admin' | 'organization-admin' | 'shop-user'>('organization-admin');
+  
   const userInfo = {
-    email: 'orga-admin@example.com',
-    groups: ['organization-admin'],
-    organizationId: 'ORG_A',
-    shopId: '',
-    role: 'organization-admin',
-    organizationName: 'パートナー企業A',
-    userId: 'orga-admin-001'
-  };
+    'system-admin': {
+      email: 'system-admin@example.com',
+      groups: ['system-admin'],
+      organizationId: 'SYSTEM',
+      shopId: '',
+      role: 'system-admin',
+      organizationName: 'SYSTEM',
+      userId: 'system-admin-001'
+    },
+    'organization-admin': {
+      email: 'orga-admin@example.com',
+      groups: ['organization-admin'],
+      organizationId: 'ORG_A',
+      shopId: '',
+      role: 'organization-admin',
+      organizationName: 'パートナー企業A',
+      userId: 'orga-admin-001'
+    },
+    'shop-user': {
+      email: 'shop-a1@example.com',
+      groups: ['shop-user'],
+      organizationId: 'ORG_A',
+      shopId: 'SHOP_A1',
+      role: 'shop-user',
+      organizationName: 'パートナー企業A',
+      userId: 'shop-a1-001'
+    }
+  }[currentUserType];
 
   const isSystemAdmin = userInfo?.groups?.includes('system-admin');
   const isOrganizationAdmin = userInfo?.groups?.includes('organization-admin');
@@ -116,15 +138,43 @@ export function Layout({ children }: LayoutProps) {
               {userInfo.email.charAt(0).toUpperCase()}
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-900">システム管理者</p>
-              <button
-                onClick={handleLogout}
-                className="text-xs text-gray-500 hover:text-gray-700 flex items-center space-x-1"
-              >
-                <LogOut className="w-3 h-3" />
-                <span>ログアウト</span>
-              </button>
+              <p className="text-sm font-medium text-gray-900">{userInfo.organizationName}</p>
+              <p className="text-xs text-gray-500">{userInfo.email}</p>
             </div>
+          </div>
+          
+          {/* ユーザー切り替えボタン（テスト用） */}
+          <div className="mt-3 space-y-1">
+            <button
+              onClick={() => setCurrentUserType('system-admin')}
+              className={`w-full text-left px-2 py-1 text-xs rounded ${
+                currentUserType === 'system-admin' 
+                  ? 'bg-blue-100 text-blue-700' 
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              システム管理者
+            </button>
+            <button
+              onClick={() => setCurrentUserType('organization-admin')}
+              className={`w-full text-left px-2 py-1 text-xs rounded ${
+                currentUserType === 'organization-admin' 
+                  ? 'bg-blue-100 text-blue-700' 
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              パートナー親
+            </button>
+            <button
+              onClick={() => setCurrentUserType('shop-user')}
+              className={`w-full text-left px-2 py-1 text-xs rounded ${
+                currentUserType === 'shop-user' 
+                  ? 'bg-blue-100 text-blue-700' 
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              販売店ユーザー
+            </button>
           </div>
         </div>
 
