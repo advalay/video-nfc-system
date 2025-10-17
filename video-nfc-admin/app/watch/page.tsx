@@ -61,8 +61,7 @@ function WatchContent() {
           // 自動再生試行（1秒後）
           setTimeout(() => {
             videoRef.current?.play().catch(() => {
-              // 自動再生失敗(iOS Safariなど)
-              console.log('Auto-play failed - user interaction required');
+              // 自動再生失敗(iOS Safariなど) - ユーザー操作が必要
             });
           }, 1000);
         } else {

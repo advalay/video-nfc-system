@@ -45,21 +45,15 @@ export function useSystemStats(startDate?: string, endDate?: string) {
   return useQuery<SystemStats>({
     queryKey: ['systemStats', startDate, endDate],
     queryFn: async () => {
-      // 開発環境でも実際のAPIを呼び出す
-      console.log('Fetching system stats from API...');
-      console.log('Environment:', process.env.NODE_ENV);
-      
+      // API呼び出し
       let endpoint = '/system/stats';
       const params = new URLSearchParams();
       if (startDate) params.append('startDate', startDate);
       if (endDate) params.append('endDate', endDate);
       if (params.toString()) endpoint += `?${params.toString()}`;
       
-      console.log('API endpoint:', endpoint);
-      
       try {
         const backendData = await apiGet<any>(endpoint);
-        console.log('API response:', backendData);
         return transformBackendResponse(backendData);
       } catch (error) {
         console.error('API call failed, falling back to mock data:', error);

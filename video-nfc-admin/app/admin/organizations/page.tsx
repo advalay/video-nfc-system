@@ -351,7 +351,6 @@ export default function OrganizationsPage() {
         
         // 開発環境ではモックデータを使用
         if (process.env.NODE_ENV === 'development') {
-          console.log('Development mode: Using mock organization data');
           setOrganizations(getMockOrganizations());
           return;
         }
@@ -391,13 +390,11 @@ export default function OrganizationsPage() {
   }, []);
 
   const handleEditShop = useCallback((shop: Shop) => {
-    console.log('Edit shop:', shop);
     // TODO: 店舗編集モーダルを開く
   }, []);
 
   const handleDeleteShop = useCallback((shop: Shop) => {
     if (confirm(`「${shop.shopName}」を削除しますか？`)) {
-      console.log('Delete shop:', shop);
       // TODO: 店舗削除のAPI呼び出し
     }
   }, []);
@@ -413,7 +410,6 @@ export default function OrganizationsPage() {
 
   const handleResetPassword = useCallback((shop: Shop) => {
     if (confirm(`「${shop.shopName}」のパスワードをリセットしますか？`)) {
-      console.log('Reset password for shop:', shop);
       // TODO: パスワードリセットのAPI呼び出し
       alert('パスワードをリセットしました');
     }
@@ -476,7 +472,7 @@ export default function OrganizationsPage() {
               <p className="text-gray-600">パートナー企業と店舗の管理、ID/PASSの発行・管理を行います</p>
             </div>
             <button
-              onClick={() => console.log('Create organization')}
+              onClick={() => {/* TODO: Create organization */}}
               className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
             >
               <Plus className="w-4 h-4" />

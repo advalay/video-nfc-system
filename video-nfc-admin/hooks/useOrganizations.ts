@@ -18,12 +18,9 @@ export function useOrganizations(): UseOrganizationsResult {
     try {
       setIsLoading(true);
       setError(null);
-
-      console.log('Fetching organizations from API...');
       
       try {
         const response = await apiGet<any>('/organizations');
-        console.log('Organizations API response:', response);
         
         // バックエンドのレスポンスをフロントエンドの型に変換
         const organizations = response.organizations || [];

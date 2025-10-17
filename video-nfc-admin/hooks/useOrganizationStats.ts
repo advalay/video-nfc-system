@@ -62,8 +62,6 @@ export function useOrganizationStats(startDate?: string, endDate?: string) {
       }
 
       const result = await response.json();
-      
-      console.log('Organization Stats API Response:', result);
 
       if (!result.success) {
         throw new Error(result.error?.message || '統計データの取得に失敗しました');
