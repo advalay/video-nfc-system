@@ -25,7 +25,9 @@ export function ProtectedRoute({ children, allowedRoles = [] }: ProtectedRoutePr
         const session = await fetchAuthSession().catch(() => null);
         if (!session || !session.tokens) {
           // 開発環境ではデモユーザーで通過、本番はログインへ
-          if (process.env.NODE_ENV === 'development') {
+          console.log('No session found, NODE_ENV:', process.env.NODE_ENV);
+          if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV !== 'production') {
+            console.log('Development mode: Setting demo user');
             setUser({ username: 'demo-user', groups: ['system-admin'] });
           } else {
             router.push('/login');
@@ -49,7 +51,9 @@ export function ProtectedRoute({ children, allowedRoles = [] }: ProtectedRoutePr
       } catch (error) {
         // Next.js のエラーオーバーレイを避けるため、console.errorは使用しない
         // 開発環境では認証をスキップ
-        if (process.env.NODE_ENV === 'development') {
+        console.log('Auth error, NODE_ENV:', process.env.NODE_ENV);
+        if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV !== 'production') {
+          console.log('Development mode: Setting demo user after error');
           setUser({ username: 'demo-user', groups: ['system-admin'] });
         } else {
           router.push('/login');
