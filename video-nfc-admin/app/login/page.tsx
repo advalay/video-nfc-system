@@ -14,10 +14,9 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
-  // 既にログイン済みかチェック（一時的に無効化）
+  // ログインページから動画ページにリダイレクト
   useEffect(() => {
-    // 強制的に動画ページにリダイレクト（Amplifyでは常にproductionとして動作するため）
-    console.log('Force redirecting to videos page');
+    console.log('Redirecting from login to videos page');
     window.location.href = '/videos';
   }, []);
 
