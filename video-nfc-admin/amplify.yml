@@ -7,6 +7,7 @@ frontend:
         - npm ci
     build:
       commands:
+        - cd video-nfc-admin
         - npm run build
   artifacts:
     baseDirectory: video-nfc-admin/out
