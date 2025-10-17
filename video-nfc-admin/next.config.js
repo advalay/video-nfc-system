@@ -1,5 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // TypeScript設定を明示的に有効化
+  typescript: {
+    // 型チェックをビルド時に実行
+    ignoreBuildErrors: false,
+  },
+
   // 実験的な機能
   experimental: {
     // 必要に応じて追加
