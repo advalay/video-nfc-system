@@ -213,6 +213,7 @@ export async function createShop(data: {
   shopName: string;
   organizationId: string;
   email: string;
+  contactPerson: string;
   contactPhone?: string;
   contactEmail?: string;
 }): Promise<{
