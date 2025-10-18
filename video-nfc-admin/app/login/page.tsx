@@ -15,7 +15,9 @@ export default function LoginPage() {
 
   // 既にログイン済みの場合はリダイレクト
   useEffect(() => {
+    console.log('LoginPage useEffect:', { authLoading, user });
     if (!authLoading && user) {
+      console.log('ログイン済み、リダイレクト中...');
       router.push('/videos');
     }
   }, [user, authLoading, router]);
