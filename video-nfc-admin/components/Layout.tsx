@@ -39,9 +39,9 @@ export function Layout({ children }: LayoutProps) {
     },
     {
       href: '/admin/organizations',
-      label: '組織管理',
+      label: isSystemAdmin ? '組織管理' : '自社管理',
       icon: Building2,
-      show: isSystemAdmin,
+      show: isSystemAdmin || isOrganizationAdmin,
     },
     {
       href: '/admin/system-stats',

@@ -33,9 +33,16 @@ export function useAuth(): UseAuthResult {
   // Cognito認証状態の確認
   const checkAuthStatus = async () => {
     try {
+      console.log('checkAuthStatus: 開始');
       configureAmplify();
+      console.log('checkAuthStatus: Amplify設定完了');
+      
       const currentUser = await getCurrentUser();
+      console.log('checkAuthStatus: 現在のユーザー取得完了', currentUser);
+      
       const session = await fetchAuthSession();
+      console.log('checkAuthStatus: セッション取得完了', session);
+      
       const idToken = session.tokens?.idToken;
       const groups = (idToken?.payload?.['cognito:groups'] as string[]) || [];
       
@@ -66,12 +73,16 @@ export function useAuth(): UseAuthResult {
         organizationName: userData.organizationName
       });
       
+      console.log('checkAuthStatus: ユーザーデータ設定', userData);
       setUser(userData);
       setIsLoading(false);
+      console.log('checkAuthStatus: 完了');
     } catch (error) {
+      console.log('認証状態確認エラー:', error);
       // 未認証の場合
       setUser(null);
       setIsLoading(false);
+      console.log('checkAuthStatus: エラーで完了');
     }
   };
 
