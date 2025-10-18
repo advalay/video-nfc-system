@@ -146,7 +146,7 @@ const OrganizationStats = memo(({
             </div>
             <div>
               <h3 className="text-lg font-semibold text-gray-900">
-                {organization.organizationName || organization.name || '組織' + organization.organizationId}
+                {organization.organizationName || '組織' + organization.organizationId}
               </h3>
               <p className="text-sm text-gray-600">{organization.shopCount}店舗</p>
             </div>
