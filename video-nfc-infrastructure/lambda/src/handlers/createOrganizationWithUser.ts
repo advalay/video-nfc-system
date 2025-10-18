@@ -56,6 +56,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       unitPrice: body.unitPrice || 1200,
       totalVideos: 0,
       totalStorage: 0,
+      shops: [],
       contractDate: now,
       createdAt: now,
       updatedAt: now,
