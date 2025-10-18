@@ -57,6 +57,8 @@ export function useShopStats(shopId?: string): UseShopStatsResult {
       } : null
     });
 
+    console.log('Target organization ID:', user?.organizationId);
+
     if (isSystemAdmin) {
       // システム管理者: 全組織の全販売店を集計
       const allShops = systemStats.organizationStats?.flatMap(org => 
