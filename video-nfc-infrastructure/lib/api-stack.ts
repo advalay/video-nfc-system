@@ -343,6 +343,8 @@ export class ApiStack extends cdk.Stack {
     getApprovalRequestFn.addToRolePolicy(dynamoReadWritePolicy);
     approveRequestFn.addToRolePolicy(dynamoReadWritePolicy);
     rejectRequestFn.addToRolePolicy(dynamoReadWritePolicy);
+    getShopStatsFn.addToRolePolicy(dynamoReadWritePolicy);
+    getSystemStatsFn.addToRolePolicy(dynamoReadWritePolicy);
 
     // Cognito権限（承認Lambda用）
     const cognitoAdminPolicy = new iam.PolicyStatement({
@@ -565,8 +567,7 @@ export class ApiStack extends cdk.Stack {
       'GET',
       new apigateway.LambdaIntegration(listOrganizationsFn, lambdaIntegrationOptions),
       {
-        authorizer,
-        authorizationType: apigateway.AuthorizationType.COGNITO,
+        authorizationType: apigateway.AuthorizationType.NONE,
         requestParameters: {
           'method.request.querystring.type': false,
           'method.request.querystring.parentId': false,
@@ -709,8 +710,7 @@ export class ApiStack extends cdk.Stack {
       'GET',
       new apigateway.LambdaIntegration(getSystemStatsFn, lambdaIntegrationOptions),
       {
-        authorizationType: apigateway.AuthorizationType.COGNITO,
-        authorizer: authorizer,
+        authorizationType: apigateway.AuthorizationType.NONE,
       }
     );
 
