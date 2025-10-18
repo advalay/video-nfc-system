@@ -77,10 +77,9 @@ exports.handler = async (event) => {
             const org = {
                 organizationId: item.organizationId?.S,
                 organizationName: item.organizationName?.S,
-                name: item.name?.S,
                 status: item.status?.S
             };
-            console.log(`Organization ${org.organizationId}: organizationName=${org.organizationName}, name=${org.name}`);
+            console.log(`Organization ${org.organizationId}: organizationName=${org.organizationName}`);
             return org;
         });
         
@@ -174,7 +173,7 @@ exports.handler = async (event) => {
             
             organizationStatsMap[org.organizationId] = {
                 organizationId: org.organizationId,
-                organizationName: org.organizationName || org.name || `組織${org.organizationId}`,
+                organizationName: org.organizationName,
                 shopCount: orgShops.length,
                 totalVideos: 0,
                 totalSize: 0,
