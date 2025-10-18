@@ -141,21 +141,21 @@ const OrganizationRow = memo(function OrganizationRow({
           </button>
           <Building2 className="w-5 h-5 text-blue-600" />
           <span className="font-medium text-gray-900">{org.organizationName}</span>
-        </div>
-
-        <div className="flex items-center space-x-2">
           <button
             onClick={(e) => { 
               console.log('販売店追加ボタンクリック:', org);
               e.stopPropagation(); 
               onCreateShop(org); 
             }}
-            className="bg-green-600 text-white hover:bg-green-700 px-3 py-1 rounded-lg text-sm font-medium"
+            className="bg-green-600 text-white hover:bg-green-700 px-2 py-1 rounded text-xs font-medium ml-2"
             title="販売店を追加"
           >
-            <Plus className="w-4 h-4 inline mr-1" />
+            <Plus className="w-3 h-3 inline mr-1" />
             販売店追加
           </button>
+        </div>
+
+        <div className="flex items-center space-x-2">
           {isSystemAdmin && (
             <button
               onClick={(e) => { e.stopPropagation(); onEditOrganization(org); }}
