@@ -106,7 +106,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         
         const organizations = (organizationsResult.Items || []).map(item => {
             // shopsフィールドを取得
-            const shops = (item.shops as any[]) || [];
+            const shops = Array.isArray(item.shops) ? item.shops : [];
             const orgShops = shops.map(shop => ({
                 id: shop.id,
                 name: shop.name,

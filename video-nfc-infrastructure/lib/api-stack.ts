@@ -397,6 +397,8 @@ export class ApiStack extends cdk.Stack {
     });
     
     approveRequestFn.addToRolePolicy(cognitoAdminPolicy);
+    createOrganizationFn.addToRolePolicy(cognitoAdminPolicy);
+    createShopFn.addToRolePolicy(cognitoAdminPolicy);
 
     // SNS権限（メール送信用）
     if (snsTopicArn) {
