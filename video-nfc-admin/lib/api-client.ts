@@ -191,4 +191,25 @@ export async function getSystemStats(): Promise<any> {
   return apiGet<any>('/system-stats');
 }
 
+/**
+ * 組織を作成
+ */
+export async function createOrganization(data: {
+  organizationName: string;
+  organizationType: 'agency' | 'store';
+  email: string;
+  contactPerson: string;
+  contactphone?: string;
+  contactEmail?: string;
+  billingAddress?: string;
+}): Promise<{
+  organizationId: string;
+  organizationName: string;
+  email: string;
+  tempPassword: string;
+  loginUrl: string;
+}> {
+  return apiPost<any>('/organizations', data);
+}
+
 // Force rebuild Sat Oct 18 00:17:19 JST 2025
