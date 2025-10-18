@@ -100,6 +100,7 @@ const ShopRow = memo(function ShopRow({ shop, onShowCredentials, onEditShop, onD
 type OrgRowProps = {
   org: Organization;
   expanded: boolean;
+  isSystemAdmin: boolean;
   onToggle: (orgId: string) => void;
   onEditOrganization: (org: Organization) => void;
   onCreateShop: (org: Organization) => void;
@@ -110,7 +111,8 @@ type OrgRowProps = {
 
 const OrganizationRow = memo(function OrganizationRow({ 
   org, 
-  expanded, 
+  expanded,
+  isSystemAdmin,
   onToggle, 
   onEditOrganization,
   onCreateShop,
@@ -149,13 +151,15 @@ const OrganizationRow = memo(function OrganizationRow({
           >
             <Plus className="w-4 h-4" />
           </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); onEditOrganization(org); }}
-            className="text-blue-600 hover:text-blue-900 p-1"
-            title="組織情報を編集"
-          >
-            <Edit className="w-4 h-4" />
-          </button>
+          {isSystemAdmin && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onEditOrganization(org); }}
+              className="text-blue-600 hover:text-blue-900 p-1"
+              title="組織情報を編集"
+            >
+              <Edit className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         <div className="flex items-center space-x-6 text-sm">
@@ -269,14 +273,27 @@ export default function OrganizationsPage() {
     loginUrl: string;
   } | null>(null);
 
-  // システム管理者の権限チェック
+  // 権限チェック
   const isSystemAdmin = user?.groups?.includes('system-admin');
+  const isOrganizationAdmin = user?.groups?.includes('organization-admin');
 
   // システム統計データを取得（組織管理でも同じデータを使用）
   const { data: systemStats, isLoading, error, refetch } = useSystemStats();
   
   // 組織データを抽出
   const organizations = systemStats?.organizationStats || [];
+
+  // データフィルタリング: 権限に応じて表示する組織を制限
+  const displayOrganizations = useMemo(() => {
+    if (isSystemAdmin) {
+      return organizations; // 全組織を表示
+    }
+    if (isOrganizationAdmin && user?.organizationId) {
+      // 自社のみ表示
+      return organizations.filter(org => org.organizationId === user.organizationId);
+    }
+    return [];
+  }, [isSystemAdmin, isOrganizationAdmin, organizations, user?.organizationId]);
 
   // 同時に1組織のみ展開するように制限
   const toggleOrganization = useCallback((orgId: string) => {
@@ -387,12 +404,12 @@ export default function OrganizationsPage() {
     refetch();
   }, [refetch]);
 
-  if (!isSystemAdmin) {
+  if (!isSystemAdmin && !isOrganizationAdmin) {
     return (
       <ProtectedRoute>
         <Layout>
           <div className="text-center py-8">
-            <p className="text-gray-600">このページはシステム管理者のみアクセス可能です。</p>
+            <p className="text-gray-600">このページへのアクセス権限がありません。</p>
           </div>
         </Layout>
       </ProtectedRoute>
@@ -440,16 +457,25 @@ export default function OrganizationsPage() {
           {/* ヘッダー */}
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">組織管理</h1>
-              <p className="text-gray-600">パートナー企業と店舗の管理、ID/PASSの発行・管理を行います</p>
+              <h1 className="text-2xl font-bold text-gray-900">
+                {isSystemAdmin ? '組織管理' : '自社管理'}
+              </h1>
+              <p className="text-gray-600">
+                {isSystemAdmin 
+                  ? 'パートナー企業と店舗の管理、ID/PASSの発行・管理を行います'
+                  : '自社の販売店管理とID/PASSの発行を行います'
+                }
+              </p>
             </div>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              <span>新規組織追加</span>
-            </button>
+            {isSystemAdmin && (
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                <span>新規組織追加</span>
+              </button>
+            )}
           </div>
 
           {/* 組織一覧 */}
@@ -460,12 +486,13 @@ export default function OrganizationsPage() {
 
             <div className="p-6">
               <div className="space-y-2">
-                {organizations.length > 0 ? (
-                  organizations.map((org) => (
+                {displayOrganizations.length > 0 ? (
+                  displayOrganizations.map((org) => (
                     <OrganizationRow
                       key={org.organizationId}
                       org={org}
                       expanded={expandedOrgs.has(org.organizationId)}
+                      isSystemAdmin={isSystemAdmin || false}
                       onToggle={toggleOrganization}
                       onEditOrganization={handleEditOrganization}
                       onCreateShop={handleCreateShop}

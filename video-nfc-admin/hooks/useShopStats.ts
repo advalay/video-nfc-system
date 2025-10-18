@@ -81,6 +81,60 @@ export function useShopStats(shopId?: string): UseShopStatsResult {
         shops: allShops
       };
     } else {
+      // 販売店管理者かどうかを確認
+      const isShopAdmin = user?.groups?.includes('shop-admin');
+      
+      if (isShopAdmin && user?.shopId) {
+        // 販売店管理者: 自店舗のみの統計を表示
+        const targetOrgId = user?.organizationId;
+        const myOrg = systemStats.organizationStats?.find(
+          org => org.organizationId === targetOrgId
+        );
+        
+        if (!myOrg) {
+          return {
+            totalVideos: 0,
+            totalSize: 0,
+            monthlyVideos: 0,
+            weeklyVideos: 0,
+            monthlyTrend: [],
+            shops: []
+          };
+        }
+        
+        // 自店舗のみを抽出
+        const myShop = myOrg.shops.find(
+          shop => shop.shopId === user.shopId
+        );
+        
+        if (!myShop) {
+          return {
+            totalVideos: 0,
+            totalSize: 0,
+            monthlyVideos: 0,
+            weeklyVideos: 0,
+            monthlyTrend: [],
+            shops: []
+          };
+        }
+        
+        return {
+          totalVideos: myShop.totalVideos || 0,
+          totalSize: myShop.totalSize || 0,
+          monthlyVideos: myShop.monthlyVideos || 0,
+          weeklyVideos: myShop.weeklyVideos || 0,
+          monthlyTrend: [],
+          shops: [{
+            shopId: myShop.shopId,
+            shopName: myShop.shopName,
+            totalVideos: myShop.totalVideos || 0,
+            totalSize: myShop.totalSize || 0,
+            monthlyVideos: myShop.monthlyVideos || 0,
+            weeklyVideos: myShop.weeklyVideos || 0
+          }]
+        };
+      }
+      
       // パートナー企業: 自組織の販売店のみを抽出
       const targetOrgId = user?.organizationId;
       console.log('Target organization ID:', targetOrgId);
