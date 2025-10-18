@@ -126,9 +126,9 @@ export default function ShopStatsPage() {
     }
   };
 
-  if (!user?.groups?.includes('shop-user') && !user?.groups?.includes('organization-admin') && !user?.groups?.includes('system-admin')) {
+  if (!user?.groups?.includes('shop-user') && !user?.groups?.includes('shop-admin') && !user?.groups?.includes('organization-admin') && !user?.groups?.includes('system-admin')) {
     return (
-      <ProtectedRoute>
+      <ProtectedRoute allowedRoles={['system-admin', 'organization-admin', 'shop-admin', 'shop-user']}>
         <Layout>
           <div className="text-center py-8">
             <p className="text-gray-600">このページは販売店ユーザー、パートナー企業、またはシステム管理者のみアクセス可能です。</p>
@@ -140,7 +140,7 @@ export default function ShopStatsPage() {
 
   if (isLoading) {
     return (
-      <ProtectedRoute>
+      <ProtectedRoute allowedRoles={['system-admin', 'organization-admin', 'shop-admin', 'shop-user']}>
         <Layout>
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -152,7 +152,7 @@ export default function ShopStatsPage() {
 
   if (error) {
     return (
-      <ProtectedRoute>
+      <ProtectedRoute allowedRoles={['system-admin', 'organization-admin', 'shop-admin', 'shop-user']}>
         <Layout>
           <div className="text-center py-8">
             <p className="text-red-600">エラーが発生しました: {error}</p>
@@ -170,7 +170,7 @@ export default function ShopStatsPage() {
 
   if (!stats) {
     return (
-      <ProtectedRoute>
+      <ProtectedRoute allowedRoles={['system-admin', 'organization-admin', 'shop-admin', 'shop-user']}>
         <Layout>
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -181,7 +181,7 @@ export default function ShopStatsPage() {
   }
 
   return (
-    <ProtectedRoute>
+    <ProtectedRoute allowedRoles={['system-admin', 'organization-admin', 'shop-admin', 'shop-user']}>
       <Layout>
         <div className="space-y-8">
           {/* ヘッダー */}

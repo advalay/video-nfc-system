@@ -17,6 +17,7 @@ export function Layout({ children }: LayoutProps) {
 
   const isSystemAdmin = user?.groups?.includes('system-admin');
   const isOrganizationAdmin = user?.groups?.includes('organization-admin');
+  const isShopAdmin = user?.groups?.includes('shop-admin') || user?.groups?.includes('shop-user');
 
   const navItems = [
     {
@@ -35,7 +36,7 @@ export function Layout({ children }: LayoutProps) {
       href: '/shop/stats',
       label: '販売店統計',
       icon: BarChart3,
-      show: isOrganizationAdmin || isSystemAdmin,
+      show: isShopAdmin || isOrganizationAdmin || isSystemAdmin,
     },
     {
       href: '/admin/organizations',
