@@ -150,10 +150,11 @@ const OrganizationRow = memo(function OrganizationRow({
               e.stopPropagation(); 
               onCreateShop(org); 
             }}
-            className="text-green-600 hover:text-green-900 p-1"
+            className="bg-green-600 text-white hover:bg-green-700 px-3 py-1 rounded-lg text-sm font-medium"
             title="販売店を追加"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4 inline mr-1" />
+            販売店追加
           </button>
           {isSystemAdmin && (
             <button
