@@ -7,6 +7,8 @@ import { useSystemStats } from '../../../hooks/useSystemStats';
 import { Layout } from '../../../components/Layout';
 import { ProtectedRoute } from '../../../components/ProtectedRoute';
 import OrganizationEditModal from '../../../components/OrganizationEditModal';
+import CreateOrganizationModal from '../../../components/CreateOrganizationModal';
+import OrganizationCreatedModal from '../../../components/OrganizationCreatedModal';
 import { Building2, Plus, Edit, Trash2, Store, ChevronDown, ChevronRight, Key, Copy, Eye, EyeOff } from 'lucide-react';
 import { Organization, Shop, UpdateOrganizationInput } from '../../../types/shared';
 import { updateOrganization, deleteShop } from '../../../lib/api-client';
@@ -232,6 +234,17 @@ export default function OrganizationsPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedOrganization, setSelectedOrganization] = useState<Organization | null>(null);
+  
+  // 組織作成モーダル関連
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCreatedModal, setShowCreatedModal] = useState(false);
+  const [createdOrganizationInfo, setCreatedOrganizationInfo] = useState<{
+    organizationId: string;
+    organizationName: string;
+    email: string;
+    tempPassword: string;
+    loginUrl: string;
+  } | null>(null);
 
   // システム管理者の権限チェック
   const isSystemAdmin = user?.groups?.includes('system-admin');
@@ -317,6 +330,20 @@ export default function OrganizationsPage() {
     }
   }, [refetch]);
 
+  // 組織作成成功時のハンドラー
+  const handleOrganizationCreated = useCallback((organizationInfo: {
+    organizationId: string;
+    organizationName: string;
+    email: string;
+    tempPassword: string;
+    loginUrl: string;
+  }) => {
+    setCreatedOrganizationInfo(organizationInfo);
+    setShowCreatedModal(true);
+    // データを再取得
+    refetch();
+  }, [refetch]);
+
   if (!isSystemAdmin) {
     return (
       <ProtectedRoute>
@@ -374,7 +401,7 @@ export default function OrganizationsPage() {
               <p className="text-gray-600">パートナー企業と店舗の管理、ID/PASSの発行・管理を行います</p>
             </div>
             <button
-              onClick={() => {/* TODO: Create organization */}}
+              onClick={() => setShowCreateModal(true)}
               className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
             >
               <Plus className="w-4 h-4" />
@@ -509,6 +536,20 @@ export default function OrganizationsPage() {
           onClose={() => setShowEditModal(false)}
           organization={selectedOrganization}
           onSave={handleSaveOrganization}
+        />
+
+        {/* 組織作成モーダル */}
+        <CreateOrganizationModal
+          isOpen={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          onSuccess={handleOrganizationCreated}
+        />
+
+        {/* 組織作成完了モーダル */}
+        <OrganizationCreatedModal
+          isOpen={showCreatedModal}
+          onClose={() => setShowCreatedModal(false)}
+          organizationInfo={createdOrganizationInfo}
         />
       </Layout>
     </ProtectedRoute>
