@@ -73,12 +73,19 @@ exports.handler = async (event) => {
         };
 
         const organizationsResult = await dynamodb.send(new ScanCommand(organizationsParams));
-        const organizations = (organizationsResult.Items || []).map(item => ({
-            organizationId: item.organizationId?.S,
-            organizationName: item.organizationName?.S,
-            name: item.name?.S,
-            status: item.status?.S
-        }));
+        const organizations = (organizationsResult.Items || []).map(item => {
+            const org = {
+                organizationId: item.organizationId?.S,
+                organizationName: item.organizationName?.S,
+                name: item.name?.S,
+                status: item.status?.S
+            };
+            console.log(`Organization ${org.organizationId}: organizationName=${org.organizationName}, name=${org.name}`);
+            return org;
+        });
+        
+        console.log('Organizations after conversion:');
+        console.log(JSON.stringify(organizations, null, 2));
 
         // 販売店データも取得
         const shopsParams = {
@@ -167,7 +174,7 @@ exports.handler = async (event) => {
             
             organizationStatsMap[org.organizationId] = {
                 organizationId: org.organizationId,
-                organizationName: org.organizationName || org.name,
+                organizationName: org.organizationName || org.name || `組織${org.organizationId}`,
                 shopCount: orgShops.length,
                 totalVideos: 0,
                 totalSize: 0,
@@ -260,10 +267,15 @@ exports.handler = async (event) => {
         const totalMonthlyVideos = allVideos.filter(video => new Date(video.uploadDate) >= startOfMonth).length;
         const totalWeeklyVideos = allVideos.filter(video => new Date(video.uploadDate) >= startOfWeek).length;
 
-        const organizationStats = Object.values(organizationStatsMap).map(org => ({
-            ...org,
-            shopCount: org.shopStats.length
-        }));
+        const organizationStats = Object.values(organizationStatsMap).map(org => {
+            const result = {
+                ...org,
+                shopCount: org.shopStats.length,
+                organizationName: org.organizationName || org.name || `組織${org.organizationId}`
+            };
+            console.log(`Final organization: ${result.organizationId} -> ${result.organizationName}`);
+            return result;
+        });
 
         console.log('System stats calculated:', {
             totalOrganizations,
