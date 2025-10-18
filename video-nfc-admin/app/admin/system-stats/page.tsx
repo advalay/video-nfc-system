@@ -145,12 +145,8 @@ const OrganizationStats = memo(({
               <Building2 className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">
-                {organization.organizationName || organization.name || '組織' + organization.organizationId}
-              </h3>
-              <p className="text-sm text-gray-600">
-                {organization.shopCount || organization.shopStats?.length || 0}店舗
-              </p>
+              <h3 className="text-lg font-semibold text-gray-900">{organization.organizationName}</h3>
+              <p className="text-sm text-gray-600">{organization.shopCount}店舗</p>
             </div>
           </div>
           <div className="flex items-center space-x-6">
