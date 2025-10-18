@@ -145,7 +145,11 @@ const OrganizationRow = memo(function OrganizationRow({
 
         <div className="flex items-center space-x-2">
           <button
-            onClick={(e) => { e.stopPropagation(); onCreateShop(org); }}
+            onClick={(e) => { 
+              console.log('販売店追加ボタンクリック:', org);
+              e.stopPropagation(); 
+              onCreateShop(org); 
+            }}
             className="text-green-600 hover:text-green-900 p-1"
             title="販売店を追加"
           >
@@ -386,6 +390,7 @@ export default function OrganizationsPage() {
 
   // 販売店作成開始
   const handleCreateShop = useCallback((organization: Organization) => {
+    console.log('handleCreateShop called:', organization);
     setSelectedOrgForShop(organization);
     setShowCreateShopModal(true);
   }, []);
