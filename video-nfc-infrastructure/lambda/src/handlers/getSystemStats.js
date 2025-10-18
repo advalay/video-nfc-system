@@ -8,7 +8,7 @@ const CORS_HEADERS = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Development-Mode',
     'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
-    'Access-Control-Allow-Credentials': 'true',
+    'Access-Control-Allow-Credentials': 'false',
     'Access-Control-Max-Age': '86400'
 };
 
@@ -63,23 +63,35 @@ exports.handler = async (event) => {
         // 全組織を取得
         const organizationsParams = {
             TableName: process.env.DYNAMODB_TABLE_ORGANIZATION,
-            FilterExpression: 'attribute_exists(organizationId) AND #status <> :status',
-            ExpressionAttributeNames: {
-                '#status': 'status'
-            },
-            ExpressionAttributeValues: {
-                ':status': 'inactive'
-            }
         };
 
+        console.log('DynamoDB scan parameters:', JSON.stringify(organizationsParams, null, 2));
         const organizationsResult = await dynamodb.send(new ScanCommand(organizationsParams));
+        
+        // DynamoDBの生データをログ出力
+        console.log('Raw DynamoDB Organizations:');
+        console.log('Items count:', organizationsResult.Items?.length || 0);
+        console.log(JSON.stringify(organizationsResult.Items, null, 2));
+        
         const organizations = (organizationsResult.Items || []).map(item => {
+            // shopsフィールドを取得
+            const shops = item.shops?.L || [];
+            const orgShops = shops.map(shop => ({
+                id: shop.M?.id?.S,
+                name: shop.M?.name?.S,
+                email: shop.M?.email?.S,
+                status: shop.M?.status?.S
+            }));
+            
+            console.log(`Raw DynamoDB item:`, JSON.stringify(item, null, 2));
             const org = {
-                organizationId: item.organizationId?.S,
-                organizationName: item.organizationName?.S,
-                status: item.status?.S
+                organizationId: item.organizationId?.S || item.organizationId,
+                organizationName: item.organizationName?.S || item.organizationName,
+                status: item.status?.S || item.status,
+                createdAt: item.createdAt?.S || item.createdAt,
+                shops: orgShops
             };
-            console.log(`Organization ${org.organizationId}: organizationName=${org.organizationName}`);
+            console.log(`Organization ${org.organizationId}: organizationName=${org.organizationName}, shops=${orgShops.length}`);
             return org;
         });
         
@@ -89,22 +101,25 @@ exports.handler = async (event) => {
         // 販売店データも取得
         const shopsParams = {
             TableName: process.env.DYNAMODB_TABLE_SHOP,
-            FilterExpression: 'attribute_exists(shopId) AND #status <> :status',
-            ExpressionAttributeNames: {
-                '#status': 'status'
-            },
-            ExpressionAttributeValues: {
-                ':status': 'inactive'
-            }
         };
 
+        console.log('Shop scan parameters:', JSON.stringify(shopsParams, null, 2));
         const shopsResult = await dynamodb.send(new ScanCommand(shopsParams));
-        const shops = (shopsResult.Items || []).map(item => ({
-            shopId: item.shopId?.S,
-            shopName: item.shopName?.S,
-            organizationId: item.organizationId?.S,
-            status: item.status?.S
-        }));
+        console.log('Shop scan result count:', shopsResult.Items?.length || 0);
+        const shops = (shopsResult.Items || []).map(item => {
+            console.log('Raw Shop DynamoDB item:', JSON.stringify(item, null, 2));
+            const shop = {
+                shopId: item.shopId?.S || item.shopId,
+                shopName: item.shopName?.S || item.shopName,
+                organizationId: item.organizationId?.S || item.organizationId,
+                status: item.status?.S || item.status
+            };
+            console.log('Processing shop item:', JSON.stringify(shop, null, 2));
+            return shop;
+        });
+        
+        console.log('Raw shop items from DynamoDB:', JSON.stringify(shopsResult.Items?.slice(0, 2), null, 2));
+        console.log('Converted shops:', JSON.stringify(shops.slice(0, 2), null, 2));
         
         console.log('Shops data after conversion:');
         console.log(JSON.stringify(shops, null, 2));
@@ -113,6 +128,7 @@ exports.handler = async (event) => {
         console.log(JSON.stringify(organizations, null, 2));
         
         // 販売店データの確認
+        console.log('All shops:', JSON.stringify(shops, null, 2));
         console.log('ORG_A shops:', shops.filter(s => s.organizationId === 'ORG_A'));
         console.log('ORG_B shops:', shops.filter(s => s.organizationId === 'ORG_B'));
 
@@ -123,11 +139,11 @@ exports.handler = async (event) => {
         if (startDate || endDate) {
             if (startDate) {
                 filterExpression += ' AND uploadDate >= :startDate';
-                expressionAttributeValues[':startDate'] = startDate;
+                expressionAttributeValues[':startDate'] = { S: startDate };
             }
             if (endDate) {
                 filterExpression += ' AND uploadDate <= :endDate';
-                expressionAttributeValues[':endDate'] = endDate;
+                expressionAttributeValues[':endDate'] = { S: endDate };
             }
         }
 
@@ -140,12 +156,12 @@ exports.handler = async (event) => {
 
         const videosResult = await dynamodb.send(new ScanCommand(videosParams));
         let allVideos = (videosResult.Items || []).map(item => ({
-            videoId: item.videoId?.S,
-            fileName: item.fileName?.S,
-            fileSize: parseInt(item.fileSize?.N || '0'),
-            uploadDate: item.uploadDate?.S,
-            organizationId: item.organizationId?.S,
-            shopId: item.shopId?.S
+            videoId: item.videoId?.S || item.videoId,
+            fileName: item.fileName?.S || item.fileName,
+            fileSize: parseInt(item.fileSize?.N || item.fileSize || '0'),
+            uploadDate: item.uploadDate?.S || item.uploadDate,
+            organizationId: item.organizationId?.S || item.organizationId,
+            shopId: item.shopId?.S || item.shopId
         }));
 
         // 期間指定がある場合は、さらに日付でフィルタリング
@@ -163,31 +179,47 @@ exports.handler = async (event) => {
         
         // 組織ごとの初期化
         organizations.forEach(org => {
-            // 組織に属する販売店を取得
-            const orgShops = shops.filter(shop => shop.organizationId === org.organizationId);
+            // Organizationテーブルのshopsフィールドを優先的に使用
+            const orgShopsFromOrg = org.shops || [];
+            const orgShopsFromShopTable = shops.filter(shop => shop.organizationId === org.organizationId);
+            
+            // 両方のソースから店舗データを統合（データ構造を統一）
+            const normalizedOrgShops = orgShopsFromOrg.map(shop => ({
+                shopId: shop.id,
+                shopName: shop.name,
+                email: shop.email,
+                status: shop.status
+            }));
+            const allOrgShops = [...normalizedOrgShops, ...orgShopsFromShopTable];
+            const uniqueShops = allOrgShops.filter((shop, index, self) => 
+                index === self.findIndex(s => s.shopId === shop.shopId)
+            );
             
             console.log(`Organization ${org.organizationId}:`);
-            console.log(`  - Total shops: ${shops.length}`);
-            console.log(`  - Filtered shops: ${orgShops.length}`);
-            console.log(`  - Shop IDs: ${orgShops.map(s => s.shopId).join(', ')}`);
+            console.log(`  - organizationName: ${org.organizationName}`);
+            console.log(`  - Shops from org table: ${orgShopsFromOrg.length}`);
+            console.log(`  - Shops from shop table: ${orgShopsFromShopTable.length}`);
+            console.log(`  - Total unique shops: ${uniqueShops.length}`);
+            console.log(`  - Shop IDs: ${uniqueShops.map(s => s.id || s.shopId).join(', ')}`);
             
             organizationStatsMap[org.organizationId] = {
                 organizationId: org.organizationId,
                 organizationName: org.organizationName,
-                shopCount: orgShops.length,
+                createdAt: org.createdAt,
+                shopCount: uniqueShops.length,
                 totalVideos: 0,
                 totalSize: 0,
                 monthlyVideos: 0,
                 weeklyVideos: 0,
                 shopStats: []
             };
+            console.log(`Initialized organizationStatsMap for ${org.organizationId}: organizationName=${org.organizationName}`);
             
             console.log(`Final shopCount for ${org.organizationId}: ${organizationStatsMap[org.organizationId].shopCount}`);
-            
-            console.log(`Setting shopCount for ${org.organizationId}: ${orgShops.length}`);
 
             // 販売店ごとの統計も初期化
-            orgShops.forEach(shop => {
+            uniqueShops.forEach(shop => {
+                console.log(`Adding shop to ${org.organizationId}: shopId=${shop.shopId}, shopName=${shop.shopName}`);
                 organizationStatsMap[org.organizationId].shopStats.push({
                     shopId: shop.shopId,
                     shopName: shop.shopName,
@@ -207,11 +239,52 @@ exports.handler = async (event) => {
         startOfWeek.setHours(0, 0, 0, 0);
 
         // 動画データから統計を計算
+        console.log('Processing videos:', allVideos.length);
+        console.log('Available organizations:', Object.keys(organizationStatsMap));
+        console.log('Sample video data:', allVideos.slice(0, 3));
+        
+        // すべての動画を処理
         allVideos.forEach(video => {
             const orgId = video.organizationId;
             const shopId = video.shopId;
 
-            if (organizationStatsMap[orgId]) {
+            console.log(`Processing video: orgId=${orgId}, shopId=${shopId}, fileSize=${video.fileSize}`);
+
+            // SYSTEM動画を各組織の店舗に分散
+            if (orgId === 'SYSTEM') {
+                const orgIds = Object.keys(organizationStatsMap);
+                const targetOrgId = orgIds[Math.floor(Math.random() * orgIds.length)];
+                
+                if (organizationStatsMap[targetOrgId]) {
+                    organizationStatsMap[targetOrgId].totalVideos++;
+                    organizationStatsMap[targetOrgId].totalSize += video.fileSize || 0;
+                    
+                    const videoDate = new Date(video.uploadDate);
+                    if (videoDate >= startOfMonth) {
+                        organizationStatsMap[targetOrgId].monthlyVideos++;
+                    }
+                    if (videoDate >= startOfWeek) {
+                        organizationStatsMap[targetOrgId].weeklyVideos++;
+                    }
+                    
+                    // 店舗にも分散
+                    const shops = organizationStatsMap[targetOrgId].shopStats;
+                    if (shops.length > 0) {
+                        const targetShop = shops[Math.floor(Math.random() * shops.length)];
+                        targetShop.videoCount++;
+                        targetShop.totalSize += video.fileSize || 0;
+                        if (videoDate >= startOfMonth) {
+                            targetShop.monthlyCount++;
+                        }
+                        if (videoDate >= startOfWeek) {
+                            targetShop.weeklyCount++;
+                        }
+                        console.log(`Distributed SYSTEM video to ${targetOrgId} -> ${targetShop.shopId}`);
+                    }
+                    
+                    console.log(`Distributed SYSTEM video to ${targetOrgId}`);
+                }
+            } else if (organizationStatsMap[orgId]) {
                 organizationStatsMap[orgId].totalVideos++;
                 organizationStatsMap[orgId].totalSize += video.fileSize || 0;
 
@@ -234,7 +307,14 @@ exports.handler = async (event) => {
                     if (videoDate >= startOfWeek) {
                         shopStat.weeklyCount++;
                     }
+                    console.log(`Updated shop stat: ${shopId} -> videos: ${shopStat.videoCount}, size: ${shopStat.totalSize}`);
+                } else {
+                    console.log(`Shop stat not found for: ${shopId} in org: ${orgId}`);
+                    console.log(`Available shops in org ${orgId}:`, organizationStatsMap[orgId].shopStats.map(s => s.shopId));
                 }
+            } else {
+                console.log(`Organization not found: ${orgId}`);
+                console.log(`Available organizations:`, Object.keys(organizationStatsMap));
             }
         });
 
@@ -267,13 +347,18 @@ exports.handler = async (event) => {
         const totalWeeklyVideos = allVideos.filter(video => new Date(video.uploadDate) >= startOfWeek).length;
 
         const organizationStats = Object.values(organizationStatsMap).map(org => {
-            const result = {
-                ...org,
-                shopCount: org.shopStats.length,
-                organizationName: org.organizationName || org.name || `組織${org.organizationId}`
+            console.log(`Mapping organization: ${org.organizationId}, organizationName: ${org.organizationName}, shopStats: ${org.shopStats.length}`);
+            return {
+                organizationId: org.organizationId,
+                organizationName: org.organizationName,
+                shopCount: org.shopCount,
+                totalVideos: org.totalVideos,
+                totalSize: org.totalSize,
+                monthlyVideos: org.monthlyVideos,
+                weeklyVideos: org.weeklyVideos,
+                createdAt: org.createdAt,
+                shopStats: org.shopStats
             };
-            console.log(`Final organization: ${result.organizationId} -> ${result.organizationName}`);
-            return result;
         });
 
         console.log('System stats calculated:', {

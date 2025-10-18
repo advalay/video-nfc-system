@@ -42,12 +42,22 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     }));
     
     const organizations = orgsResult.Items || [];
-    
+
+    // 全店舗取得
+    const shopsResult = await dynamodb.send(new ScanCommand({
+      TableName: process.env.DYNAMODB_TABLE_SHOP,
+      FilterExpression: '#status = :active',
+      ExpressionAttributeNames: { '#status': 'status' },
+      ExpressionAttributeValues: { ':active': 'active' },
+    }));
+
+    const shops = shopsResult.Items || [];
+
     // 統計計算
     const totalVideos = videos.length;
     const totalStorage = videos.reduce((sum, v) => sum + (v.fileSize || 0), 0);
     const agencyCount = organizations.filter(o => o.organizationType === 'agency').length;
-    const storeCount = organizations.filter(o => o.organizationType === 'store').length;
+    const storeCount = shops.length;
     
     // 今月のアップロード数
     const now = new Date();
@@ -81,21 +91,21 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     const organizationStats = organizations
       .filter(org => org.organizationType === 'agency')
       .map(org => {
-        // この組織に属する店舗を取得
-        const orgShops = organizations.filter(shop =>
-          shop.organizationType === 'store' && shop.parentOrganizationId === org.organizationId
+        // この組織に属する店舗を取得（Shopテーブルから）
+        const orgShops = shops.filter(shop =>
+          shop.organizationId === org.organizationId
         );
 
         // 店舗別統計を計算
         const shopStats = orgShops.map(shop => {
-          const shopVideos = videos.filter(v => v.organizationId === shop.organizationId);
+          const shopVideos = videos.filter(v => v.organizationId === shop.shopId);
           const shopMonthlyVideos = shopVideos.filter(v =>
             v.uploadDate && v.uploadDate.slice(0, 7) === currentMonth
           );
 
           return {
-            shopId: shop.organizationId,
-            shopName: shop.organizationName || shop.organizationId,
+            shopId: shop.shopId,
+            shopName: shop.shopName || shop.shopId,
             videoCount: shopVideos.length,
             totalSize: shopVideos.reduce((sum, v) => sum + (v.fileSize || 0), 0),
             monthlyCount: shopMonthlyVideos.length,
