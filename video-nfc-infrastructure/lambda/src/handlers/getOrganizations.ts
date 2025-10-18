@@ -94,22 +94,68 @@ export const handler = async (
       };
     }
 
+    // 販売店データを取得
+    const shopsResult = await docClient.send(new ScanCommand({
+      TableName: process.env.DYNAMODB_TABLE_SHOP,
+      FilterExpression: 'attribute_exists(shopId) AND (#status = :active OR attribute_not_exists(#status))',
+      ExpressionAttributeNames: { '#status': 'status' },
+      ExpressionAttributeValues: { ':active': 'active' }
+    }));
+    const shops = shopsResult.Items || [];
+
+    // 動画データを取得
+    const videosResult = await docClient.send(new ScanCommand({
+      TableName: process.env.DYNAMODB_TABLE_VIDEO,
+      FilterExpression: 'attribute_exists(videoId)'
+    }));
+    const videos = videosResult.Items || [];
+
+    // 現在の日時を取得
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+
     // 組織データを整形
     const organizations: Organization[] = result.Items
-      .filter(item => item.type === 'organization')
-      .map(item => ({
-        organizationId: item.organizationId || item.id,
-        organizationName: item.name || item.organizationName,
-        shopCount: item.shopCount || 0,
-        totalVideos: item.totalVideos || 0,
-        totalSize: item.totalSize || 0,
-        monthlyVideos: item.monthlyVideos || 0,
-        weeklyVideos: item.weeklyVideos || 0,
-        status: item.status || 'active',
-        createdAt: item.createdAt || new Date().toISOString(),
-        updatedAt: item.updatedAt,
-        shops: item.shops || []
-      }));
+      .filter(item => item.organizationId) // organizationIdが存在するもののみ
+      .map(item => {
+        const orgId = item.organizationId;
+        
+        // 販売店数を集計
+        const orgShops = shops.filter(s => s.organizationId === orgId);
+        
+        // 動画データを集計
+        const orgVideos = videos.filter(v => v.organizationId === orgId);
+        const totalVideos = orgVideos.length;
+        const totalSize = orgVideos.reduce((sum, v) => sum + (v.fileSize || 0), 0);
+        
+        // 今月・今週の動画を計算
+        const monthlyVideos = orgVideos.filter(v => {
+          const uploadDate = new Date(v.uploadDate || v.createdAt);
+          return uploadDate >= startOfMonth;
+        }).length;
+        
+        const weeklyVideos = orgVideos.filter(v => {
+          const uploadDate = new Date(v.uploadDate || v.createdAt);
+          return uploadDate >= startOfWeek;
+        }).length;
+        
+        return {
+          organizationId: orgId,
+          organizationName: item.organizationName || item.name,
+          shopCount: orgShops.length,
+          totalVideos,
+          totalSize,
+          monthlyVideos,
+          weeklyVideos,
+          status: item.status || 'active',
+          createdAt: item.createdAt || new Date().toISOString(),
+          updatedAt: item.updatedAt,
+          shops: orgShops
+        };
+      });
 
     return {
       statusCode: 200,
