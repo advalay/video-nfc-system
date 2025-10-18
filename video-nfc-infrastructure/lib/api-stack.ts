@@ -172,6 +172,39 @@ export class ApiStack extends cdk.Stack {
       description: 'Update organization (system-admin only)',
     });
 
+    // Lambda関数: createShop
+    const createShopFn = new lambda.Function(this, 'CreateShopFn', {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      handler: 'handlers/createShop.handler',
+      code: lambda.Code.fromAsset('lambda/dist'),
+      memorySize: 512,
+      timeout: cdk.Duration.seconds(29),
+      environment: commonEnvironment,
+      description: 'Create shop (organization-admin only)',
+    });
+
+    // Lambda関数: updateShop
+    const updateShopFn = new lambda.Function(this, 'UpdateShopFn', {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      handler: 'handlers/updateShop.handler',
+      code: lambda.Code.fromAsset('lambda/dist'),
+      memorySize: 512,
+      timeout: cdk.Duration.seconds(29),
+      environment: commonEnvironment,
+      description: 'Update shop (organization-admin only)',
+    });
+
+    // Lambda関数: deleteShop
+    const deleteShopFn = new lambda.Function(this, 'DeleteShopFn', {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      handler: 'handlers/deleteShop.handler',
+      code: lambda.Code.fromAsset('lambda/dist'),
+      memorySize: 512,
+      timeout: cdk.Duration.seconds(29),
+      environment: commonEnvironment,
+      description: 'Delete shop (system-admin only)',
+    });
+
     // Lambda関数: deleteOrganization
     const deleteOrganizationFn = new lambda.Function(this, 'DeleteOrganizationFn', {
       runtime: lambda.Runtime.NODEJS_20_X,
@@ -284,6 +317,9 @@ export class ApiStack extends cdk.Stack {
       createOrganizationFn,
       updateOrganizationFn,
       deleteOrganizationFn,
+      createShopFn,
+      updateShopFn,
+      deleteShopFn,
       createApprovalRequestFn,
       submitApprovalFormFn,
       getPendingApprovalsFn,
@@ -337,6 +373,9 @@ export class ApiStack extends cdk.Stack {
     createOrganizationFn.addToRolePolicy(dynamoReadWritePolicy);
     updateOrganizationFn.addToRolePolicy(dynamoReadWritePolicy);
     deleteOrganizationFn.addToRolePolicy(dynamoReadWritePolicy);
+    createShopFn.addToRolePolicy(dynamoReadWritePolicy);
+    updateShopFn.addToRolePolicy(dynamoReadWritePolicy);
+    deleteShopFn.addToRolePolicy(dynamoReadWritePolicy);
     createApprovalRequestFn.addToRolePolicy(dynamoReadWritePolicy);
     submitApprovalFormFn.addToRolePolicy(dynamoReadWritePolicy);
     getPendingApprovalsFn.addToRolePolicy(dynamoReadWritePolicy);
@@ -608,6 +647,48 @@ export class ApiStack extends cdk.Stack {
         authorizationType: apigateway.AuthorizationType.COGNITO,
         requestParameters: {
           'method.request.path.organizationId': true,
+        },
+      }
+    );
+
+    // 販売店ルート: /shops
+    const shopsResource = this.restApi.root.addResource('shops');
+
+    // POST /shops - 販売店作成（組織管理者のみ）
+    shopsResource.addMethod(
+      'POST',
+      new apigateway.LambdaIntegration(createShopFn, lambdaIntegrationOptions),
+      {
+        authorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+      }
+    );
+
+    // /shops/{shopId}
+    const shopIdResource = shopsResource.addResource('{shopId}');
+
+    // PATCH /shops/{shopId} - 販売店更新（組織管理者のみ）
+    shopIdResource.addMethod(
+      'PATCH',
+      new apigateway.LambdaIntegration(updateShopFn, lambdaIntegrationOptions),
+      {
+        authorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+        requestParameters: {
+          'method.request.path.shopId': true,
+        },
+      }
+    );
+
+    // DELETE /shops/{shopId} - 販売店削除（システム管理者のみ）
+    shopIdResource.addMethod(
+      'DELETE',
+      new apigateway.LambdaIntegration(deleteShopFn, lambdaIntegrationOptions),
+      {
+        authorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+        requestParameters: {
+          'method.request.path.shopId': true,
         },
       }
     );

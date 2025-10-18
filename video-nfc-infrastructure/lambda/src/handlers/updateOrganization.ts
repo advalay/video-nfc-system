@@ -45,19 +45,24 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       attributeValues[':name'] = body.organizationName;
     }
     
-    if (body.email) {
-      updateExpressions.push('email = :email');
-      attributeValues[':email'] = body.email;
+    if (body.contactPerson !== undefined) {
+      updateExpressions.push('contactPerson = :contactPerson');
+      attributeValues[':contactPerson'] = body.contactPerson;
     }
     
-    if (body.phone !== undefined) {
-      updateExpressions.push('phone = :phone');
-      attributeValues[':phone'] = body.phone;
+    if (body.contactEmail !== undefined) {
+      updateExpressions.push('contactEmail = :contactEmail');
+      attributeValues[':contactEmail'] = body.contactEmail;
     }
     
-    if (body.address !== undefined) {
-      updateExpressions.push('address = :address');
-      attributeValues[':address'] = body.address;
+    if (body.contactphone !== undefined) {
+      updateExpressions.push('contactphone = :contactphone');
+      attributeValues[':contactphone'] = body.contactphone;
+    }
+    
+    if (body.billingAddress !== undefined) {
+      updateExpressions.push('billingAddress = :billingAddress');
+      attributeValues[':billingAddress'] = body.billingAddress;
     }
     
     if (body.status) {
