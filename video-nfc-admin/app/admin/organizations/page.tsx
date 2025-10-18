@@ -3,143 +3,14 @@
 import { useState, useMemo, useCallback, memo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../hooks/useAuth';
+import { useSystemStats } from '../../../hooks/useSystemStats';
 import { Layout } from '../../../components/Layout';
 import { ProtectedRoute } from '../../../components/ProtectedRoute';
+import OrganizationEditModal from '../../../components/OrganizationEditModal';
 import { Building2, Plus, Edit, Trash2, Store, ChevronDown, ChevronRight, Key, Copy, Eye, EyeOff } from 'lucide-react';
-import { Organization, Shop } from '../../../types/shared';
+import { Organization, Shop, UpdateOrganizationInput } from '../../../types/shared';
+import { updateOrganization, deleteShop } from '../../../lib/api-client';
 
-// モック組織データを生成する関数
-function getMockOrganizations(): Organization[] {
-  return [
-    {
-      organizationId: 'org-001',
-      organizationName: '株式会社サンプル企業A',
-      shopCount: 3,
-      totalVideos: 67,
-      totalSize: 1.2 * 1024 * 1024 * 1024, // 1.2GB
-      monthlyVideos: 12,
-      weeklyVideos: 4,
-      status: 'active',
-      createdAt: '2024-01-15T09:00:00Z',
-      shops: [
-        {
-          shopId: 'shop-001',
-          shopName: 'サンプル店舗A-1',
-          organizationId: 'org-001',
-          totalVideos: 25,
-          totalSize: 500 * 1024 * 1024, // 500MB
-          monthlyVideos: 5,
-          weeklyVideos: 2,
-          status: 'active',
-          createdAt: '2024-01-15T09:00:00Z'
-        },
-        {
-          shopId: 'shop-002',
-          shopName: 'サンプル店舗A-2',
-          organizationId: 'org-001',
-          totalVideos: 22,
-          totalSize: 400 * 1024 * 1024, // 400MB
-          monthlyVideos: 4,
-          weeklyVideos: 1,
-          status: 'active',
-          createdAt: '2024-01-15T09:00:00Z'
-        },
-        {
-          shopId: 'shop-003',
-          shopName: 'サンプル店舗A-3',
-          organizationId: 'org-001',
-          totalVideos: 20,
-          totalSize: 300 * 1024 * 1024, // 300MB
-          monthlyVideos: 3,
-          weeklyVideos: 1,
-          status: 'active',
-          createdAt: '2024-01-15T09:00:00Z'
-        }
-      ]
-    },
-    {
-      organizationId: 'org-002',
-      organizationName: '株式会社サンプル企業B',
-      shopCount: 3,
-      totalVideos: 52,
-      totalSize: 800 * 1024 * 1024, // 800MB
-      monthlyVideos: 8,
-      weeklyVideos: 2,
-      status: 'active',
-      createdAt: '2024-02-01T10:00:00Z',
-      shops: [
-        {
-          shopId: 'shop-004',
-          shopName: 'サンプル店舗B-1',
-          organizationId: 'org-002',
-          totalVideos: 18,
-          totalSize: 300 * 1024 * 1024, // 300MB
-          monthlyVideos: 3,
-          weeklyVideos: 1,
-          status: 'active',
-          createdAt: '2024-02-01T10:00:00Z'
-        },
-        {
-          shopId: 'shop-005',
-          shopName: 'サンプル店舗B-2',
-          organizationId: 'org-002',
-          totalVideos: 17,
-          totalSize: 250 * 1024 * 1024, // 250MB
-          monthlyVideos: 3,
-          weeklyVideos: 1,
-          status: 'active',
-          createdAt: '2024-02-01T10:00:00Z'
-        },
-        {
-          shopId: 'shop-006',
-          shopName: 'サンプル店舗B-3',
-          organizationId: 'org-002',
-          totalVideos: 17,
-          totalSize: 250 * 1024 * 1024, // 250MB
-          monthlyVideos: 2,
-          weeklyVideos: 0,
-          status: 'active',
-          createdAt: '2024-02-01T10:00:00Z'
-        }
-      ]
-    },
-    {
-      organizationId: 'org-003',
-      organizationName: '株式会社サンプル企業C',
-      shopCount: 2,
-      totalVideos: 37,
-      totalSize: 400 * 1024 * 1024, // 400MB
-      monthlyVideos: 3,
-      weeklyVideos: 1,
-      status: 'active',
-      createdAt: '2024-03-01T11:00:00Z',
-      shops: [
-        {
-          shopId: 'shop-007',
-          shopName: 'サンプル店舗C-1',
-          organizationId: 'org-003',
-          totalVideos: 20,
-          totalSize: 250 * 1024 * 1024, // 250MB
-          monthlyVideos: 2,
-          weeklyVideos: 1,
-          status: 'active',
-          createdAt: '2024-03-01T11:00:00Z'
-        },
-        {
-          shopId: 'shop-008',
-          shopName: 'サンプル店舗C-2',
-          organizationId: 'org-003',
-          totalVideos: 17,
-          totalSize: 150 * 1024 * 1024, // 150MB
-          monthlyVideos: 1,
-          weeklyVideos: 0,
-          status: 'active',
-          createdAt: '2024-03-01T11:00:00Z'
-        }
-      ]
-    }
-  ];
-}
 
 // ユーティリティはコンポーネント外に定義し、再生成を避ける
 const formatFileSize = (bytes: number): string => {
@@ -173,6 +44,12 @@ const ShopRow = memo(function ShopRow({ shop, onShowCredentials, onEditShop, onD
           <Store className="w-4 h-4 text-gray-400 mr-2" />
           <span className="text-sm font-medium text-gray-900">{shop.shopName}</span>
         </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+        {shop.contactEmail || '-'}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+        {shop.contactPhone || '-'}
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{shop.totalVideos}本</td>
       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatFileSize(shop.totalSize)}</td>
@@ -220,6 +97,7 @@ type OrgRowProps = {
   org: Organization;
   expanded: boolean;
   onToggle: (orgId: string) => void;
+  onEditOrganization: (org: Organization) => void;
   onShowCredentials: (shop: Shop) => void;
   onEditShop: (shop: Shop) => void;
   onDeleteShop: (shop: Shop) => void;
@@ -229,6 +107,7 @@ const OrganizationRow = memo(function OrganizationRow({
   org, 
   expanded, 
   onToggle, 
+  onEditOrganization,
   onShowCredentials, 
   onEditShop, 
   onDeleteShop 
@@ -254,6 +133,16 @@ const OrganizationRow = memo(function OrganizationRow({
           </button>
           <Building2 className="w-5 h-5 text-blue-600" />
           <span className="font-medium text-gray-900">{org.organizationName}</span>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={(e) => { e.stopPropagation(); onEditOrganization(org); }}
+            className="text-blue-600 hover:text-blue-900 p-1"
+            title="組織情報を編集"
+          >
+            <Edit className="w-4 h-4" />
+          </button>
         </div>
 
         <div className="flex items-center space-x-6 text-sm">
@@ -285,6 +174,12 @@ const OrganizationRow = memo(function OrganizationRow({
                 <tr>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     店舗名
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    連絡先メール
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    連絡先電話
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     総動画数
@@ -331,46 +226,21 @@ export default function OrganizationsPage() {
   const router = useRouter();
   const { user } = useAuth();
 
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
   const [expandedOrgs, setExpandedOrgs] = useState<Set<string>>(new Set());
   const [showCredentialsModal, setShowCredentialsModal] = useState(false);
   const [selectedShop, setSelectedShop] = useState<Shop | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedOrganization, setSelectedOrganization] = useState<Organization | null>(null);
 
   // システム管理者の権限チェック
   const isSystemAdmin = user?.groups?.includes('system-admin');
 
-  // 組織データを取得
-  useEffect(() => {
-    const fetchOrganizations = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        
-        // 開発環境ではモックデータを使用
-        if (process.env.NODE_ENV === 'development') {
-          setOrganizations(getMockOrganizations());
-          return;
-        }
-        
-        // 本番環境ではAPI呼び出し
-        const { apiGet } = await import('../../../lib/api-client');
-        const response = await apiGet<{ organizations: Organization[] }>('/organizations');
-        setOrganizations(response.organizations || []);
-      } catch (err: any) {
-        console.error('Error fetching organizations:', err);
-        setError(err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (isSystemAdmin) {
-      fetchOrganizations();
-    }
-  }, [isSystemAdmin]);
+  // システム統計データを取得（組織管理でも同じデータを使用）
+  const { data: systemStats, isLoading, error, refetch } = useSystemStats();
+  
+  // 組織データを抽出
+  const organizations = systemStats?.organizationStats || [];
 
   // 同時に1組織のみ展開するように制限
   const toggleOrganization = useCallback((orgId: string) => {
@@ -390,14 +260,29 @@ export default function OrganizationsPage() {
   }, []);
 
   const handleEditShop = useCallback((shop: Shop) => {
-    // TODO: 店舗編集モーダルを開く
+    // 販売店編集はPhase 4で実装予定
+    alert('販売店編集機能は、パートナー企業用の販売店管理ページで利用できます。\n\nPhase 4で実装予定です。');
   }, []);
 
-  const handleDeleteShop = useCallback((shop: Shop) => {
-    if (confirm(`「${shop.shopName}」を削除しますか？`)) {
-      // TODO: 店舗削除のAPI呼び出し
+  const handleDeleteShop = useCallback(async (shop: Shop) => {
+    // マネタイズへの影響を警告
+    const hasVideos = shop.totalVideos > 0;
+    const warningMessage = hasVideos 
+      ? `「${shop.shopName}」を削除しますか？\n\n⚠️ 警告: この販売店には${shop.totalVideos}本の動画が登録されています。\n削除すると、これらの動画データも失われ、マネタイズに影響する可能性があります。\n\n本当に削除しますか？`
+      : `「${shop.shopName}」を削除しますか？`;
+
+    if (confirm(warningMessage)) {
+      try {
+        await deleteShop(shop.shopId);
+        // データを再取得
+        await refetch();
+        alert(`販売店「${shop.shopName}」を削除しました`);
+      } catch (error: any) {
+        console.error('Error deleting shop:', error);
+        alert(`削除に失敗しました: ${error.message || '不明なエラーが発生しました'}`);
+      }
     }
-  }, []);
+  }, [refetch]);
 
   const handleCopyCredentials = useCallback(async (text: string) => {
     try {
@@ -414,6 +299,23 @@ export default function OrganizationsPage() {
       alert('パスワードをリセットしました');
     }
   }, []);
+
+  const handleEditOrganization = useCallback((organization: Organization) => {
+    setSelectedOrganization(organization);
+    setShowEditModal(true);
+  }, []);
+
+  const handleSaveOrganization = useCallback(async (organizationId: string, data: UpdateOrganizationInput) => {
+    try {
+      await updateOrganization(organizationId, data);
+      // データを再取得
+      await refetch();
+      alert('組織情報を更新しました');
+    } catch (error: any) {
+      console.error('Error updating organization:', error);
+      throw new Error(error.message || '組織情報の更新に失敗しました');
+    }
+  }, [refetch]);
 
   if (!isSystemAdmin) {
     return (
@@ -495,6 +397,7 @@ export default function OrganizationsPage() {
                       org={org}
                       expanded={expandedOrgs.has(org.organizationId)}
                       onToggle={toggleOrganization}
+                      onEditOrganization={handleEditOrganization}
                       onShowCredentials={handleShowCredentials}
                       onEditShop={handleEditShop}
                       onDeleteShop={handleDeleteShop}
@@ -599,6 +502,14 @@ export default function OrganizationsPage() {
             </div>
           </div>
         )}
+
+        {/* 組織編集モーダル */}
+        <OrganizationEditModal
+          isOpen={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          organization={selectedOrganization}
+          onSave={handleSaveOrganization}
+        />
       </Layout>
     </ProtectedRoute>
   );

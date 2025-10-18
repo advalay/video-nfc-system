@@ -76,9 +76,7 @@ export interface Organization {
   organizationName: string;
   parentId: string | null;
   level: number;
-  email: string;
-  phone: string;
-  address: string;
+  contactphone: string;
   status: 'active' | 'suspended';
   unitPrice: number;
   totalVideos: number;
@@ -127,17 +125,13 @@ export interface CreateOrganizationInput {
   organizationType: 'agency' | 'store';
   organizationName: string;
   parentId?: string;
-  email: string;
-  phone?: string;
-  address?: string;
+  contactphone?: string;
   unitPrice?: number;
 }
 
 export interface UpdateOrganizationInput {
   organizationName?: string;
-  email?: string;
-  phone?: string;
-  address?: string;
+  contactphone?: string;
   status?: 'active' | 'suspended';
   unitPrice?: number;
 }

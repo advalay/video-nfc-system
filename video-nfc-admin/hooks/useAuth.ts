@@ -41,14 +41,23 @@ export function useAuth(): UseAuthResult {
       // Cognitoのカスタム属性から組織情報を取得
       const attributes = (currentUser as any).attributes || {};
       
-      setUser({
+      const userData = {
         id: currentUser.username,
         email: attributes.email || currentUser.username,
         groups: groups,
         organizationId: attributes['custom:organizationId'],
         shopId: attributes['custom:shopId'],
         organizationName: attributes['custom:organizationName'],
+      };
+      
+      console.log('useAuth Debug:', {
+        currentUser: currentUser.username,
+        attributes: attributes,
+        groups: groups,
+        userData: userData
       });
+      
+      setUser(userData);
       setIsLoading(false);
     } catch (error) {
       // 未認証の場合
