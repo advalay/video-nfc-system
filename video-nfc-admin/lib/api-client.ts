@@ -160,12 +160,6 @@ export async function updateOrganization(
   return apiPut<any>(`/organizations/${organizationId}`, data);
 }
 
-/**
- * 販売店を作成
- */
-export async function createShop(data: { shopName: string; organizationId: string; contactEmail?: string; contactPhone?: string }): Promise<any> {
-  return apiPost<any>('/shops', data);
-}
 
 /**
  * 販売店情報を更新
@@ -210,6 +204,25 @@ export async function createOrganization(data: {
   loginUrl: string;
 }> {
   return apiPost<any>('/organizations', data);
+}
+
+/**
+ * 販売店を作成
+ */
+export async function createShop(data: {
+  shopName: string;
+  organizationId: string;
+  email: string;
+  contactPhone?: string;
+  contactEmail?: string;
+}): Promise<{
+  shopId: string;
+  shopName: string;
+  email: string;
+  tempPassword: string;
+  loginUrl: string;
+}> {
+  return apiPost<any>('/shops', data);
 }
 
 // Force rebuild Sat Oct 18 00:17:19 JST 2025

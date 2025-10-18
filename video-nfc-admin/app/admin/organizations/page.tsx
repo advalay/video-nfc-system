@@ -9,6 +9,8 @@ import { ProtectedRoute } from '../../../components/ProtectedRoute';
 import OrganizationEditModal from '../../../components/OrganizationEditModal';
 import CreateOrganizationModal from '../../../components/CreateOrganizationModal';
 import OrganizationCreatedModal from '../../../components/OrganizationCreatedModal';
+import CreateShopModal from '../../../components/CreateShopModal';
+import ShopCreatedModal from '../../../components/ShopCreatedModal';
 import { Building2, Plus, Edit, Trash2, Store, ChevronDown, ChevronRight, Key, Copy, Eye, EyeOff } from 'lucide-react';
 import { Organization, Shop, UpdateOrganizationInput } from '../../../types/shared';
 import { updateOrganization, deleteShop } from '../../../lib/api-client';
@@ -100,6 +102,7 @@ type OrgRowProps = {
   expanded: boolean;
   onToggle: (orgId: string) => void;
   onEditOrganization: (org: Organization) => void;
+  onCreateShop: (org: Organization) => void;
   onShowCredentials: (shop: Shop) => void;
   onEditShop: (shop: Shop) => void;
   onDeleteShop: (shop: Shop) => void;
@@ -110,6 +113,7 @@ const OrganizationRow = memo(function OrganizationRow({
   expanded, 
   onToggle, 
   onEditOrganization,
+  onCreateShop,
   onShowCredentials, 
   onEditShop, 
   onDeleteShop 
@@ -138,6 +142,13 @@ const OrganizationRow = memo(function OrganizationRow({
         </div>
 
         <div className="flex items-center space-x-2">
+          <button
+            onClick={(e) => { e.stopPropagation(); onCreateShop(org); }}
+            className="text-green-600 hover:text-green-900 p-1"
+            title="販売店を追加"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
           <button
             onClick={(e) => { e.stopPropagation(); onEditOrganization(org); }}
             className="text-blue-600 hover:text-blue-900 p-1"
@@ -246,6 +257,18 @@ export default function OrganizationsPage() {
     loginUrl: string;
   } | null>(null);
 
+  // 販売店作成モーダル関連
+  const [showCreateShopModal, setShowCreateShopModal] = useState(false);
+  const [showShopCreatedModal, setShowShopCreatedModal] = useState(false);
+  const [selectedOrgForShop, setSelectedOrgForShop] = useState<Organization | null>(null);
+  const [createdShopInfo, setCreatedShopInfo] = useState<{
+    shopId: string;
+    shopName: string;
+    email: string;
+    tempPassword: string;
+    loginUrl: string;
+  } | null>(null);
+
   // システム管理者の権限チェック
   const isSystemAdmin = user?.groups?.includes('system-admin');
 
@@ -344,6 +367,26 @@ export default function OrganizationsPage() {
     refetch();
   }, [refetch]);
 
+  // 販売店作成開始
+  const handleCreateShop = useCallback((organization: Organization) => {
+    setSelectedOrgForShop(organization);
+    setShowCreateShopModal(true);
+  }, []);
+
+  // 販売店作成成功時のハンドラー
+  const handleShopCreated = useCallback((shopInfo: {
+    shopId: string;
+    shopName: string;
+    email: string;
+    tempPassword: string;
+    loginUrl: string;
+  }) => {
+    setCreatedShopInfo(shopInfo);
+    setShowShopCreatedModal(true);
+    // データを再取得
+    refetch();
+  }, [refetch]);
+
   if (!isSystemAdmin) {
     return (
       <ProtectedRoute>
@@ -425,6 +468,7 @@ export default function OrganizationsPage() {
                       expanded={expandedOrgs.has(org.organizationId)}
                       onToggle={toggleOrganization}
                       onEditOrganization={handleEditOrganization}
+                      onCreateShop={handleCreateShop}
                       onShowCredentials={handleShowCredentials}
                       onEditShop={handleEditShop}
                       onDeleteShop={handleDeleteShop}
@@ -546,11 +590,25 @@ export default function OrganizationsPage() {
         />
 
         {/* 組織作成完了モーダル */}
-        <OrganizationCreatedModal
-          isOpen={showCreatedModal}
-          onClose={() => setShowCreatedModal(false)}
-          organizationInfo={createdOrganizationInfo}
-        />
+            <OrganizationCreatedModal
+              isOpen={showCreatedModal}
+              onClose={() => setShowCreatedModal(false)}
+              organizationInfo={createdOrganizationInfo}
+            />
+
+            <CreateShopModal
+              isOpen={showCreateShopModal}
+              onClose={() => setShowCreateShopModal(false)}
+              organizationId={selectedOrgForShop?.organizationId || ''}
+              organizationName={selectedOrgForShop?.organizationName || ''}
+              onSuccess={handleShopCreated}
+            />
+
+            <ShopCreatedModal
+              isOpen={showShopCreatedModal}
+              onClose={() => setShowShopCreatedModal(false)}
+              shopInfo={createdShopInfo}
+            />
       </Layout>
     </ProtectedRoute>
   );
