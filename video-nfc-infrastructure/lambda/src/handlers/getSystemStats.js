@@ -250,41 +250,14 @@ exports.handler = async (event) => {
 
             console.log(`Processing video: orgId=${orgId}, shopId=${shopId}, fileSize=${video.fileSize}`);
 
-            // SYSTEM動画を各組織の店舗に分散
+            // SYSTEM動画はスキップ（カウントしない）
             if (orgId === 'SYSTEM') {
-                const orgIds = Object.keys(organizationStatsMap);
-                const targetOrgId = orgIds[Math.floor(Math.random() * orgIds.length)];
-                
-                if (organizationStatsMap[targetOrgId]) {
-                    organizationStatsMap[targetOrgId].totalVideos++;
-                    organizationStatsMap[targetOrgId].totalSize += video.fileSize || 0;
-                    
-                    const videoDate = new Date(video.uploadDate);
-                    if (videoDate >= startOfMonth) {
-                        organizationStatsMap[targetOrgId].monthlyVideos++;
-                    }
-                    if (videoDate >= startOfWeek) {
-                        organizationStatsMap[targetOrgId].weeklyVideos++;
-                    }
-                    
-                    // 店舗にも分散
-                    const shops = organizationStatsMap[targetOrgId].shopStats;
-                    if (shops.length > 0) {
-                        const targetShop = shops[Math.floor(Math.random() * shops.length)];
-                        targetShop.videoCount++;
-                        targetShop.totalSize += video.fileSize || 0;
-                        if (videoDate >= startOfMonth) {
-                            targetShop.monthlyCount++;
-                        }
-                        if (videoDate >= startOfWeek) {
-                            targetShop.weeklyCount++;
-                        }
-                        console.log(`Distributed SYSTEM video to ${targetOrgId} -> ${targetShop.shopId}`);
-                    }
-                    
-                    console.log(`Distributed SYSTEM video to ${targetOrgId}`);
-                }
-            } else if (organizationStatsMap[orgId]) {
+                console.log('Skipping SYSTEM video:', video.videoId);
+                return;
+            }
+            
+            // 組織IDが存在する動画のみカウント
+            if (organizationStatsMap[orgId]) {
                 organizationStatsMap[orgId].totalVideos++;
                 organizationStatsMap[orgId].totalSize += video.fileSize || 0;
 
