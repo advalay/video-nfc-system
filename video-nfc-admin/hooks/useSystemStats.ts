@@ -8,7 +8,9 @@ export type { OrganizationStat };
 
 // バックエンドのレスポンスをフロントエンドの型に変換
 function transformBackendResponse(backendData: any): SystemStats {
-  return {
+  console.log('Backend data received:', JSON.stringify(backendData, null, 2));
+  
+  const result = {
     totalOrganizations: backendData.totalOrganizations || 0,
     totalShops: backendData.totalShops || 0,
     totalVideos: backendData.totalVideos || 0,
@@ -16,29 +18,38 @@ function transformBackendResponse(backendData: any): SystemStats {
     totalMonthlyVideos: backendData.totalMonthlyVideos || 0,
     totalWeeklyVideos: backendData.totalWeeklyVideos || 0,
     monthlyTrend: backendData.monthlyTrend || [],
-    organizationStats: (backendData.organizationStats || []).map((orgStat: OrganizationStat): Organization => ({
-      organizationId: orgStat.organizationId,
-      organizationName: orgStat.organizationName,
-      shopCount: orgStat.totalShops || 0,
-      totalVideos: orgStat.totalVideos || 0,
-      totalSize: orgStat.totalSize || 0,
-      monthlyVideos: orgStat.monthlyVideos || 0,
-      weeklyVideos: orgStat.weeklyVideos || 0,
-      status: 'active',
-      createdAt: new Date().toISOString(),
-      shops: (orgStat.shopStats || []).map((shopStat): Shop => ({
-        shopId: shopStat.shopId,
-        shopName: shopStat.shopName,
+    organizationStats: (backendData.organizationStats || []).map((orgStat: OrganizationStat): Organization => {
+      console.log('Processing organization:', orgStat.organizationId, 'shopStats:', orgStat.shopStats);
+      
+      return {
         organizationId: orgStat.organizationId,
-        totalVideos: shopStat.videoCount || 0,
-        totalSize: shopStat.totalSize || 0,
-        monthlyVideos: shopStat.monthlyCount || 0,
-        weeklyVideos: shopStat.weeklyCount || 0,
+        organizationName: orgStat.organizationName,
+        shopCount: orgStat.shopStats?.length || 0,
+        totalVideos: orgStat.totalVideos || 0,
+        totalSize: orgStat.totalSize || 0,
+        monthlyVideos: orgStat.monthlyVideos || 0,
+        weeklyVideos: orgStat.weeklyVideos || 0,
         status: 'active',
-        createdAt: new Date().toISOString()
-      }))
-    }))
+        createdAt: new Date().toISOString(),
+        shops: (orgStat.shopStats || []).map((shopStat): Shop => ({
+          shopId: shopStat.shopId,
+          shopName: shopStat.shopName,
+          organizationId: orgStat.organizationId,
+          contactEmail: shopStat.contactEmail || '',
+          contactPhone: shopStat.contactPhone || '',
+          totalVideos: shopStat.videoCount || 0,
+          totalSize: shopStat.totalSize || 0,
+          monthlyVideos: shopStat.monthlyCount || 0,
+          weeklyVideos: shopStat.weeklyCount || 0,
+          status: 'active',
+          createdAt: new Date().toISOString()
+        }))
+      };
+    })
   };
+  
+  console.log('Transformed result:', JSON.stringify(result, null, 2));
+  return result;
 }
 
 export function useSystemStats(startDate?: string, endDate?: string) {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../hooks/useAuth';
 import { useShopStats } from '../../../hooks/useShopStats';
@@ -28,7 +28,52 @@ export default function ShopStatsPage() {
   const [endDate, setEndDate] = useState<string>('');
   const [showFilter, setShowFilter] = useState(false);
   
+  // 販売店名フィルターの状態
+  const [shopNameFilter, setShopNameFilter] = useState<string>('');
+  
+  // ソートの状態
+  const [sortBy, setSortBy] = useState<'name' | 'videos' | 'size' | 'monthly'>('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  
   const { stats, isLoading, error, refetch } = useShopStats();
+
+  // フィルタリングとソート機能
+  const filteredAndSortedShops = useMemo(() => {
+    if (!stats?.shops) return [];
+    
+    let filteredShops = stats.shops;
+    
+    // 販売店名でフィルタリング
+    if (shopNameFilter) {
+      filteredShops = filteredShops.filter(shop => 
+        shop.shopName.toLowerCase().includes(shopNameFilter.toLowerCase())
+      );
+    }
+    
+    // ソート
+    filteredShops.sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortBy) {
+        case 'name':
+          comparison = a.shopName.localeCompare(b.shopName);
+          break;
+        case 'videos':
+          comparison = a.totalVideos - b.totalVideos;
+          break;
+        case 'size':
+          comparison = a.totalSize - b.totalSize;
+          break;
+        case 'monthly':
+          comparison = a.monthlyVideos - b.monthlyVideos;
+          break;
+      }
+      
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+    
+    return filteredShops;
+  }, [stats?.shops, shopNameFilter, sortBy, sortOrder]);
 
   // 期間フィルターのリセット
   const resetFilter = () => {
@@ -39,6 +84,8 @@ export default function ShopStatsPage() {
   // 期間フィルターの適用
   const applyFilter = () => {
     setShowFilter(false);
+    // フィルターが適用されたことを示す（実際の実装では、フィルター条件に基づいてデータを再取得）
+    console.log('Filter applied:', { startDate, endDate });
   };
 
   const formatFileSize = (bytes: number): string => {
@@ -79,12 +126,12 @@ export default function ShopStatsPage() {
     }
   };
 
-  if (!user?.groups?.includes('shop-user') && !user?.groups?.includes('organization-admin')) {
+  if (!user?.groups?.includes('shop-user') && !user?.groups?.includes('organization-admin') && !user?.groups?.includes('system-admin')) {
     return (
       <ProtectedRoute>
         <Layout>
           <div className="text-center py-8">
-            <p className="text-gray-600">このページは販売店ユーザーまたはパートナー親のみアクセス可能です。</p>
+            <p className="text-gray-600">このページは販売店ユーザー、パートナー企業、またはシステム管理者のみアクセス可能です。</p>
           </div>
         </Layout>
       </ProtectedRoute>
@@ -144,13 +191,6 @@ export default function ShopStatsPage() {
               <p className="text-gray-600 mt-1">店舗の利用状況とパフォーマンス</p>
             </div>
             <div className="flex items-center space-x-4">
-              <button
-                onClick={() => setShowFilter(true)}
-                className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-              >
-                <Filter className="w-4 h-4" />
-                <span>期間フィルター</span>
-              </button>
               <button
                 onClick={() => refetch()}
                 className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -216,11 +256,11 @@ export default function ShopStatsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex items-center justify-between">
-                <div>
+                <div className="flex-1">
                   <p className="text-sm font-medium text-gray-600">総動画数</p>
                   <p className="text-2xl font-bold text-gray-900 mt-1">{formatNumber(stats.totalVideos)}</p>
                 </div>
-                <div className="p-3 rounded-lg text-blue-600 bg-blue-50">
+                <div className="p-3 rounded-lg text-blue-600 bg-blue-50 flex-shrink-0">
                   <Video className="w-6 h-6" />
                 </div>
               </div>
@@ -228,11 +268,11 @@ export default function ShopStatsPage() {
 
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex items-center justify-between">
-                <div>
+                <div className="flex-1">
                   <p className="text-sm font-medium text-gray-600">総容量</p>
                   <p className="text-2xl font-bold text-gray-900 mt-1">{formatFileSize(stats.totalSize)}</p>
                 </div>
-                <div className="p-3 rounded-lg text-green-600 bg-green-50">
+                <div className="p-3 rounded-lg text-green-600 bg-green-50 flex-shrink-0">
                   <HardDrive className="w-6 h-6" />
                 </div>
               </div>
@@ -240,11 +280,11 @@ export default function ShopStatsPage() {
 
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex items-center justify-between">
-                <div>
+                <div className="flex-1">
                   <p className="text-sm font-medium text-gray-600">今月の動画</p>
                   <p className="text-2xl font-bold text-gray-900 mt-1">{formatNumber(stats.monthlyVideos)}</p>
                 </div>
-                <div className="p-3 rounded-lg text-purple-600 bg-purple-50">
+                <div className="p-3 rounded-lg text-purple-600 bg-purple-50 flex-shrink-0">
                   <Calendar className="w-6 h-6" />
                 </div>
               </div>
@@ -252,59 +292,112 @@ export default function ShopStatsPage() {
 
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex items-center justify-between">
-                <div>
+                <div className="flex-1">
                   <p className="text-sm font-medium text-gray-600">今週の動画</p>
                   <p className="text-2xl font-bold text-gray-900 mt-1">{formatNumber(stats.weeklyVideos)}</p>
                 </div>
-                <div className="p-3 rounded-lg text-orange-600 bg-orange-50">
+                <div className="p-3 rounded-lg text-orange-600 bg-orange-50 flex-shrink-0">
                   <Clock className="w-6 h-6" />
                 </div>
               </div>
             </div>
           </div>
 
-          {/* 動画一覧 */}
+          {/* 販売店一覧 */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">最近の動画</h2>
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-900">販売店一覧</h2>
+              
+              {/* フィルター機能を右側に配置 */}
+              <div className="flex items-center space-x-3">
+                {/* 販売店名フィルター */}
+                <input
+                  type="text"
+                  placeholder="販売店名で検索..."
+                  value={shopNameFilter}
+                  onChange={(e) => setShopNameFilter(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                />
+                
+                {/* ソート機能 */}
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as 'name' | 'videos' | 'size' | 'monthly')}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                >
+                  <option value="name">名前順</option>
+                  <option value="videos">動画数順</option>
+                  <option value="size">容量順</option>
+                  <option value="monthly">今月の動画数順</option>
+                </select>
+                
+                {/* ソート順序ボタン */}
+                <div className="flex border border-gray-300 rounded-lg overflow-hidden">
+                  <button
+                    onClick={() => setSortOrder('asc')}
+                    className={`px-3 py-2 text-sm ${
+                      sortOrder === 'asc' 
+                        ? 'bg-blue-600 text-white' 
+                        : 'bg-white text-gray-700 hover:bg-gray-50'
+                    }`}
+                    title="少ない順"
+                  >
+                    少ない順
+                  </button>
+                  <button
+                    onClick={() => setSortOrder('desc')}
+                    className={`px-3 py-2 text-sm border-l border-gray-300 ${
+                      sortOrder === 'desc' 
+                        ? 'bg-blue-600 text-white' 
+                        : 'bg-white text-gray-700 hover:bg-gray-50'
+                    }`}
+                    title="多い順"
+                  >
+                    多い順
+                  </button>
+                </div>
+                
+                <button
+                  onClick={() => setShowFilter(true)}
+                  className="flex items-center space-x-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm"
+                >
+                  <Filter className="w-4 h-4" />
+                  <span>期間</span>
+                </button>
+              </div>
             </div>
             <div className="p-6">
-              <div className="space-y-4">
-                {stats.recentVideos.map((video) => (
-                  <div key={video.videoId} className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
-                    <div className="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <Video className="w-8 h-8 text-blue-600" />
+              {filteredAndSortedShops && filteredAndSortedShops.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredAndSortedShops.map((shop) => (
+                    <div key={shop.shopId} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                      <h3 className="font-semibold text-gray-900 mb-3">{shop.shopName}</h3>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">総動画数</span>
+                          <span className="font-medium">{shop.totalVideos}本</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">総容量</span>
+                          <span className="font-medium">{formatFileSize(shop.totalSize)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">今月</span>
+                          <span className="font-medium">{shop.monthlyVideos}本</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">今週</span>
+                          <span className="font-medium">{shop.weeklyVideos}本</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <h3 className="font-medium text-gray-900">{video.title}</h3>
-                      <p className="text-sm text-gray-600">{formatFileSize(video.fileSize)} • {formatTimeAgo(video.uploadDate)}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm text-gray-600">ファイル名</p>
-                      <p className="font-medium text-gray-900 text-xs">{video.fileName}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* パフォーマンス指標 */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">パフォーマンス指標</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">98.5%</div>
-                <div className="text-sm text-gray-600">動画再生成功率</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">2.3s</div>
-                <div className="text-sm text-gray-600">平均読み込み時間</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-purple-600">4.2</div>
-                <div className="text-sm text-gray-600">平均視聴時間（分）</div>
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  販売店データがありません
+                </div>
+              )}
             </div>
           </div>
         </div>

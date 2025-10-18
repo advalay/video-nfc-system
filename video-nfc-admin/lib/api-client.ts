@@ -130,10 +130,65 @@ export async function apiPut<T>(endpoint: string, body?: any): Promise<T> {
 }
 
 /**
+ * PATCH リクエスト
+ */
+export async function apiPatch<T>(endpoint: string, body?: any): Promise<T> {
+  return apiClient<T>(endpoint, {
+    method: 'PATCH',
+    body: body ? JSON.stringify(body) : undefined,
+  });
+}
+
+/**
  * DELETE リクエスト
  */
 export async function apiDelete<T>(endpoint: string): Promise<T> {
   return apiClient<T>(endpoint, { method: 'DELETE' });
+}
+
+// ========================================
+// 組織・販売店管理用API関数
+// ========================================
+
+/**
+ * 組織情報を更新
+ */
+export async function updateOrganization(
+  organizationId: string, 
+  data: { organizationName?: string; contactPerson?: string; contactEmail?: string; contactphone?: string; billingAddress?: string; status?: string }
+): Promise<any> {
+  return apiPut<any>(`/organizations/${organizationId}`, data);
+}
+
+/**
+ * 販売店を作成
+ */
+export async function createShop(data: { shopName: string; organizationId: string; contactEmail?: string; contactPhone?: string }): Promise<any> {
+  return apiPost<any>('/shops', data);
+}
+
+/**
+ * 販売店情報を更新
+ */
+export async function updateShop(
+  shopId: string, 
+  data: { shopName?: string; contactEmail?: string; contactPhone?: string; status?: string }
+): Promise<any> {
+  return apiPatch<any>(`/shops/${shopId}`, data);
+}
+
+/**
+ * 販売店を削除
+ */
+export async function deleteShop(shopId: string): Promise<any> {
+  return apiDelete<any>(`/shops/${shopId}`);
+}
+
+/**
+ * システム統計を取得
+ */
+export async function getSystemStats(): Promise<any> {
+  return apiGet<any>('/system-stats');
 }
 
 // Force rebuild Sat Oct 18 00:17:19 JST 2025

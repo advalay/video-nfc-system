@@ -21,6 +21,9 @@ import {
   Store,
   TrendingUp,
   Clock,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react';
 
 // ユーティリティはコンポーネント外に定義し、再生成を避ける
@@ -146,12 +149,26 @@ const OrganizationStats = memo(({
             </div>
             <div>
               <h3 className="text-lg font-semibold text-gray-900">
-                {organization.organizationName || '組織' + organization.organizationId}
+                {organization.organizationName || organization.organizationId}
               </h3>
-              <p className="text-sm text-gray-600">{organization.shopCount}店舗</p>
+              <div className="flex items-center space-x-3">
+                {organization.createdAt && (
+                  <p className="text-xs text-gray-500">
+                    登録: {new Date(organization.createdAt).toLocaleDateString('ja-JP', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric'
+                    })}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex items-center space-x-6">
+            <div className="text-right">
+              <p className="text-sm text-gray-600">店舗数</p>
+              <p className="text-lg font-semibold text-gray-900">{organization.shopCount}</p>
+            </div>
             <div className="text-right">
               <p className="text-sm text-gray-600">総動画数</p>
               <p className="text-lg font-semibold text-gray-900">{formatNumber(organization.totalVideos)}</p>
@@ -212,6 +229,10 @@ const OrganizationStats = memo(({
   );
 });
 
+// 並び替えの型定義
+type SortField = 'organizationName' | 'shopCount' | 'totalVideos' | 'totalSize' | 'monthlyVideos' | 'createdAt';
+type SortDirection = 'asc' | 'desc';
+
 export default function SystemStatsPage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -220,6 +241,8 @@ export default function SystemStatsPage() {
   const [endDate, setEndDate] = useState<string>('');
   const [showFilter, setShowFilter] = useState(false);
   const [expandedOrgs, setExpandedOrgs] = useState<Set<string>>(new Set());
+  const [sortField, setSortField] = useState<SortField>('organizationName');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   const { data: stats, isLoading, error, refetch } = useSystemStats();
 
@@ -246,6 +269,69 @@ export default function SystemStatsPage() {
       return newExpanded;
     });
   }, []);
+
+  // 並び替え処理
+  const handleSort = useCallback((field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  }, [sortField]);
+
+  // 並び替えされた組織データ
+  const sortedOrganizations = useMemo(() => {
+    if (!stats?.organizationStats) return [];
+    
+    return [...stats.organizationStats].sort((a, b) => {
+      let aValue: string | number;
+      let bValue: string | number;
+      
+      switch (sortField) {
+        case 'organizationName':
+          aValue = a.organizationName || a.organizationId;
+          bValue = b.organizationName || b.organizationId;
+          break;
+        case 'shopCount':
+          aValue = a.shopCount || 0;
+          bValue = b.shopCount || 0;
+          break;
+        case 'totalVideos':
+          aValue = a.totalVideos || 0;
+          bValue = b.totalVideos || 0;
+          break;
+        case 'totalSize':
+          aValue = a.totalSize || 0;
+          bValue = b.totalSize || 0;
+          break;
+        case 'monthlyVideos':
+          aValue = a.monthlyVideos || 0;
+          bValue = b.monthlyVideos || 0;
+          break;
+        case 'createdAt':
+          aValue = new Date(a.createdAt || 0).getTime();
+          bValue = new Date(b.createdAt || 0).getTime();
+          break;
+        default:
+          return 0;
+      }
+      
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return sortDirection === 'asc' 
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+      
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return sortDirection === 'asc' 
+          ? aValue - bValue
+          : bValue - aValue;
+      }
+      
+      return 0;
+    });
+  }, [stats?.organizationStats, sortField, sortDirection]);
 
   if (!user?.groups?.includes('system-admin')) {
     return (
@@ -425,8 +511,45 @@ export default function SystemStatsPage() {
               </div>
             </div>
             
+            {/* 並び替えコントロール */}
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-medium text-gray-700">並び替え</h3>
+                <ArrowUpDown className="w-4 h-4 text-gray-500" />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { field: 'organizationName' as SortField, label: '組織名' },
+                  { field: 'shopCount' as SortField, label: '店舗数' },
+                  { field: 'totalVideos' as SortField, label: '動画数' },
+                  { field: 'totalSize' as SortField, label: '容量' },
+                  { field: 'monthlyVideos' as SortField, label: '今月の動画' },
+                  { field: 'createdAt' as SortField, label: '登録日' },
+                ].map(({ field, label }) => (
+                  <button
+                    key={field}
+                    onClick={() => handleSort(field)}
+                    className={`flex items-center space-x-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                      sortField === field
+                        ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                        : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span>{label}</span>
+                    {sortField === field && (
+                      sortDirection === 'asc' ? (
+                        <ArrowUp className="w-3 h-3" />
+                      ) : (
+                        <ArrowDown className="w-3 h-3" />
+                      )
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
             <div className="space-y-4">
-              {stats.organizationStats.map((organization) => (
+              {sortedOrganizations.map((organization) => (
                 <OrganizationStats
                   key={organization.organizationId}
                   organization={organization}

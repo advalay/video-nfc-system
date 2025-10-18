@@ -5,6 +5,8 @@ export interface Shop {
   shopId: string;
   shopName: string;
   organizationId: string;
+  contactEmail?: string;
+  contactPhone?: string;
   totalVideos: number;
   totalSize: number;
   monthlyVideos: number;
@@ -18,6 +20,10 @@ export interface Shop {
 export interface Organization {
   organizationId: string;
   organizationName: string;
+  contactPerson?: string;
+  contactEmail?: string;
+  contactphone?: string;
+  billingAddress?: string;
   shopCount: number;
   totalVideos: number;
   totalSize: number;
@@ -60,6 +66,8 @@ export interface OrganizationStat {
     totalSize: number;
     monthlyCount: number;
     weeklyCount: number;
+    contactEmail?: string;
+    contactPhone?: string;
   }>;
 }
 
@@ -101,6 +109,36 @@ export interface PaginationInfo {
 export interface ListResponse<T> {
   items: T[];
   pagination: PaginationInfo;
+}
+
+// ========================================
+// 組織・販売店の編集用型定義
+// ========================================
+
+// 組織更新用の入力型
+export interface UpdateOrganizationInput {
+  organizationName?: string;
+  contactPerson?: string;
+  contactEmail?: string;
+  contactphone?: string;
+  billingAddress?: string;
+  status?: 'active' | 'inactive' | 'suspended';
+}
+
+// 販売店作成用の入力型
+export interface CreateShopInput {
+  shopName: string;
+  organizationId: string;
+  contactEmail?: string;
+  contactPhone?: string;
+}
+
+// 販売店更新用の入力型
+export interface UpdateShopInput {
+  shopName?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  status?: 'active' | 'inactive' | 'suspended';
 }
 
 
