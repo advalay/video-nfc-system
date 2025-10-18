@@ -79,8 +79,11 @@ export default function CreateShopModal({
     try {
       // API呼び出し
       const response = await createShop({
-        ...formData,
-        organizationId
+        shopName: formData.shopName,
+        organizationId,
+        email: formData.email, // 管理者メールアドレス
+        contactPhone: formData.contactPhone,
+        contactEmail: formData.contactEmail
       });
       
       // 成功時の処理
