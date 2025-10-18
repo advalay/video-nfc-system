@@ -4,10 +4,10 @@
   "description": "Lambda functions for Video NFC Admin",
   "main": "index.js",
   "scripts": {
-    "build": "tsc && npm run copy:modules",
+    "build": "npm run clean && tsc && npm run install-deps",
     "watch": "tsc --watch",
     "clean": "rm -rf dist",
-    "copy:modules": "mkdir -p dist/node_modules && cp -R node_modules/* dist/node_modules/"
+    "install-deps": "cd dist && cp ../package.json . && npm install --production --no-package-lock"
   },
   "dependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.906.0",
