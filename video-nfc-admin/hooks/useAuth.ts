@@ -54,7 +54,9 @@ export function useAuth(): UseAuthResult {
         currentUser: currentUser.username,
         attributes: attributes,
         groups: groups,
-        userData: userData
+        userData: userData,
+        organizationId: userData.organizationId,
+        organizationName: userData.organizationName
       });
       
       setUser(userData);
