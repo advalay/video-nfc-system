@@ -21,6 +21,7 @@ interface CreateShopModalProps {
 interface ShopFormData {
   shopName: string;
   email: string;
+  contactPerson: string;
   contactPhone: string;
   contactEmail: string;
 }
@@ -35,6 +36,7 @@ export default function CreateShopModal({
   const [formData, setFormData] = useState<ShopFormData>({
     shopName: '',
     email: '',
+    contactPerson: '',
     contactPhone: '',
     contactEmail: ''
   });
@@ -63,6 +65,10 @@ export default function CreateShopModal({
       newErrors.email = '有効なメールアドレスを入力してください';
     }
 
+    if (!formData.contactPerson.trim()) {
+      newErrors.contactPerson = '担当者名は必須です';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -82,6 +88,7 @@ export default function CreateShopModal({
         shopName: formData.shopName,
         organizationId,
         email: formData.email, // 管理者メールアドレス
+        contactPerson: formData.contactPerson,
         contactPhone: formData.contactPhone,
         contactEmail: formData.contactEmail
       });
@@ -101,6 +108,7 @@ export default function CreateShopModal({
       setFormData({
         shopName: '',
         email: '',
+        contactPerson: '',
         contactPhone: '',
         contactEmail: ''
       });
@@ -160,6 +168,28 @@ export default function CreateShopModal({
             </div>
             {errors.shopName && (
               <p className="mt-1 text-sm text-red-600">{errors.shopName}</p>
+            )}
+          </div>
+
+          {/* 担当者名 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              担当者名 <span className="text-red-500">*</span>
+            </label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                value={formData.contactPerson}
+                onChange={(e) => handleInputChange('contactPerson', e.target.value)}
+                className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  errors.contactPerson ? 'border-red-500' : 'border-gray-300'
+                }`}
+                placeholder="例: 田中太郎"
+              />
+            </div>
+            {errors.contactPerson && (
+              <p className="mt-1 text-sm text-red-600">{errors.contactPerson}</p>
             )}
           </div>
 
