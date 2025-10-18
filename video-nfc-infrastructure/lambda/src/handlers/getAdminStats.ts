@@ -77,6 +77,49 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       a.month.localeCompare(b.month)
     );
     
+    // 組織別統計を計算
+    const organizationStats = organizations
+      .filter(org => org.organizationType === 'agency')
+      .map(org => {
+        // この組織に属する店舗を取得
+        const orgShops = organizations.filter(shop =>
+          shop.organizationType === 'store' && shop.parentOrganizationId === org.organizationId
+        );
+
+        // 店舗別統計を計算
+        const shopStats = orgShops.map(shop => {
+          const shopVideos = videos.filter(v => v.organizationId === shop.organizationId);
+          const shopMonthlyVideos = shopVideos.filter(v =>
+            v.uploadDate && v.uploadDate.slice(0, 7) === currentMonth
+          );
+
+          return {
+            shopId: shop.organizationId,
+            shopName: shop.organizationName || shop.organizationId,
+            videoCount: shopVideos.length,
+            totalSize: shopVideos.reduce((sum, v) => sum + (v.fileSize || 0), 0),
+            monthlyCount: shopMonthlyVideos.length,
+            weeklyCount: 0,
+          };
+        });
+
+        // 代理店全体の統計
+        const orgTotalVideos = shopStats.reduce((sum, shop) => sum + shop.videoCount, 0);
+        const orgTotalSize = shopStats.reduce((sum, shop) => sum + shop.totalSize, 0);
+        const orgMonthlyVideos = shopStats.reduce((sum, shop) => sum + shop.monthlyCount, 0);
+
+        return {
+          organizationId: org.organizationId,
+          organizationName: org.organizationName || org.organizationId,
+          totalShops: orgShops.length,
+          totalVideos: orgTotalVideos,
+          totalSize: orgTotalSize,
+          monthlyVideos: orgMonthlyVideos,
+          weeklyVideos: 0,
+          shopStats,
+        };
+      });
+
     const response = {
       totalVideos,
       totalStorage,
@@ -84,6 +127,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       storeCount,
       thisMonthUploads: thisMonthVideos.length,
       monthlyStats: monthlyData,
+      organizationStats,
     };
     
     logInfo('統計データ取得成功', { totalVideos, agencyCount, storeCount }, event);
