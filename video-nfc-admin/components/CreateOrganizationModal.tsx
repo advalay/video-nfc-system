@@ -18,7 +18,6 @@ interface CreateOrganizationModalProps {
 
 interface OrganizationFormData {
   organizationName: string;
-  organizationType: 'agency' | 'store';
   email: string;
   contactPerson: string;
   contactphone: string;
@@ -33,7 +32,6 @@ export default function CreateOrganizationModal({
 }: CreateOrganizationModalProps) {
   const [formData, setFormData] = useState<OrganizationFormData>({
     organizationName: '',
-    organizationType: 'agency',
     email: '',
     contactPerson: '',
     contactphone: '',
@@ -83,8 +81,11 @@ export default function CreateOrganizationModal({
     setIsLoading(true);
     
     try {
-      // API呼び出し
-      const response = await createOrganization(formData);
+      // API呼び出し（組織タイプを固定で'agency'に設定）
+      const response = await createOrganization({
+        ...formData,
+        organizationType: 'agency'
+      });
       
       // 成功時の処理
       onSuccess({
@@ -100,7 +101,6 @@ export default function CreateOrganizationModal({
       // フォームをリセット
       setFormData({
         organizationName: '',
-        organizationType: 'agency',
         email: '',
         contactPerson: '',
         contactphone: '',
@@ -166,19 +166,14 @@ export default function CreateOrganizationModal({
               )}
             </div>
 
-            {/* 組織タイプ */}
+            {/* 組織タイプ（固定表示） */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                組織タイプ <span className="text-red-500">*</span>
+                組織タイプ
               </label>
-              <select
-                value={formData.organizationType}
-                onChange={(e) => handleInputChange('organizationType', e.target.value as 'agency' | 'store')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="agency">パートナー企業</option>
-                <option value="store">販売店</option>
-              </select>
+              <div className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700">
+                パートナー企業
+              </div>
             </div>
 
             {/* 管理者メール */}
