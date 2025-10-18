@@ -36,22 +36,29 @@ export function useAuth(): UseAuthResult {
       configureAmplify();
       const currentUser = await getCurrentUser();
       const session = await fetchAuthSession();
-      const groups = (session.tokens?.idToken?.payload?.['cognito:groups'] as string[]) || [];
+      const idToken = session.tokens?.idToken;
+      const groups = (idToken?.payload?.['cognito:groups'] as string[]) || [];
       
-      // Cognitoのカスタム属性から組織情報を取得
+      // idTokenから直接カスタム属性を取得（より確実）
+      const organizationId = idToken?.payload?.['custom:organizationId'] as string;
+      const shopId = idToken?.payload?.['custom:shopId'] as string;
+      const organizationName = idToken?.payload?.['custom:organizationName'] as string;
+      
+      // フォールバック: currentUserのattributesも試す
       const attributes = (currentUser as any).attributes || {};
       
       const userData = {
         id: currentUser.username,
-        email: attributes.email || currentUser.username,
+        email: (idToken?.payload?.email as string) || attributes.email || currentUser.username,
         groups: groups,
-        organizationId: attributes['custom:organizationId'],
-        shopId: attributes['custom:shopId'],
-        organizationName: attributes['custom:organizationName'],
+        organizationId: organizationId || attributes['custom:organizationId'],
+        shopId: shopId || attributes['custom:shopId'],
+        organizationName: organizationName || attributes['custom:organizationName'],
       };
       
       console.log('useAuth Debug:', {
         currentUser: currentUser.username,
+        idTokenPayload: idToken?.payload,
         attributes: attributes,
         groups: groups,
         userData: userData,
