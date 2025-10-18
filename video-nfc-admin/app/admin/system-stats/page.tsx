@@ -145,8 +145,22 @@ const OrganizationStats = memo(({
               <Building2 className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">{organization.organizationName}</h3>
-              <p className="text-sm text-gray-600">{organization.shopCount}店舗</p>
+              <h3 className="text-lg font-semibold text-gray-900">
+                {organization.organizationName || organization.name || `組織${organization.organizationId}`}
+                {!organization.organizationName && !organization.name && (
+                  <span className="ml-2 text-xs text-red-500 bg-red-50 px-2 py-1 rounded">
+                    組織名未設定
+                  </span>
+                )}
+              </h3>
+              <p className="text-sm text-gray-600">
+                {organization.shopCount || organization.shopStats?.length || 0}店舗
+                {organization.shopCount === 0 && organization.shopStats?.length > 0 && (
+                  <span className="ml-2 text-xs text-orange-500 bg-orange-50 px-2 py-1 rounded">
+                    データ不整合
+                  </span>
+                )}
+              </p>
             </div>
           </div>
           <div className="flex items-center space-x-6">
