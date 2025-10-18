@@ -36,46 +36,8 @@ export function useShopStats(shopId?: string): UseShopStatsResult {
   // システム統計を取得
   const { data: systemStats, isLoading, error, refetch } = useSystemStats();
   
-  // 一時的な修正: 現在のURLからユーザー情報を推測
-  const getCurrentUserInfo = () => {
-    // 実際の実装では、認証状態から取得する必要がある
-    // 現在は開発用のハードコード
-    const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
-    
-    // 開発環境でのテスト用
-    if (currentPath.includes('/shop/stats')) {
-      // 現在のログインユーザーに応じて組織IDを設定
-      // 実際の実装では、認証状態から取得する必要がある
-      const currentUser = 'orgb-admin@example.com'; // パートナー企業Bでログイン
-      
-      if (currentUser.includes('org-a-admin')) {
-        return {
-          id: 'org-a-admin@example.com',
-          email: 'org-a-admin@example.com',
-          groups: ['organization-admin'],
-          organizationId: 'ORG_A'
-        };
-      } else if (currentUser.includes('orgb-admin') || currentUser.includes('org-b-admin')) {
-        return {
-          id: 'orgb-admin@example.com',
-          email: 'orgb-admin@example.com',
-          groups: ['organization-admin'],
-          organizationId: 'ORG_B'
-        };
-      } else if (currentUser.includes('system-admin')) {
-        return {
-          id: 'system-admin@example.com',
-          email: 'system-admin@example.com',
-          groups: ['system-admin'],
-          organizationId: null
-        };
-      }
-    }
-    
-    return null;
-  };
-
-  const user = getCurrentUserInfo();
+  // 認証されたユーザー情報を取得
+  const { user } = useAuth();
 
   // 権限に応じてデータをフィルタリング
   const stats: ShopStats | null = systemStats ? (() => {
