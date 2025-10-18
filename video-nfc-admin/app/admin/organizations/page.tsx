@@ -451,7 +451,7 @@ export default function OrganizationsPage() {
   }
 
   return (
-    <ProtectedRoute allowedRoles={['system-admin']}>
+    <ProtectedRoute allowedRoles={['system-admin', 'organization-admin']}>
       <Layout>
         <div className="space-y-6">
           {/* ヘッダー */}
