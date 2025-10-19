@@ -182,6 +182,15 @@ export default function ShopStatsPage() {
 
   // 販売店管理者かどうかを判定
   const isShopAdmin = user?.groups?.includes('shop-admin');
+  
+  // デバッグ用ログ
+  console.log('ShopStatsPage Debug:', {
+    user: user,
+    groups: user?.groups,
+    isShopAdmin: isShopAdmin,
+    organizationId: user?.organizationId,
+    shopId: user?.shopId
+  });
 
   return (
     <ProtectedRoute allowedRoles={['system-admin', 'organization-admin', 'shop-admin', 'shop-user']}>
