@@ -17,7 +17,7 @@ export function Layout({ children }: LayoutProps) {
 
   const isSystemAdmin = user?.groups?.includes('system-admin');
   const isOrganizationAdmin = user?.groups?.includes('organization-admin');
-  const isShopAdmin = user?.groups?.includes('shop-admin') || user?.groups?.includes('shop-user');
+  const isShopAdmin = user?.groups?.includes('shop-admin');
 
   const navItems = [
     {
