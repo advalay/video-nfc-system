@@ -2,8 +2,9 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { parseAuthUser } from '../lib/permissions';
 import { handleError, logInfo } from '../lib/errorHandler';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, PutCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
-import { CognitoIdentityProviderClient, AdminCreateUserCommand, AdminAddUserToGroupCommand, AdminSetUserPasswordCommand } from '@aws-sdk/client-cognito-identity-provider';
+import { DynamoDBDocumentClient, GetCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
+import { CognitoIdentityProviderClient, AdminCreateUserCommand, AdminAddUserToGroupCommand, AdminSetUserPasswordCommand, AdminGetUserCommand, AdminUpdateUserAttributesCommand } from '@aws-sdk/client-cognito-identity-provider';
+import { generateTempPassword } from '../lib/password';
 
 const client = new DynamoDBClient({});
 const dynamodb = DynamoDBDocumentClient.from(client);
@@ -35,9 +36,119 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       throw new Error('自社の販売店のみ作成できます');
     }
     
+    // 組織の存在確認
+    logInfo('組織の存在確認', { organizationId }, event);
+    const organization = await dynamodb.send(new GetCommand({
+      TableName: process.env.DYNAMODB_TABLE_ORGANIZATION,
+      Key: { organizationId }
+    }));
+    
+    if (!organization.Item) {
+      throw new Error(`組織ID ${organizationId} が見つかりません`);
+    }
+    
     // 販売店IDを生成（SHOP_組織ID_連番）
     const timestamp = Date.now();
     const shopId = `SHOP_${organizationId}_${timestamp}`;
+    
+    // Cognitoユーザーアカウントを作成または更新
+    const tempPassword = generateTempPassword();
+    const username = email; // メールアドレスをユーザー名として使用
+    let userExists = false; // 既存ユーザーフラグ
+
+    try {
+      // 既存ユーザーの確認
+      try {
+        await cognitoClient.send(new AdminGetUserCommand({
+          UserPoolId: USER_POOL_ID,
+          Username: username,
+        }));
+        userExists = true;
+        logInfo('既存ユーザーを検出', { username }, event);
+      } catch (error: any) {
+        if (error.name !== 'UserNotFoundException') {
+          throw error;
+        }
+      }
+
+      if (userExists) {
+        // 既存ユーザーの属性を更新
+        await cognitoClient.send(new AdminUpdateUserAttributesCommand({
+          UserPoolId: USER_POOL_ID,
+          Username: username,
+          UserAttributes: [
+            { Name: 'custom:shopId', Value: shopId },
+            { Name: 'custom:organizationId', Value: organizationId },
+            { Name: 'custom:shopName', Value: shopName },
+            { Name: 'custom:role', Value: 'shop-admin' },
+          ],
+        }));
+
+        // グループに追加（既に追加されている場合はエラーにならない）
+        try {
+          await cognitoClient.send(new AdminAddUserToGroupCommand({
+            UserPoolId: USER_POOL_ID,
+            Username: username,
+            GroupName: 'shop-admin',
+          }));
+        } catch (error: any) {
+          // グループに既に所属している場合は無視
+          if (error.name !== 'UserNotFoundException') {
+            logInfo('グループ追加スキップ（既に所属）', { username }, event);
+          }
+        }
+
+        logInfo('既存ユーザー更新成功', { username, shopId, organizationId }, event);
+      } else {
+        // 新規ユーザー作成
+        await cognitoClient.send(new AdminCreateUserCommand({
+          UserPoolId: USER_POOL_ID,
+          Username: username,
+          UserAttributes: [
+            { Name: 'email', Value: email },
+            { Name: 'email_verified', Value: 'true' },
+            { Name: 'custom:shopId', Value: shopId },
+            { Name: 'custom:organizationId', Value: organizationId },
+            { Name: 'custom:shopName', Value: shopName },
+            { Name: 'custom:role', Value: 'shop-admin' },
+          ],
+          TemporaryPassword: tempPassword,
+          MessageAction: 'SUPPRESS', // メール送信を抑制
+        }));
+
+        // ユーザーをshop-adminグループに追加
+        await cognitoClient.send(new AdminAddUserToGroupCommand({
+          UserPoolId: USER_POOL_ID,
+          Username: username,
+          GroupName: 'shop-admin',
+        }));
+
+        // パスワードを永続化（初回ログイン時に変更を強制しない）
+        await cognitoClient.send(new AdminSetUserPasswordCommand({
+          UserPoolId: USER_POOL_ID,
+          Username: username,
+          Password: tempPassword,
+          Permanent: true,
+        }));
+
+        logInfo('販売店ユーザーアカウント作成成功', { username, shopId, organizationId }, event);
+      }
+
+    } catch (cognitoError: any) {
+      logInfo('Cognitoユーザー作成/更新エラー', { error: cognitoError.message }, event);
+      return {
+        statusCode: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+        body: JSON.stringify({
+          success: false,
+          error: 'ユーザーアカウントの作成/更新に失敗しました',
+          details: cognitoError.message
+        }),
+      };
+    }
     
     // 販売店データを作成
     const shopData = {
@@ -58,88 +169,57 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       weeklyVideos: 0
     };
     
-    // DynamoDBに保存
-    await dynamodb.send(new PutCommand({
-      TableName: process.env.DYNAMODB_TABLE_SHOP,
-      Item: shopData,
-      ConditionExpression: 'attribute_not_exists(shopId)', // 重複チェック
-    }));
-    
-    // 組織テーブルのshopsフィールドも更新
-    const organization = await dynamodb.send(new GetCommand({
-      TableName: process.env.DYNAMODB_TABLE_ORGANIZATION,
-      Key: { organizationId }
-    }));
-    
-    if (organization.Item) {
-      const existingShops = organization.Item.shops?.L || [];
-      const newShop = {
-        M: {
-          id: { S: shopId },
-          name: { S: shopName },
-          email: { S: contactEmail || '' },
-          status: { S: 'active' }
-        }
-      };
-      
-      await dynamodb.send(new PutCommand({
-        TableName: process.env.DYNAMODB_TABLE_ORGANIZATION,
-        Item: {
-          ...organization.Item,
-          shops: {
-            L: [...existingShops, newShop]
-          },
-          updatedAt: new Date().toISOString()
-        }
-      }));
-    }
-    
-    // Cognitoユーザーアカウントを作成
-    const tempPassword = generateTempPassword();
-    const username = email; // メールアドレスをユーザー名として使用
-    
+    // DynamoDBトランザクション：Shop作成 + Organization更新
     try {
-      // ユーザー作成
-      await cognitoClient.send(new AdminCreateUserCommand({
-        UserPoolId: USER_POOL_ID,
-        Username: username,
-        UserAttributes: [
-          { Name: 'email', Value: email },
-          { Name: 'email_verified', Value: 'true' },
-          { Name: 'custom:shopId', Value: shopId },
-          { Name: 'custom:organizationId', Value: organizationId },
-          { Name: 'custom:shopName', Value: shopName },
-          { Name: 'custom:role', Value: 'shop-admin' },
-        ],
-        TemporaryPassword: tempPassword,
-        MessageAction: 'SUPPRESS', // メール送信を抑制
+      await dynamodb.send(new TransactWriteCommand({
+        TransactItems: [
+          {
+            Put: {
+              TableName: process.env.DYNAMODB_TABLE_SHOP,
+              Item: shopData,
+              ConditionExpression: 'attribute_not_exists(shopId)', // 重複チェック
+            }
+          },
+          {
+            Update: {
+              TableName: process.env.DYNAMODB_TABLE_ORGANIZATION,
+              Key: { organizationId },
+              UpdateExpression: 'SET shops = list_append(if_not_exists(shops, :empty_list), :new_shop), updatedAt = :updatedAt',
+              ExpressionAttributeValues: {
+                ':new_shop': [{
+                  id: shopId,
+                  name: shopName,
+                  email: contactEmail || '',
+                  status: 'active'
+                }],
+                ':empty_list': [],
+                ':updatedAt': new Date().toISOString()
+              },
+              ConditionExpression: 'attribute_exists(organizationId)' // 組織の存在を再確認
+            }
+          }
+        ]
       }));
 
-      // ユーザーをshop-adminグループに追加
-      await cognitoClient.send(new AdminAddUserToGroupCommand({
-        UserPoolId: USER_POOL_ID,
-        Username: username,
-        GroupName: 'shop-admin',
-      }));
+      logInfo('販売店作成成功', { shopId, shopName, organizationId }, event);
 
-      // パスワードを永続化（初回ログイン時に変更を強制しない）
-      await cognitoClient.send(new AdminSetUserPasswordCommand({
-        UserPoolId: USER_POOL_ID,
-        Username: username,
-        Password: tempPassword,
-        Permanent: true,
-      }));
-
-      logInfo('販売店ユーザーアカウント作成成功', { username, shopId, organizationId }, event);
-
-    } catch (cognitoError: any) {
-      logInfo('Cognitoユーザー作成エラー', { error: cognitoError.message }, event);
-      // 販売店は作成済みなので、エラーを返す
-      throw new Error(`販売店は作成されましたが、ユーザーアカウントの作成に失敗しました: ${cognitoError.message}`);
+    } catch (dbError: any) {
+      logInfo('DynamoDBトランザクションエラー', { error: dbError.message }, event);
+      return {
+        statusCode: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+        body: JSON.stringify({
+          success: false,
+          error: '販売店データの保存に失敗しました',
+          details: dbError.message,
+          note: 'ユーザーアカウントは作成されています'
+        }),
+      };
     }
-    
-    logInfo('販売店作成成功', { shopId, shopName, organizationId }, event);
-    
+
     return {
       statusCode: 201,
       headers: {
@@ -152,8 +232,9 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
           shopId,
           shopName,
           email,
-          tempPassword,
+          ...(userExists ? {} : { tempPassword }), // 既存ユーザーの場合はパスワードを返さない
           loginUrl: process.env.LOGIN_URL || 'https://your-app.com/login',
+          isExistingUser: userExists,
         },
       }),
     };
@@ -162,23 +243,3 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     return handleError(error, event, 'createShop');
   }
 };
-
-// 一時パスワード生成
-function generateTempPassword(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
-  let password = '';
-  
-  // 大文字、小文字、数字、記号を最低1つずつ含む
-  password += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random() * 26)];
-  password += 'abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 26)];
-  password += '0123456789'[Math.floor(Math.random() * 10)];
-  password += '!@#$%^&*'[Math.floor(Math.random() * 8)];
-  
-  // 残り8文字をランダムに生成
-  for (let i = 0; i < 8; i++) {
-    password += chars[Math.floor(Math.random() * chars.length)];
-  }
-  
-  // 文字列をシャッフル
-  return password.split('').sort(() => Math.random() - 0.5).join('');
-}

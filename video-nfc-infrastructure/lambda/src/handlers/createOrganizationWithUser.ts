@@ -5,6 +5,7 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { CognitoIdentityProviderClient, AdminCreateUserCommand, AdminAddUserToGroupCommand, AdminSetUserPasswordCommand } from '@aws-sdk/client-cognito-identity-provider';
 import { v4 as uuidv4 } from 'uuid';
+import { generateTempPassword } from '../lib/password';
 
 const client = new DynamoDBClient({});
 const dynamodb = DynamoDBDocumentClient.from(client);
@@ -42,32 +43,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     const organizationId = `org-${body.organizationType}-${uuidv4().slice(0, 8)}`;
     const now = new Date().toISOString();
     
-    // 1. 組織情報をDynamoDBに保存
-    const organization = {
-      organizationId,
-      organizationType: body.organizationType,
-      organizationName: body.organizationName,
-      parentId: body.parentId || null,
-      level: body.organizationType === 'agency' ? 0 : 1,
-      email: body.email,
-      phone: body.phone || '',
-      address: body.address || '',
-      status: 'active',
-      unitPrice: body.unitPrice || 1200,
-      totalVideos: 0,
-      totalStorage: 0,
-      shops: [],
-      contractDate: now,
-      createdAt: now,
-      updatedAt: now,
-    };
-    
-    await dynamodb.send(new PutCommand({
-      TableName: process.env.DYNAMODB_TABLE_ORGANIZATION,
-      Item: organization,
-    }));
-
-    // 2. Cognitoユーザーアカウントを作成
+    // 1. Cognitoユーザーアカウントを作成
     const tempPassword = generateTempPassword();
     const username = body.email; // メールアドレスをユーザー名として使用
     
@@ -107,11 +83,66 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
     } catch (cognitoError: any) {
       logInfo('Cognitoユーザー作成エラー', { error: cognitoError.message }, event);
-      // 組織は作成済みなので、エラーを返す
-      throw new Error(`組織は作成されましたが、ユーザーアカウントの作成に失敗しました: ${cognitoError.message}`);
+      return {
+        statusCode: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+        body: JSON.stringify({
+          success: false,
+          error: 'ユーザーアカウントの作成に失敗しました',
+          details: cognitoError.message
+        }),
+      };
     }
     
-    logInfo('組織・ユーザー作成成功', { organizationId, organizationType: body.organizationType, username: body.email }, event);
+    // 2. 組織情報をDynamoDBに保存
+    const organization = {
+      organizationId,
+      organizationType: body.organizationType,
+      organizationName: body.organizationName,
+      parentId: body.parentId || null,
+      level: body.organizationType === 'agency' ? 0 : 1,
+      email: body.email,
+      phone: body.phone || '',
+      address: body.address || '',
+      status: 'active',
+      unitPrice: body.unitPrice || 1200,
+      totalVideos: 0,
+      totalStorage: 0,
+      shops: [],
+      contractDate: now,
+      createdAt: now,
+      updatedAt: now,
+    };
+    
+    try {
+      await dynamodb.send(new PutCommand({
+        TableName: process.env.DYNAMODB_TABLE_ORGANIZATION,
+        Item: organization,
+      }));
+
+      logInfo('組織作成成功', { organizationId, organizationType: body.organizationType }, event);
+
+    } catch (dbError: any) {
+      logInfo('DynamoDB組織作成エラー', { error: dbError.message }, event);
+      return {
+        statusCode: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+        body: JSON.stringify({
+          success: false,
+          error: '組織データの保存に失敗しました',
+          details: dbError.message,
+          note: 'ユーザーアカウントは作成されています'
+        }),
+      };
+    }
+    
+    logInfo('組織・ユーザー作成完了', { organizationId, organizationType: body.organizationType, username: body.email }, event);
     
     return {
       statusCode: 201,
@@ -126,7 +157,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
           userAccount: {
             email: body.email,
             temporaryPassword: tempPassword,
-            role: body.organizationType === 'agency' ? 'organization-admin' : 'shop-user',
+            role: body.organizationType === 'agency' ? 'organization-admin' : 'shop-admin',
             note: '初回ログイン時にパスワードの変更が必要です',
           },
         },
@@ -137,28 +168,3 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     return handleError(error, event, 'createOrganizationWithUser');
   }
 };
-
-// 一時パスワード生成
-function generateTempPassword(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
-  let password = '';
-  
-  // 大文字、小文字、数字、記号を最低1つずつ含む
-  password += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random() * 26)];
-  password += 'abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 26)];
-  password += '0123456789'[Math.floor(Math.random() * 10)];
-  password += '!@#$%^&*'[Math.floor(Math.random() * 8)];
-  
-  // 残り8文字をランダムに生成
-  for (let i = 0; i < 8; i++) {
-    password += chars[Math.floor(Math.random() * chars.length)];
-  }
-  
-  // 文字列をシャッフル
-  return password.split('').sort(() => Math.random() - 0.5).join('');
-}
-
-
-
-
-
