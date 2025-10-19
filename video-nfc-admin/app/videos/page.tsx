@@ -70,9 +70,13 @@ function getMockVideos() {
 
 export default function VideosPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [videos, setVideos] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // 販売店管理者かどうかを判定
+  const isShopAdmin = user?.groups?.includes('shop-admin');
 
          useEffect(() => {
            const fetchVideos = async () => {
@@ -82,7 +86,10 @@ export default function VideosPage() {
                
                // API呼び出し（開発環境でも実際のAPIを使用）
                const { apiGet } = await import('../../lib/api-client');
-               const response = await apiGet<{videos: any[], totalCount: number}>('/videos');
+               
+               // 販売店管理者の場合は自分の販売店の動画のみを取得
+               const endpoint = isShopAdmin ? `/videos?shopId=${user?.shopId}` : '/videos';
+               const response = await apiGet<{videos: any[], totalCount: number}>(endpoint);
                setVideos(response.videos || []);
              } catch (err: any) {
                console.error('Error fetching videos:', err);
@@ -93,7 +100,7 @@ export default function VideosPage() {
            };
 
            fetchVideos();
-         }, []);
+         }, [isShopAdmin, user?.shopId]);
 
   const handleCopyUrl = async (videoId: string) => {
     const url = `${window.location.origin}/videos/${videoId}`;
@@ -142,14 +149,18 @@ export default function VideosPage() {
   }
 
   return (
-    <ProtectedRoute allowedRoles={['system-admin', 'organization-admin', 'shop-user']}>
+    <ProtectedRoute allowedRoles={['system-admin', 'organization-admin', 'shop-admin']}>
       <Layout>
       <div className="space-y-6">
         {/* ヘッダー */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">動画一覧</h1>
-            <p className="text-gray-600">アップロードされた動画を管理します</p>
+            <h1 className="text-2xl font-bold text-gray-900">
+              {isShopAdmin ? 'マイ動画一覧' : '動画一覧'}
+            </h1>
+            <p className="text-gray-600">
+              {isShopAdmin ? 'あなたの販売店の動画を管理します' : 'アップロードされた動画を管理します'}
+            </p>
           </div>
           <button
             onClick={() => router.push('/upload')}
@@ -181,8 +192,12 @@ export default function VideosPage() {
           {videos.length === 0 ? (
             <div className="px-6 py-12 text-center">
               <Video className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">動画が登録されていません</h3>
-              <p className="text-gray-600 mb-4">新しい動画をアップロードしてください。</p>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                {isShopAdmin ? '動画が登録されていません' : '動画が登録されていません'}
+              </h3>
+              <p className="text-gray-600 mb-4">
+                {isShopAdmin ? 'あなたの販売店の動画をアップロードしてください。' : '新しい動画をアップロードしてください。'}
+              </p>
               <button
                 onClick={() => router.push('/upload')}
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
