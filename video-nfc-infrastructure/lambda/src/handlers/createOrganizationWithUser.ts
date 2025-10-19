@@ -81,14 +81,14 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
           { Name: 'email_verified', Value: 'true' },
           { Name: 'custom:organizationId', Value: organizationId },
           { Name: 'custom:shopId', Value: body.organizationType === 'store' ? organizationId : '' },
-          { Name: 'custom:role', Value: body.organizationType === 'agency' ? 'organization-admin' : 'shop-user' },
+          { Name: 'custom:role', Value: body.organizationType === 'agency' ? 'organization-admin' : 'shop-admin' },
         ],
         TemporaryPassword: tempPassword,
         MessageAction: 'SUPPRESS', // メール送信を抑制
       }));
 
       // ユーザーをグループに追加
-      const groupName = body.organizationType === 'agency' ? 'organization-admin' : 'shop-user';
+      const groupName = body.organizationType === 'agency' ? 'organization-admin' : 'shop-admin';
       await cognitoClient.send(new AdminAddUserToGroupCommand({
         UserPoolId: USER_POOL_ID,
         Username: username,

@@ -107,7 +107,7 @@ export default function VideosPage() {
 
   if (isLoading) {
     return (
-      <ProtectedRoute allowedRoles={['system-admin', 'organization-admin', 'shop-user']}>
+      <ProtectedRoute allowedRoles={['system-admin', 'organization-admin', 'shop-admin']}>
         <Layout>
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
@@ -122,7 +122,7 @@ export default function VideosPage() {
 
   if (error) {
     return (
-      <ProtectedRoute allowedRoles={['system-admin', 'organization-admin', 'shop-user']}>
+      <ProtectedRoute allowedRoles={['system-admin', 'organization-admin', 'shop-admin']}>
         <Layout>
           <div className="flex items-center justify-center h-64">
             <div className="text-center">

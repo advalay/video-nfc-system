@@ -148,11 +148,13 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       },
       body: JSON.stringify({
         success: true,
-        shopId,
-        shopName,
-        email,
-        tempPassword,
-        loginUrl: process.env.LOGIN_URL || 'https://your-app.com/login',
+        data: {
+          shopId,
+          shopName,
+          email,
+          tempPassword,
+          loginUrl: process.env.LOGIN_URL || 'https://your-app.com/login',
+        },
       }),
     };
     
