@@ -180,6 +180,9 @@ export default function ShopStatsPage() {
     );
   }
 
+  // 販売店管理者かどうかを判定
+  const isShopAdmin = user?.groups?.includes('shop-admin');
+
   return (
     <ProtectedRoute allowedRoles={['system-admin', 'organization-admin', 'shop-admin', 'shop-user']}>
       <Layout>
@@ -187,8 +190,12 @@ export default function ShopStatsPage() {
           {/* ヘッダー */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">販売店統計</h1>
-              <p className="text-gray-600 mt-1">店舗の利用状況とパフォーマンス</p>
+              <h1 className="text-2xl font-bold text-gray-900">
+                {isShopAdmin ? 'マイ販売店ダッシュボード' : '販売店統計'}
+              </h1>
+              <p className="text-gray-600 mt-1">
+                {isShopAdmin ? 'あなたの販売店の利用状況' : '店舗の利用状況とパフォーマンス'}
+              </p>
             </div>
             <div className="flex items-center space-x-4">
               <button
@@ -201,8 +208,8 @@ export default function ShopStatsPage() {
             </div>
           </div>
 
-          {/* 期間フィルターモーダル */}
-          {showFilter && (
+          {/* 期間フィルターモーダル（組織管理者のみ） */}
+          {!isShopAdmin && showFilter && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
               <div className="bg-white rounded-lg p-6 w-full max-w-md">
                 <div className="flex items-center justify-between mb-4">
@@ -303,103 +310,165 @@ export default function ShopStatsPage() {
             </div>
           </div>
 
-          {/* 販売店一覧 */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-900">販売店一覧</h2>
-              
-              {/* フィルター機能を右側に配置 */}
-              <div className="flex items-center space-x-3">
-                {/* 販売店名フィルター */}
-                <input
-                  type="text"
-                  placeholder="販売店名で検索..."
-                  value={shopNameFilter}
-                  onChange={(e) => setShopNameFilter(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                />
-                
-                {/* ソート機能 */}
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as 'name' | 'videos' | 'size' | 'monthly')}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                >
-                  <option value="name">名前順</option>
-                  <option value="videos">動画数順</option>
-                  <option value="size">容量順</option>
-                  <option value="monthly">今月の動画数順</option>
-                </select>
-                
-                {/* ソート順序ボタン */}
-                <div className="flex border border-gray-300 rounded-lg overflow-hidden">
-                  <button
-                    onClick={() => setSortOrder('asc')}
-                    className={`px-3 py-2 text-sm ${
-                      sortOrder === 'asc' 
-                        ? 'bg-blue-600 text-white' 
-                        : 'bg-white text-gray-700 hover:bg-gray-50'
-                    }`}
-                    title="少ない順"
-                  >
-                    少ない順
-                  </button>
-                  <button
-                    onClick={() => setSortOrder('desc')}
-                    className={`px-3 py-2 text-sm border-l border-gray-300 ${
-                      sortOrder === 'desc' 
-                        ? 'bg-blue-600 text-white' 
-                        : 'bg-white text-gray-700 hover:bg-gray-50'
-                    }`}
-                    title="多い順"
-                  >
-                    多い順
-                  </button>
+          {/* 販売店管理者向けの追加情報セクション */}
+          {isShopAdmin && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">詳細情報</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
+                    <div>
+                      <p className="text-sm font-medium text-blue-900">販売店名</p>
+                      <p className="text-lg font-semibold text-blue-900">
+                        {stats.shops && stats.shops.length > 0 ? stats.shops[0].shopName : 'データなし'}
+                      </p>
+                    </div>
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <Video className="w-6 h-6 text-blue-600" />
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
+                    <div>
+                      <p className="text-sm font-medium text-green-900">今月の投稿率</p>
+                      <p className="text-lg font-semibold text-green-900">
+                        {stats.monthlyVideos > 0 ? `${Math.round((stats.monthlyVideos / stats.totalVideos) * 100)}%` : '0%'}
+                      </p>
+                    </div>
+                    <div className="p-2 bg-green-100 rounded-lg">
+                      <TrendingUp className="w-6 h-6 text-green-600" />
+                    </div>
+                  </div>
                 </div>
                 
-                <button
-                  onClick={() => setShowFilter(true)}
-                  className="flex items-center space-x-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm"
-                >
-                  <Filter className="w-4 h-4" />
-                  <span>期間</span>
-                </button>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-purple-50 rounded-lg">
+                    <div>
+                      <p className="text-sm font-medium text-purple-900">今週の投稿率</p>
+                      <p className="text-lg font-semibold text-purple-900">
+                        {stats.weeklyVideos > 0 ? `${Math.round((stats.weeklyVideos / stats.totalVideos) * 100)}%` : '0%'}
+                      </p>
+                    </div>
+                    <div className="p-2 bg-purple-100 rounded-lg">
+                      <Clock className="w-6 h-6 text-purple-600" />
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between p-4 bg-orange-50 rounded-lg">
+                    <div>
+                      <p className="text-sm font-medium text-orange-900">平均動画サイズ</p>
+                      <p className="text-lg font-semibold text-orange-900">
+                        {stats.totalVideos > 0 ? formatFileSize(Math.round(stats.totalSize / stats.totalVideos)) : '0 B'}
+                      </p>
+                    </div>
+                    <div className="p-2 bg-orange-100 rounded-lg">
+                      <HardDrive className="w-6 h-6 text-orange-600" />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="p-6">
-              {filteredAndSortedShops && filteredAndSortedShops.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredAndSortedShops.map((shop) => (
-                    <div key={shop.shopId} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                      <h3 className="font-semibold text-gray-900 mb-3">{shop.shopName}</h3>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">総動画数</span>
-                          <span className="font-medium">{shop.totalVideos}本</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">総容量</span>
-                          <span className="font-medium">{formatFileSize(shop.totalSize)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">今月</span>
-                          <span className="font-medium">{shop.monthlyVideos}本</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">今週</span>
-                          <span className="font-medium">{shop.weeklyVideos}本</span>
+          )}
+
+          {/* 販売店一覧（組織管理者のみ） */}
+          {!isShopAdmin && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+              <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-gray-900">販売店一覧</h2>
+                
+                {/* フィルター機能を右側に配置 */}
+                <div className="flex items-center space-x-3">
+                  {/* 販売店名フィルター */}
+                  <input
+                    type="text"
+                    placeholder="販売店名で検索..."
+                    value={shopNameFilter}
+                    onChange={(e) => setShopNameFilter(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  />
+                  
+                  {/* ソート機能 */}
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as 'name' | 'videos' | 'size' | 'monthly')}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  >
+                    <option value="name">名前順</option>
+                    <option value="videos">動画数順</option>
+                    <option value="size">容量順</option>
+                    <option value="monthly">今月の動画数順</option>
+                  </select>
+                  
+                  {/* ソート順序ボタン */}
+                  <div className="flex border border-gray-300 rounded-lg overflow-hidden">
+                    <button
+                      onClick={() => setSortOrder('asc')}
+                      className={`px-3 py-2 text-sm ${
+                        sortOrder === 'asc' 
+                          ? 'bg-blue-600 text-white' 
+                          : 'bg-white text-gray-700 hover:bg-gray-50'
+                      }`}
+                      title="少ない順"
+                    >
+                      少ない順
+                    </button>
+                    <button
+                      onClick={() => setSortOrder('desc')}
+                      className={`px-3 py-2 text-sm border-l border-gray-300 ${
+                        sortOrder === 'desc' 
+                          ? 'bg-blue-600 text-white' 
+                          : 'bg-white text-gray-700 hover:bg-gray-50'
+                      }`}
+                      title="多い順"
+                    >
+                      多い順
+                    </button>
+                  </div>
+                  
+                  <button
+                    onClick={() => setShowFilter(true)}
+                    className="flex items-center space-x-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm"
+                  >
+                    <Filter className="w-4 h-4" />
+                    <span>期間</span>
+                  </button>
+                </div>
+              </div>
+              <div className="p-6">
+                {filteredAndSortedShops && filteredAndSortedShops.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredAndSortedShops.map((shop) => (
+                      <div key={shop.shopId} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <h3 className="font-semibold text-gray-900 mb-3">{shop.shopName}</h3>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">総動画数</span>
+                            <span className="font-medium">{shop.totalVideos}本</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">総容量</span>
+                            <span className="font-medium">{formatFileSize(shop.totalSize)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">今月</span>
+                            <span className="font-medium">{shop.monthlyVideos}本</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">今週</span>
+                            <span className="font-medium">{shop.weeklyVideos}本</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  販売店データがありません
-                </div>
-              )}
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    販売店データがありません
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </Layout>
     </ProtectedRoute>
