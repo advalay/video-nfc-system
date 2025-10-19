@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '../../hooks/useAuth';
 import { Layout } from '../../components/Layout';
 import { ProtectedRoute } from '../../components/ProtectedRoute';
 import { formatFileSize, formatRelativeTime } from '../../lib/utils';
