@@ -99,7 +99,8 @@ export default function CreateShopModal({
         shopName: response.shopName,
         email: response.email,
         tempPassword: response.tempPassword,
-        loginUrl: response.loginUrl || window.location.origin + '/login'
+        loginUrl: response.loginUrl || window.location.origin + '/login',
+        isExistingUser: response.isExistingUser
       });
       
       onClose();
