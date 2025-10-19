@@ -10,8 +10,9 @@ interface ShopCreatedModalProps {
     shopId: string;
     shopName: string;
     email: string;
-    tempPassword: string;
+    tempPassword?: string;
     loginUrl: string;
+    isExistingUser?: boolean;
   } | null;
 }
 
@@ -26,13 +27,22 @@ export default function ShopCreatedModal({
   const handleCopyCredentials = async () => {
     if (!shopInfo) return;
 
-    const text = `
+    const text = shopInfo.tempPassword
+      ? `
 販売店名: ${shopInfo.shopName}
 ログインURL: ${shopInfo.loginUrl}
 メールアドレス: ${shopInfo.email}
 パスワード: ${shopInfo.tempPassword}
 
 初回ログイン後、パスワードを変更してください。
+    `.trim()
+      : `
+販売店名: ${shopInfo.shopName}
+ログインURL: ${shopInfo.loginUrl}
+メールアドレス: ${shopInfo.email}
+
+※ 既存のアカウントに販売店が追加されました。
+既存のパスワードでログインしてください。
     `.trim();
 
     try {
@@ -45,7 +55,7 @@ export default function ShopCreatedModal({
   };
 
   const handleCopyPassword = async () => {
-    if (!shopInfo) return;
+    if (!shopInfo || !shopInfo.tempPassword) return;
     
     try {
       await navigator.clipboard.writeText(shopInfo.tempPassword);
@@ -134,30 +144,41 @@ export default function ShopCreatedModal({
               </div>
 
               {/* パスワード */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  初期パスワード
-                </label>
-                <div className="flex items-center space-x-2">
-                  <div className="flex-1 text-sm text-gray-900 font-mono bg-white px-2 py-1 rounded border">
-                    {showPassword ? shopInfo.tempPassword : '••••••••'}
+              {shopInfo.tempPassword ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    初期パスワード
+                  </label>
+                  <div className="flex items-center space-x-2">
+                    <div className="flex-1 text-sm text-gray-900 font-mono bg-white px-2 py-1 rounded border">
+                      {showPassword ? shopInfo.tempPassword : '••••••••'}
+                    </div>
+                    <button
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                      title={showPassword ? 'パスワードを隠す' : 'パスワードを表示'}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                    <button
+                      onClick={handleCopyPassword}
+                      className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                      title="パスワードをコピー"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
                   </div>
-                  <button
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
-                    title={showPassword ? 'パスワードを隠す' : 'パスワードを表示'}
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                  <button
-                    onClick={handleCopyPassword}
-                    className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
-                    title="パスワードをコピー"
-                  >
-                    <Copy className="w-4 h-4" />
-                  </button>
                 </div>
-              </div>
+              ) : (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <div className="text-blue-800 text-sm">
+                    <p className="font-medium mb-1">既存アカウントを使用</p>
+                    <p className="text-xs">
+                      このメールアドレスは既に登録されています。既存のパスワードでログインしてください。
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -170,7 +191,9 @@ export default function ShopCreatedModal({
                 <ul className="space-y-1 text-xs">
                   <li>• このログイン情報は再表示できません</li>
                   <li>• 販売店管理者に安全に送信してください</li>
-                  <li>• 初回ログイン後、パスワードを変更してください</li>
+                  {shopInfo.tempPassword && (
+                    <li>• 初回ログイン後、パスワードを変更してください</li>
+                  )}
                 </ul>
               </div>
             </div>

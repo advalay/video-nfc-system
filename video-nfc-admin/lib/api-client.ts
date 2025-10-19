@@ -220,8 +220,9 @@ export async function createShop(data: {
   shopId: string;
   shopName: string;
   email: string;
-  tempPassword: string;
+  tempPassword?: string;
   loginUrl: string;
+  isExistingUser?: boolean;
 }> {
   return apiPost<any>('/shops', data);
 }
