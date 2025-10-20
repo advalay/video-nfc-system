@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
+import QRCode from 'qrcode';
 
 interface QRModalProps {
   isOpen: boolean;
@@ -11,6 +12,25 @@ interface QRModalProps {
 }
 
 export function QRModal({ isOpen, onClose, videoId, videoUrl }: QRModalProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    if (isOpen && canvasRef.current && videoUrl) {
+      QRCode.toCanvas(canvasRef.current, videoUrl, {
+        width: 256,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      }, (error) => {
+        if (error) {
+          console.error('QRコード生成エラー:', error);
+        }
+      });
+    }
+  }, [isOpen, videoUrl]);
+
   if (!isOpen) return null;
 
   return (
@@ -28,10 +48,13 @@ export function QRModal({ isOpen, onClose, videoId, videoUrl }: QRModalProps) {
         
         <div className="text-center">
           <div className="bg-gray-100 p-4 rounded-lg mb-4">
-            <p className="text-sm text-gray-600">QRコード生成機能は準備中です</p>
+            <canvas ref={canvasRef} className="mx-auto" />
           </div>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 mb-2">
             動画ID: {videoId}
+          </p>
+          <p className="text-xs text-gray-400 break-all">
+            {videoUrl}
           </p>
         </div>
       </div>
