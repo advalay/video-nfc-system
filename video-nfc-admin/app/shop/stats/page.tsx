@@ -349,36 +349,6 @@ export default function ShopStatsPage() {
                 </div>
               </div>
 
-              {/* クイックアクションカード */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">🎯 クイックアクション</h3>
-                  <div className="p-2 rounded-lg bg-orange-50">
-                    <Upload className="w-5 h-5 text-orange-600" />
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <button
-                    onClick={() => router.push('/upload')}
-                    className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    <Upload className="w-4 h-4" />
-                    <span>動画をアップロード</span>
-                  </button>
-                  <button
-                    onClick={() => router.push('/videos')}
-                    className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-                  >
-                    <Video className="w-4 h-4" />
-                    <span>動画一覧を見る</span>
-                  </button>
-                  <div className="pt-2 border-t border-gray-100">
-                    <p className="text-xs text-gray-500 text-center">
-                      定期的な動画投稿でエンゲージメントを向上
-                    </p>
-                  </div>
-                </div>
-              </div>
             </div>
           ) : (
             /* 組織管理者向けの統計カード */
