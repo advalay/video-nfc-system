@@ -511,24 +511,39 @@ export class ApiStack extends cdk.Stack {
       }
     );
 
-    // CORS設定を追加
-    uploadUrlResource.addCorsPreflight({
-      allowOrigins: [
-        'http://localhost:3000',
-        'http://localhost:3001',
-        'https://main.d3vnoskfyyh2d2.amplifyapp.com',
-      ],
-      allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-      allowHeaders: [
-        'Content-Type',
-        'X-Amz-Date',
-        'Authorization',
-        'X-Api-Key',
-        'X-Amz-Security-Token',
-        'X-Development-Mode',
-      ],
-      allowCredentials: true,
-    });
+    // OPTIONS メソッドを手動で追加（CORS用）
+    uploadUrlResource.addMethod(
+      'OPTIONS',
+      new apigateway.MockIntegration({
+        integrationResponses: [
+          {
+            statusCode: '200',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Headers': "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Development-Mode'",
+              'method.response.header.Access-Control-Allow-Origin': "'*'",
+              'method.response.header.Access-Control-Allow-Methods': "'GET,POST,PUT,DELETE,OPTIONS'",
+              'method.response.header.Access-Control-Allow-Credentials': "'true'",
+            },
+          },
+        ],
+        requestTemplates: {
+          'application/json': '{"statusCode": 200}',
+        },
+      }),
+      {
+        methodResponses: [
+          {
+            statusCode: '200',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Headers': true,
+              'method.response.header.Access-Control-Allow-Origin': true,
+              'method.response.header.Access-Control-Allow-Methods': true,
+              'method.response.header.Access-Control-Allow-Credentials': true,
+            },
+          },
+        ],
+      }
+    );
 
     // GET /videos - 開発環境では認証をスキップ
     videosResource.addMethod(
