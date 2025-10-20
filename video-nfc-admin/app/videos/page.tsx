@@ -103,6 +103,17 @@ export default function VideosPage() {
            fetchVideos();
          }, [isShopAdmin, user?.shopId]);
 
+  // 削除可能かどうかを判定する関数
+  const canDelete = (uploadDate: string): boolean => {
+    if (!uploadDate) return false;
+    
+    const uploadTime = new Date(uploadDate).getTime();
+    const now = Date.now();
+    const hoursPassed = (now - uploadTime) / (1000 * 60 * 60);
+    
+    return hoursPassed < 48; // 48時間以内のみ削除可能
+  };
+
   const handleCopyUrl = async (videoId: string) => {
     const url = `${window.location.origin}/videos/${videoId}`;
     try {
@@ -110,6 +121,34 @@ export default function VideosPage() {
       alert('URLをコピーしました');
     } catch (err) {
       console.error('Failed to copy URL:', err);
+    }
+  };
+
+  const handleDelete = async (videoId: string, uploadDate: string) => {
+    if (!canDelete(uploadDate)) {
+      alert('動画は48時間経過後は削除できません');
+      return;
+    }
+
+    if (!confirm('この動画を削除してもよろしいですか？')) {
+      return;
+    }
+
+    try {
+      const { apiDelete } = await import('../../lib/api-client');
+      await apiDelete(`/videos/${videoId}`);
+      
+      // 動画一覧から削除
+      setVideos(videos.filter(v => v.videoId !== videoId));
+      alert('動画を削除しました');
+    } catch (err: any) {
+      console.error('Delete error:', err);
+      
+      if (err.error?.code === 'DELETE_NOT_ALLOWED') {
+        alert('動画は48時間経過後は削除できません');
+      } else {
+        alert(err.message || '動画の削除に失敗しました');
+      }
     }
   };
 
@@ -283,12 +322,22 @@ export default function VideosPage() {
                           >
                             <QrCode className="w-4 h-4" />
                           </button>
-                          <button
-                            className="text-red-600 hover:text-red-900 p-1"
-                            title="削除"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          {canDelete(video.uploadDate || video.uploadedAt) ? (
+                            <button
+                              onClick={() => handleDelete(video.videoId, video.uploadDate || video.uploadedAt)}
+                              className="text-red-600 hover:text-red-900 p-1"
+                              title="削除"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          ) : (
+                            <span
+                              className="text-gray-300 p-1 cursor-not-allowed"
+                              title="48時間経過のため削除不可"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </span>
+                          )}
                         </div>
                       </td>
                     </tr>
