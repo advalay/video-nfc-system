@@ -513,10 +513,21 @@ export class ApiStack extends cdk.Stack {
 
     // CORS設定を追加
     uploadUrlResource.addCorsPreflight({
-      allowOrigins: defaultCorsPreflightOptions.allowOrigins,
-      allowMethods: defaultCorsPreflightOptions.allowMethods,
-      allowHeaders: defaultCorsPreflightOptions.allowHeaders,
-      allowCredentials: defaultCorsPreflightOptions.allowCredentials,
+      allowOrigins: [
+        'http://localhost:3000',
+        'http://localhost:3001',
+        'https://main.d3vnoskfyyh2d2.amplifyapp.com',
+      ],
+      allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+      allowHeaders: [
+        'Content-Type',
+        'X-Amz-Date',
+        'Authorization',
+        'X-Api-Key',
+        'X-Amz-Security-Token',
+        'X-Development-Mode',
+      ],
+      allowCredentials: true,
     });
 
     // GET /videos - 開発環境では認証をスキップ
