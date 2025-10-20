@@ -319,10 +319,10 @@ export default function UploadPage() {
                   <span className="text-gray-600">サイズ:</span>
                   <span className="font-medium text-gray-900">{formatFileSize(result.size || selectedFile?.size || 0)}</span>
                 </div>
-                {(description || result.description) && (
+                {result.description && (
                   <div className="flex justify-between">
                     <span className="text-gray-600">説明:</span>
-                    <span className="font-medium text-gray-900">{description || result.description}</span>
+                    <span className="font-medium text-gray-900">{result.description}</span>
                   </div>
                 )}
               </div>
