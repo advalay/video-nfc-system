@@ -13,8 +13,9 @@ interface CreateShopModalProps {
     shopId: string;
     shopName: string;
     email: string;
-    tempPassword: string;
+    tempPassword?: string;
     loginUrl: string;
+    isExistingUser?: boolean;
   }) => void;
 }
 
@@ -98,7 +99,7 @@ export default function CreateShopModal({
         shopId: response.shopId,
         shopName: response.shopName,
         email: response.email,
-        tempPassword: response.tempPassword,
+        tempPassword: response.tempPassword || undefined,
         loginUrl: response.loginUrl || window.location.origin + '/login',
         isExistingUser: response.isExistingUser
       });

@@ -274,8 +274,9 @@ export default function OrganizationsPage() {
     shopId: string;
     shopName: string;
     email: string;
-    tempPassword: string;
+    tempPassword?: string;
     loginUrl: string;
+    isExistingUser?: boolean;
   } | null>(null);
 
   // 権限チェック
@@ -401,8 +402,9 @@ export default function OrganizationsPage() {
     shopId: string;
     shopName: string;
     email: string;
-    tempPassword: string;
+    tempPassword?: string;
     loginUrl: string;
+    isExistingUser?: boolean;
   }) => {
     setCreatedShopInfo(shopInfo);
     setShowShopCreatedModal(true);
