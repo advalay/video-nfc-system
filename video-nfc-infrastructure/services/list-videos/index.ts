@@ -88,8 +88,8 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
         ScanIndexForward: false, // 新しい順
       });
       result = await docClient.send(command);
-    } else if (userGroups.includes('shop-user') && shopId) {
-      // shop-user: 自分の販売店の動画のみ閲覧可能
+    } else if (userGroups.includes('shop-admin') && shopId) {
+      // shop-admin: 自分の販売店の動画のみ閲覧可能
       const command = new QueryCommand({
         TableName: TABLE_NAME,
         IndexName: 'shopId-uploadDate-index',
