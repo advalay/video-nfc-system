@@ -105,7 +105,7 @@ export function useUpload(): UseUploadResult {
 
       // Step 3: 結果を設定
       console.log('Step 3: アップロード完了');
-      const videoUrl = `${window.location.origin}/videos/${videoId}`;
+      const videoUrl = `${window.location.origin}/watch?id=${videoId}`;
       
       setResult({
         videoId,
