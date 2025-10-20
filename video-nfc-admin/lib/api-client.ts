@@ -22,18 +22,25 @@ async function getAuthToken(): Promise<string | null> {
     configureAmplify();
     
     const session = await fetchAuthSession();
-    console.log('Auth session:', {
+    const userGroups = session.tokens?.idToken?.payload['cognito:groups'] || [];
+    const organizationId = session.tokens?.idToken?.payload['custom:organizationId'];
+    const shopId = session.tokens?.idToken?.payload['custom:shopId'];
+    
+    console.log('🔐 Auth session:', {
       hasSession: !!session,
       hasTokens: !!session.tokens,
       hasIdToken: !!session.tokens?.idToken,
-      tokenLength: session.tokens?.idToken?.toString().length || 0
+      tokenLength: session.tokens?.idToken?.toString().length || 0,
+      userGroups,
+      organizationId,
+      shopId
     });
     
     const token = session.tokens?.idToken?.toString() || null;
-    console.log('Token obtained:', token ? `${token.substring(0, 20)}...` : 'null');
+    console.log('🎫 Token obtained:', token ? `${token.substring(0, 20)}...` : 'null');
     return token;
   } catch (error) {
-    console.error('Failed to get auth token:', error);
+    console.error('❌ Failed to get auth token:', error);
     return null;
   }
 }

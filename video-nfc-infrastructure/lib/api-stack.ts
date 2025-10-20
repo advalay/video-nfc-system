@@ -500,13 +500,14 @@ export class ApiStack extends cdk.Stack {
     // ルート: /videos
     const videosResource = this.restApi.root.addResource('videos');
 
-    // POST /videos/upload-url - 認証必須（agency-user, system-admin）
+    // POST /videos/upload-url - 認証必須（shop-admin, organization-admin, system-admin）
     const uploadUrlResource = videosResource.addResource('upload-url');
     uploadUrlResource.addMethod(
       'POST',
       new apigateway.LambdaIntegration(generateUploadUrlFn, lambdaIntegrationOptions),
       {
-        authorizationType: apigateway.AuthorizationType.NONE, // 一時的に認証を無効化
+        authorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
       }
     );
 

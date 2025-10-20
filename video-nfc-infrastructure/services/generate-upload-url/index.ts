@@ -22,9 +22,8 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
     const userRole = claims?.['custom:role'];
     const userEmail = claims?.['email'];
 
-    // shop-user, shop-admin, organization-admin, system-admin のみアップロード可能
-    if (!userGroups.includes('shop-user') && 
-        !userGroups.includes('shop-admin') &&
+    // shop-admin, organization-admin, system-admin のみアップロード可能
+    if (!userGroups.includes('shop-admin') &&
         !userGroups.includes('organization-admin') && 
         !userGroups.includes('system-admin')) {
       return {

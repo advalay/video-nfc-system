@@ -38,7 +38,14 @@ export function useUpload(): UseUploadResult {
 
     try {
       // Step 1: 署名付きURL取得
-      console.log('Step 1: 署名付きURL取得中...');
+      console.log('📤 Step 1: 署名付きURL取得中...');
+      console.log('リクエスト内容:', {
+        fileName: file.name,
+        fileSize: file.size,
+        contentType: file.type,
+        title: title || file.name
+      });
+      
       const uploadUrlResponse = await apiPost<{
         videoId: string;
         uploadUrl: string;
@@ -51,7 +58,7 @@ export function useUpload(): UseUploadResult {
       });
 
       const { videoId, uploadUrl } = uploadUrlResponse;
-      console.log('署名付きURL取得成功:', { videoId, uploadUrl: uploadUrl.substring(0, 50) + '...' });
+      console.log('✅ 署名付きURL取得成功:', { videoId, uploadUrl: uploadUrl.substring(0, 50) + '...' });
 
       // Step 2: S3へ直接アップロード（XMLHttpRequestでプログレストラッキング）
       console.log('Step 2: S3へアップロード中...');
@@ -108,10 +115,31 @@ export function useUpload(): UseUploadResult {
         size: file.size,
       });
 
-      console.log('アップロード処理完了:', { videoId, videoUrl });
-    } catch (err) {
-      console.error('アップロードエラー:', err);
-      setError(err instanceof Error ? err.message : 'アップロードに失敗しました');
+      console.log('✅ アップロード処理完了:', { videoId, videoUrl });
+    } catch (err: any) {
+      console.error('❌ アップロードエラー詳細:', {
+        error: err,
+        message: err.message,
+        status: err.statusCode,
+        code: err.code
+      });
+      
+      // エラーメッセージの詳細化
+      let errorMessage = 'アップロードに失敗しました';
+      
+      if (err.statusCode === 403) {
+        errorMessage = '❌ アクセスが拒否されました。権限を確認してください。';
+      } else if (err.statusCode === 401) {
+        errorMessage = '❌ 認証に失敗しました。ログインし直してください。';
+      } else if (err.message?.includes('CORS')) {
+        errorMessage = '❌ CORSエラーが発生しました。ブラウザをリフレッシュしてください。';
+      } else if (err.message?.includes('ネットワーク')) {
+        errorMessage = '❌ ネットワークに接続できません。時間をおいて再試行してください。';
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsUploading(false);
     }
