@@ -59,9 +59,9 @@ export async function apiClient<T>(
     ...(options.headers || {}),
   };
 
-  // 常に開発モードヘッダーを追加（テスト用）
-  (headers as any)['x-development-mode'] = 'true';
-  console.log('Development mode: Adding x-development-mode header');
+  // 開発用の強制ヘッダーは削除（本番と同等の動作にする）
+  // (headers as any)['x-development-mode'] = 'true';
+  // console.log('Development mode: Adding x-development-mode header');
 
   // 認証トークンがあれば追加
   if (token) {
