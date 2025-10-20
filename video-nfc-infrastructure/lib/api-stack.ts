@@ -490,11 +490,61 @@ export class ApiStack extends cdk.Stack {
       }
     );
 
-    // Lambda統合の設定
+    // Lambda統合の設定（非プロキーモードでCORSヘッダーを制御）
     const lambdaIntegrationOptions: apigateway.LambdaIntegrationOptions = {
-      proxy: true,
+      proxy: false,
       allowTestInvoke: true,
       timeout: cdk.Duration.seconds(29),
+      integrationResponses: [
+        {
+          statusCode: '200',
+          responseParameters: {
+            'method.response.header.Access-Control-Allow-Origin': "'*'",
+            'method.response.header.Access-Control-Allow-Headers': "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Development-Mode'",
+            'method.response.header.Access-Control-Allow-Methods': "'GET,POST,PUT,DELETE,OPTIONS'",
+            'method.response.header.Access-Control-Allow-Credentials': "'true'",
+          },
+          responseTemplates: {
+            'application/json': '$input.body',
+          },
+        },
+        {
+          statusCode: '400',
+          responseParameters: {
+            'method.response.header.Access-Control-Allow-Origin': "'*'",
+            'method.response.header.Access-Control-Allow-Headers': "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Development-Mode'",
+            'method.response.header.Access-Control-Allow-Methods': "'GET,POST,PUT,DELETE,OPTIONS'",
+            'method.response.header.Access-Control-Allow-Credentials': "'true'",
+          },
+          responseTemplates: {
+            'application/json': '$input.body',
+          },
+        },
+        {
+          statusCode: '403',
+          responseParameters: {
+            'method.response.header.Access-Control-Allow-Origin': "'*'",
+            'method.response.header.Access-Control-Allow-Headers': "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Development-Mode'",
+            'method.response.header.Access-Control-Allow-Methods': "'GET,POST,PUT,DELETE,OPTIONS'",
+            'method.response.header.Access-Control-Allow-Credentials': "'true'",
+          },
+          responseTemplates: {
+            'application/json': '$input.body',
+          },
+        },
+        {
+          statusCode: '500',
+          responseParameters: {
+            'method.response.header.Access-Control-Allow-Origin': "'*'",
+            'method.response.header.Access-Control-Allow-Headers': "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Development-Mode'",
+            'method.response.header.Access-Control-Allow-Methods': "'GET,POST,PUT,DELETE,OPTIONS'",
+            'method.response.header.Access-Control-Allow-Credentials': "'true'",
+          },
+          responseTemplates: {
+            'application/json': '$input.body',
+          },
+        },
+      ],
     };
 
     // ルート: /videos
@@ -508,6 +558,44 @@ export class ApiStack extends cdk.Stack {
       {
         authorizer,
         authorizationType: apigateway.AuthorizationType.COGNITO,
+        methodResponses: [
+          {
+            statusCode: '200',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Origin': true,
+              'method.response.header.Access-Control-Allow-Headers': true,
+              'method.response.header.Access-Control-Allow-Methods': true,
+              'method.response.header.Access-Control-Allow-Credentials': true,
+            },
+          },
+          {
+            statusCode: '400',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Origin': true,
+              'method.response.header.Access-Control-Allow-Headers': true,
+              'method.response.header.Access-Control-Allow-Methods': true,
+              'method.response.header.Access-Control-Allow-Credentials': true,
+            },
+          },
+          {
+            statusCode: '403',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Origin': true,
+              'method.response.header.Access-Control-Allow-Headers': true,
+              'method.response.header.Access-Control-Allow-Methods': true,
+              'method.response.header.Access-Control-Allow-Credentials': true,
+            },
+          },
+          {
+            statusCode: '500',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Origin': true,
+              'method.response.header.Access-Control-Allow-Headers': true,
+              'method.response.header.Access-Control-Allow-Methods': true,
+              'method.response.header.Access-Control-Allow-Credentials': true,
+            },
+          },
+        ],
       }
     );
 
