@@ -268,95 +268,165 @@ export default function ShopStatsPage() {
             </div>
           )}
 
-          {/* 統計カード */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-600">総動画数</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{formatNumber(stats.totalVideos)}</p>
-                </div>
-                <div className="p-3 rounded-lg text-blue-600 bg-blue-50 flex-shrink-0">
-                  <Video className="w-6 h-6" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-600">総容量</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{formatFileSize(stats.totalSize)}</p>
-                </div>
-                <div className="p-3 rounded-lg text-green-600 bg-green-50 flex-shrink-0">
-                  <HardDrive className="w-6 h-6" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-600">今月の動画</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{formatNumber(stats.monthlyVideos)}</p>
-                </div>
-                <div className="p-3 rounded-lg text-purple-600 bg-purple-50 flex-shrink-0">
-                  <Calendar className="w-6 h-6" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-600">今週の動画</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{formatNumber(stats.weeklyVideos)}</p>
-                </div>
-                <div className="p-3 rounded-lg text-orange-600 bg-orange-50 flex-shrink-0">
-                  <Clock className="w-6 h-6" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* 販売店管理者向けの追加情報セクション */}
-          {isShopAdmin && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">詳細情報</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
-                  <div>
-                    <p className="text-sm font-medium text-green-900">今月の投稿率</p>
-                    <p className="text-lg font-semibold text-green-900">
-                      {stats.monthlyVideos > 0 ? `${Math.round((stats.monthlyVideos / stats.totalVideos) * 100)}%` : '0%'}
-                    </p>
-                  </div>
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <TrendingUp className="w-6 h-6 text-green-600" />
+          {/* 販売店管理者向けの2x2ダッシュボード */}
+          {isShopAdmin ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* 動画管理カード */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">📹 動画管理</h3>
+                  <div className="p-2 rounded-lg bg-blue-50">
+                    <Video className="w-5 h-5 text-blue-600" />
                   </div>
                 </div>
-                
-                <div className="flex items-center justify-between p-4 bg-purple-50 rounded-lg">
-                  <div>
-                    <p className="text-sm font-medium text-purple-900">今週の投稿率</p>
-                    <p className="text-lg font-semibold text-purple-900">
-                      {stats.weeklyVideos > 0 ? `${Math.round((stats.weeklyVideos / stats.totalVideos) * 100)}%` : '0%'}
-                    </p>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">総動画数</span>
+                    <span className="text-lg font-bold text-gray-900">{formatNumber(stats.totalVideos)}</span>
                   </div>
-                  <div className="p-2 bg-purple-100 rounded-lg">
-                    <Clock className="w-6 h-6 text-purple-600" />
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">総容量</span>
+                    <span className="text-lg font-bold text-gray-900">{formatFileSize(stats.totalSize)}</span>
                   </div>
-                </div>
-                
-                <div className="flex items-center justify-between p-4 bg-orange-50 rounded-lg">
-                  <div>
-                    <p className="text-sm font-medium text-orange-900">平均動画サイズ</p>
-                    <p className="text-lg font-semibold text-orange-900">
+                  <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+                    <span className="text-sm text-gray-600">平均サイズ</span>
+                    <span className="text-md font-semibold text-gray-700">
                       {stats.totalVideos > 0 ? formatFileSize(Math.round(stats.totalSize / stats.totalVideos)) : '0 B'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 今月のアクティビティカード */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">📊 今月のアクティビティ</h3>
+                  <div className="p-2 rounded-lg bg-green-50">
+                    <TrendingUp className="w-5 h-5 text-green-600" />
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">投稿数</span>
+                    <span className="text-lg font-bold text-gray-900">{formatNumber(stats.monthlyVideos)}本</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">増加率</span>
+                    <span className="text-lg font-bold text-green-600">
+                      {stats.totalVideos > 0 ? `+${Math.round((stats.monthlyVideos / stats.totalVideos) * 100)}%` : '-'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+                    <span className="text-sm text-gray-600">前月比</span>
+                    <span className="text-2xl text-gray-400">→</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 今週のアクティビティカード */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">📅 今週のアクティビティ</h3>
+                  <div className="p-2 rounded-lg bg-purple-50">
+                    <Calendar className="w-5 h-5 text-purple-600" />
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">投稿数</span>
+                    <span className="text-lg font-bold text-gray-900">{formatNumber(stats.weeklyVideos)}本</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">増加率</span>
+                    <span className="text-lg font-bold text-purple-600">
+                      {stats.totalVideos > 0 ? `+${Math.round((stats.weeklyVideos / stats.totalVideos) * 100)}%` : '-'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+                    <span className="text-sm text-gray-600">前週比</span>
+                    <span className="text-2xl text-gray-400">→</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* クイックアクションカード */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">🎯 クイックアクション</h3>
+                  <div className="p-2 rounded-lg bg-orange-50">
+                    <Upload className="w-5 h-5 text-orange-600" />
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <button
+                    onClick={() => router.push('/upload')}
+                    className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <Upload className="w-4 h-4" />
+                    <span>動画をアップロード</span>
+                  </button>
+                  <button
+                    onClick={() => router.push('/videos')}
+                    className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    <Video className="w-4 h-4" />
+                    <span>動画一覧を見る</span>
+                  </button>
+                  <div className="pt-2 border-t border-gray-100">
+                    <p className="text-xs text-gray-500 text-center">
+                      定期的な動画投稿でエンゲージメントを向上
                     </p>
                   </div>
-                  <div className="p-2 bg-orange-100 rounded-lg">
-                    <HardDrive className="w-6 h-6 text-orange-600" />
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* 組織管理者向けの統計カード */
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-600">総動画数</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{formatNumber(stats.totalVideos)}</p>
+                  </div>
+                  <div className="p-3 rounded-lg text-blue-600 bg-blue-50 flex-shrink-0">
+                    <Video className="w-6 h-6" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-600">総容量</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{formatFileSize(stats.totalSize)}</p>
+                  </div>
+                  <div className="p-3 rounded-lg text-green-600 bg-green-50 flex-shrink-0">
+                    <HardDrive className="w-6 h-6" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-600">今月の動画</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{formatNumber(stats.monthlyVideos)}</p>
+                  </div>
+                  <div className="p-3 rounded-lg text-purple-600 bg-purple-50 flex-shrink-0">
+                    <Calendar className="w-6 h-6" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-600">今週の動画</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{formatNumber(stats.weeklyVideos)}</p>
+                  </div>
+                  <div className="p-3 rounded-lg text-orange-600 bg-orange-50 flex-shrink-0">
+                    <Clock className="w-6 h-6" />
                   </div>
                 </div>
               </div>
