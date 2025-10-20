@@ -17,7 +17,6 @@ export default function UploadPage() {
   
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
   
@@ -82,7 +81,7 @@ export default function UploadPage() {
     if (!selectedFile) return;
     
     configureAmplify();
-    await upload(selectedFile, title || '', description || '');
+    await upload(selectedFile, title || selectedFile.name);
   };
 
   const handleCopyUrl = async () => {
@@ -221,18 +220,6 @@ export default function UploadPage() {
                       onChange={(e) => setTitle(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-gray-900 placeholder:text-gray-500"
                       placeholder="動画のタイトルを入力"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      説明
-                    </label>
-                    <textarea
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-gray-900 placeholder:text-gray-500"
-                      placeholder="動画の説明を入力（任意）"
                     />
                   </div>
                 </div>
