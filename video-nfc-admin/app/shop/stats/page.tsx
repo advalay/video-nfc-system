@@ -323,56 +323,40 @@ export default function ShopStatsPage() {
           {isShopAdmin && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">詳細情報</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
-                    <div>
-                      <p className="text-sm font-medium text-blue-900">販売店名</p>
-                      <p className="text-lg font-semibold text-blue-900">
-                        {stats.shops && stats.shops.length > 0 ? stats.shops[0].shopName : 'データなし'}
-                      </p>
-                    </div>
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <Video className="w-6 h-6 text-blue-600" />
-                    </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
+                  <div>
+                    <p className="text-sm font-medium text-green-900">今月の投稿率</p>
+                    <p className="text-lg font-semibold text-green-900">
+                      {stats.monthlyVideos > 0 ? `${Math.round((stats.monthlyVideos / stats.totalVideos) * 100)}%` : '0%'}
+                    </p>
                   </div>
-                  
-                  <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
-                    <div>
-                      <p className="text-sm font-medium text-green-900">今月の投稿率</p>
-                      <p className="text-lg font-semibold text-green-900">
-                        {stats.monthlyVideos > 0 ? `${Math.round((stats.monthlyVideos / stats.totalVideos) * 100)}%` : '0%'}
-                      </p>
-                    </div>
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <TrendingUp className="w-6 h-6 text-green-600" />
-                    </div>
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <TrendingUp className="w-6 h-6 text-green-600" />
                   </div>
                 </div>
                 
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-purple-50 rounded-lg">
-                    <div>
-                      <p className="text-sm font-medium text-purple-900">今週の投稿率</p>
-                      <p className="text-lg font-semibold text-purple-900">
-                        {stats.weeklyVideos > 0 ? `${Math.round((stats.weeklyVideos / stats.totalVideos) * 100)}%` : '0%'}
-                      </p>
-                    </div>
-                    <div className="p-2 bg-purple-100 rounded-lg">
-                      <Clock className="w-6 h-6 text-purple-600" />
-                    </div>
+                <div className="flex items-center justify-between p-4 bg-purple-50 rounded-lg">
+                  <div>
+                    <p className="text-sm font-medium text-purple-900">今週の投稿率</p>
+                    <p className="text-lg font-semibold text-purple-900">
+                      {stats.weeklyVideos > 0 ? `${Math.round((stats.weeklyVideos / stats.totalVideos) * 100)}%` : '0%'}
+                    </p>
                   </div>
-                  
-                  <div className="flex items-center justify-between p-4 bg-orange-50 rounded-lg">
-                    <div>
-                      <p className="text-sm font-medium text-orange-900">平均動画サイズ</p>
-                      <p className="text-lg font-semibold text-orange-900">
-                        {stats.totalVideos > 0 ? formatFileSize(Math.round(stats.totalSize / stats.totalVideos)) : '0 B'}
-                      </p>
-                    </div>
-                    <div className="p-2 bg-orange-100 rounded-lg">
-                      <HardDrive className="w-6 h-6 text-orange-600" />
-                    </div>
+                  <div className="p-2 bg-purple-100 rounded-lg">
+                    <Clock className="w-6 h-6 text-purple-600" />
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between p-4 bg-orange-50 rounded-lg">
+                  <div>
+                    <p className="text-sm font-medium text-orange-900">平均動画サイズ</p>
+                    <p className="text-lg font-semibold text-orange-900">
+                      {stats.totalVideos > 0 ? formatFileSize(Math.round(stats.totalSize / stats.totalVideos)) : '0 B'}
+                    </p>
+                  </div>
+                  <div className="p-2 bg-orange-100 rounded-lg">
+                    <HardDrive className="w-6 h-6 text-orange-600" />
                   </div>
                 </div>
               </div>
