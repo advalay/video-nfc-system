@@ -48,7 +48,7 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
     }
 
     // 開発環境では認証をスキップ
-    let claims, userGroups: string[], organizationId, shopId;
+    let claims, userGroups: string[], organizationId, shopId, customRole;
     
     if (process.env.ENVIRONMENT === 'dev' && event.headers?.['x-development-mode'] === 'true') {
       console.log('Development mode: Skipping authentication');
@@ -62,11 +62,13 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
       userGroups = claims?.['cognito:groups'] || [];
       organizationId = claims?.['custom:organizationId'];
       shopId = claims?.['custom:shopId'];
+      customRole = claims?.['custom:role'];
+      console.log('ListVideos auth:', { userGroups, organizationId, shopId, customRole });
     }
 
     let result;
     
-    if (userGroups.includes('system-admin')) {
+    if (userGroups.includes('system-admin') || customRole === 'system-admin') {
       // system-admin: 全動画を閲覧可能
       const command = new ScanCommand({
         TableName: TABLE_NAME,
@@ -74,7 +76,7 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
         ExclusiveStartKey: lastEvaluatedKey,
       });
       result = await docClient.send(command);
-    } else if (userGroups.includes('organization-admin') && organizationId) {
+    } else if ((userGroups.includes('organization-admin') || customRole === 'organization-admin') && organizationId) {
       // organization-admin: 自分の代理店配下の全動画を閲覧可能（全販売店含む）
       const command = new QueryCommand({
         TableName: TABLE_NAME,
@@ -88,7 +90,7 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
         ScanIndexForward: false, // 新しい順
       });
       result = await docClient.send(command);
-    } else if (userGroups.includes('shop-admin') && shopId) {
+    } else if (shopId) {
       // shop-admin: 自分の販売店の動画のみ閲覧可能
       const command = new QueryCommand({
         TableName: TABLE_NAME,
@@ -127,13 +129,20 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
       );
     }
 
+    // 表示用に既存データを正規化
+    const normalized = items.map((item: any) => ({
+      ...item,
+      uploadedAt: item.uploadedAt || item.uploadDate,
+      status: item.status || 'completed',
+    }));
+
     return {
       statusCode: 200,
       headers: CORS_HEADERS,
       body: JSON.stringify({
         success: true,
         data: {
-          videos: items,
+          videos: normalized,
           totalCount: items.length,
           lastEvaluatedKey: result.LastEvaluatedKey 
             ? encodeURIComponent(JSON.stringify(result.LastEvaluatedKey))

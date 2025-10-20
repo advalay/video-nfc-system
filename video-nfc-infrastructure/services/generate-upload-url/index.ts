@@ -123,9 +123,10 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
           uploader: userEmail,
           uploaderRole: userRole,
           uploadDate: now,
+          uploadedAt: now,
           
-          // ステータス
-          status: 'pending',
+          // ステータス（即完了）
+          status: 'completed',
           
           // 請求情報
           billingMonth,

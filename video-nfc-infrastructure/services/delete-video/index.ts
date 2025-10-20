@@ -89,13 +89,14 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
     const userEmail = (claims?.email as string) || 'unknown';
     const sourceIp = (event.requestContext as any)?.identity?.sourceIp || (event.headers?.['x-forwarded-for'] || '').split(',')[0] || 'unknown';
 
-    if (!userGroups.includes('shop-user')) {
-      // 監査ログ（権限不足）
+    // ショップ所属が必須（グループではなく属性で判定）
+    const userShopId = (claims?.['custom:shopId'] as string) || '';
+    if (!userShopId) {
       console.warn(JSON.stringify({
         level: 'WARN',
         action: 'DELETE_VIDEO',
         outcome: 'FORBIDDEN',
-        reason: 'Only shop users can delete videos',
+        reason: 'Shop affiliation required',
         videoId,
         requestId: event.requestContext.requestId,
         user: { userId, userEmail, userGroups },
@@ -113,7 +114,7 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
           success: false,
           error: {
             code: 'FORBIDDEN',
-            message: 'Only shop users can delete videos',
+            message: 'Shop affiliation required',
           },
         }),
       };
@@ -121,7 +122,6 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
 
     // 販売店ユーザーの場合、自分の組織の動画のみ削除可能
     const userOrganizationId = claims?.['custom:organizationId'] as string;
-    const userShopId = claims?.['custom:shopId'] as string;
     
     // 動画の所有者をチェック
     const videoOrganizationId = result.Item.organizationId;
@@ -157,49 +157,7 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
       };
     }
 
-    // アップロード後6時間以内のみ削除可能（ビジネスモデル上の制約）
-    const uploadedAt = result.Item.createdAt;
-    if (uploadedAt) {
-      const uploadTime = new Date(uploadedAt).getTime();
-      const currentTime = Date.now();
-      const sixHoursInMs = 6 * 60 * 60 * 1000; // 6時間をミリ秒に変換
-      const timeSinceUpload = currentTime - uploadTime;
-
-      if (timeSinceUpload > sixHoursInMs) {
-        console.warn(JSON.stringify({
-          level: 'WARN',
-          action: 'DELETE_VIDEO',
-          outcome: 'FORBIDDEN',
-          reason: 'Cannot delete video after 6 hours grace period',
-          videoId,
-          requestId: event.requestContext.requestId,
-          user: { userId, userEmail, userShopId },
-          uploadedAt,
-          timeSinceUploadHours: (timeSinceUpload / (60 * 60 * 1000)).toFixed(2),
-          sourceIp,
-          timestamp: new Date().toISOString(),
-        }));
-
-        return {
-          statusCode: 403,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-          },
-          body: JSON.stringify({
-            success: false,
-            error: {
-              code: 'GRACE_PERIOD_EXPIRED',
-              message: 'Videos can only be deleted within 6 hours of upload',
-              details: {
-                uploadedAt,
-                timeSinceUploadHours: (timeSinceUpload / (60 * 60 * 1000)).toFixed(2),
-              },
-            },
-          }),
-        };
-      }
-    }
+    // 6時間制限は廃止。48時間ルール（上部）に一本化済み
 
     // S3から動画ファイルを削除
     // 注意: Object Lock が有効な場合、削除できない可能性があります
