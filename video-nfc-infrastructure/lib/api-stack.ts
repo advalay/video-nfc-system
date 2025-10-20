@@ -392,6 +392,8 @@ export class ApiStack extends cdk.Stack {
         'cognito-idp:AdminCreateUser',
         'cognito-idp:AdminAddUserToGroup',
         'cognito-idp:AdminSetUserPassword',
+        'cognito-idp:AdminGetUser',
+        'cognito-idp:AdminUpdateUserAttributes',
       ],
       resources: [`arn:aws:cognito-idp:${this.region}:${accountId}:userpool/${userPoolId}`],
     });
@@ -508,6 +510,14 @@ export class ApiStack extends cdk.Stack {
         authorizationType: apigateway.AuthorizationType.COGNITO,
       }
     );
+
+    // CORS設定を追加
+    uploadUrlResource.addCorsPreflight({
+      allowOrigins: defaultCorsPreflightOptions.allowOrigins,
+      allowMethods: defaultCorsPreflightOptions.allowMethods,
+      allowHeaders: defaultCorsPreflightOptions.allowHeaders,
+      allowCredentials: defaultCorsPreflightOptions.allowCredentials,
+    });
 
     // GET /videos - 開発環境では認証をスキップ
     videosResource.addMethod(
