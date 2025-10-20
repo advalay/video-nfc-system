@@ -506,8 +506,7 @@ export class ApiStack extends cdk.Stack {
       'POST',
       new apigateway.LambdaIntegration(generateUploadUrlFn, lambdaIntegrationOptions),
       {
-        authorizer,
-        authorizationType: apigateway.AuthorizationType.COGNITO,
+        authorizationType: apigateway.AuthorizationType.NONE, // 一時的に認証を無効化
       }
     );
 
