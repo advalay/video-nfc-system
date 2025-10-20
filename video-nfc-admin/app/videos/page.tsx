@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../hooks/useAuth';
 import { Layout } from '../../components/Layout';
 import { ProtectedRoute } from '../../components/ProtectedRoute';
-import { formatFileSize, formatRelativeTime } from '../../lib/utils';
+import { formatFileSize, formatUploadDateTime } from '../../lib/utils';
 import { Copy, QrCode, Trash2, Plus, Search, Upload, Video, HardDrive } from 'lucide-react';
+import { QRModal } from '../../components/QRModal';
 
 // モック動画データを生成する関数
 function getMockVideos() {
@@ -75,6 +76,8 @@ export default function VideosPage() {
   const [videos, setVideos] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [qrOpen, setQrOpen] = useState(false);
+  const [qrVideo, setQrVideo] = useState<{ id: string; url: string } | null>(null);
 
   // 販売店管理者かどうかを判定
   const isShopAdmin = user?.groups?.includes('shop-admin');
@@ -122,6 +125,12 @@ export default function VideosPage() {
     } catch (err) {
       console.error('Failed to copy URL:', err);
     }
+  };
+
+  const handleOpenQR = (videoId: string) => {
+    const url = `${window.location.origin}/videos/${videoId}`;
+    setQrVideo({ id: videoId, url });
+    setQrOpen(true);
   };
 
   const handleDelete = async (videoId: string, uploadDate: string) => {
@@ -290,7 +299,19 @@ export default function VideosPage() {
                         {formatFileSize(video.fileSize)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {formatRelativeTime(video.uploadedAt)}
+                        {(() => {
+                          const formatted = formatUploadDateTime(video.uploadedAt);
+                          return (
+                            <div className="flex flex-col" title={formatted.tooltip}>
+                              <span>{formatted.display}</span>
+                              {formatted.deletableInfo && (
+                                <span className={`text-xs ${formatted.isWarning ? 'text-orange-600' : 'text-green-600'}`}>
+                                  {formatted.deletableInfo}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
@@ -317,6 +338,7 @@ export default function VideosPage() {
                             <Copy className="w-4 h-4" />
                           </button>
                           <button
+                            onClick={() => handleOpenQR(video.videoId)}
                             className="text-gray-600 hover:text-gray-900 p-1"
                             title="QRコード"
                           >
@@ -349,6 +371,14 @@ export default function VideosPage() {
         </div>
       </div>
       </Layout>
+      {qrVideo && (
+        <QRModal
+          isOpen={qrOpen}
+          onClose={() => setQrOpen(false)}
+          videoId={qrVideo.id}
+          videoUrl={qrVideo.url}
+        />
+      )}
     </ProtectedRoute>
   );
 }

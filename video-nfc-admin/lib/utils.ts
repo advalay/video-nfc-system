@@ -35,6 +35,65 @@ export function formatRelativeTime(date: Date | string | number): string {
   }
 }
 
+/**
+ * アップロード日時を表示用にフォーマット
+ * - 48時間以内: 相対時刻 + 削除可能残り時間
+ * - 48時間超: 絶対日付（YYYY年MM月DD日）
+ */
+export function formatUploadDateTime(uploadedAt: string | Date): {
+  display: string;
+  tooltip: string;
+  deletableInfo?: string;
+  isWarning?: boolean;
+} {
+  try {
+    const d = typeof uploadedAt === 'string' ? new Date(uploadedAt) : uploadedAt;
+    const now = Date.now();
+    const uploadTime = d.getTime();
+    const hoursPassed = (now - uploadTime) / (1000 * 60 * 60);
+    const hoursLeft = 48 - hoursPassed;
+
+    // ツールチップ用の絶対日時（時刻付き）
+    const tooltip = d.toLocaleString('ja-JP', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    if (hoursPassed < 48) {
+      // 48時間以内: 相対時刻 + 削除可能残り時間
+      const relativeTime = formatDistanceToNow(d, { addSuffix: true, locale: ja });
+      const hoursInt = Math.floor(hoursLeft);
+      const minutesInt = Math.floor((hoursLeft - hoursInt) * 60);
+      const deletableInfo = `削除可: 残り${hoursInt}時間${minutesInt}分`;
+      const isWarning = hoursLeft < 6; // 6時間切ったら警告
+
+      return {
+        display: relativeTime,
+        tooltip,
+        deletableInfo,
+        isWarning,
+      };
+    } else {
+      // 48時間超: 絶対日付のみ（時刻なし）
+      const absoluteDate = d.toLocaleDateString('ja-JP', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+
+      return {
+        display: absoluteDate,
+        tooltip,
+      };
+    }
+  } catch {
+    return { display: '', tooltip: '' };
+  }
+}
+
 export function getVideoPublicUrl(videoId: string): string {
   const base = process.env.NEXT_PUBLIC_API_URL || '';
   return `${base}/videos/${videoId}/public`;
