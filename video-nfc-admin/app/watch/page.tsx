@@ -33,7 +33,7 @@ function WatchContent() {
 
     const fetchVideo = async () => {
       try {
-        const apiUrl = 'https://rwwiyktk7e.execute-api.ap-northeast-1.amazonaws.com/dev';
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://rwwiyktk7e.execute-api.ap-northeast-1.amazonaws.com/dev';
         const response = await fetch(`${apiUrl}/videos/${videoId}/detail`);
 
         if (!response.ok) {

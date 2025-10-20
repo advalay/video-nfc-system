@@ -118,7 +118,7 @@ export default function VideosPage() {
   };
 
   const handleCopyUrl = async (videoId: string) => {
-    const url = `${window.location.origin}/videos/${videoId}`;
+    const url = `${window.location.origin}/watch?id=${videoId}`;
     try {
       await navigator.clipboard.writeText(url);
       alert('URLをコピーしました');
@@ -128,7 +128,7 @@ export default function VideosPage() {
   };
 
   const handleOpenQR = (videoId: string) => {
-    const url = `${window.location.origin}/videos/${videoId}`;
+    const url = `${window.location.origin}/watch?id=${videoId}`;
     setQrVideo({ id: videoId, url });
     setQrOpen(true);
   };
@@ -286,9 +286,14 @@ export default function VideosPage() {
                         <div className="flex items-center">
                           <Video className="w-5 h-5 text-gray-400 mr-3" />
                           <div>
-                            <div className="text-sm font-medium text-gray-900">
-                              {video.fileName}
-                            </div>
+                            <button
+                              onClick={() => router.push(`/watch?id=${video.videoId}`)}
+                              className="text-left"
+                            >
+                              <div className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer">
+                                {video.fileName}
+                              </div>
+                            </button>
                             <div className="text-sm text-gray-500">
                               ID: {video.videoId}
                             </div>
