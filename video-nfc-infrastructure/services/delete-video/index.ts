@@ -57,6 +57,31 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
       };
     }
 
+    // 48時間削除制限チェック
+    const uploadDate = result.Item.uploadDate;
+    if (uploadDate) {
+      const uploadTime = new Date(uploadDate).getTime();
+      const now = Date.now();
+      const hoursPassed = (now - uploadTime) / (1000 * 60 * 60);
+      
+      if (hoursPassed >= 48) {
+        return {
+          statusCode: 403,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+          },
+          body: JSON.stringify({
+            success: false,
+            error: {
+              code: 'DELETE_NOT_ALLOWED',
+              message: '動画は48時間経過後は削除できません',
+            },
+          }),
+        };
+      }
+    }
+
     // アクセス制御：販売店ユーザーのみ削除可能（認証情報は任意チェーンで安全に参照）
     const claims: any = event.requestContext?.authorizer?.claims || {};
     const userGroups: string[] = (claims?.['cognito:groups'] as string[]) || [];
