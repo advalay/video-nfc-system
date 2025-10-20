@@ -22,7 +22,16 @@ async function getAuthToken(): Promise<string | null> {
     configureAmplify();
     
     const session = await fetchAuthSession();
-    return session.tokens?.idToken?.toString() || null;
+    console.log('Auth session:', {
+      hasSession: !!session,
+      hasTokens: !!session.tokens,
+      hasIdToken: !!session.tokens?.idToken,
+      tokenLength: session.tokens?.idToken?.toString().length || 0
+    });
+    
+    const token = session.tokens?.idToken?.toString() || null;
+    console.log('Token obtained:', token ? `${token.substring(0, 20)}...` : 'null');
+    return token;
   } catch (error) {
     console.error('Failed to get auth token:', error);
     return null;
