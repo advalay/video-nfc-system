@@ -15,15 +15,15 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     const params = event.queryStringParameters || {};
     
     // 権限チェック
-    const isAdmin = user.groups.includes('system-admin');
-    const isAgencyAdmin = user.role === 'agency-admin';
+    const isSystemAdmin = user.groups.includes('system-admin');
+    const isOrganizationAdmin = user.groups.includes('organization-admin');
     
-    if (!isAdmin && !isAgencyAdmin) {
+    if (!isSystemAdmin && !isOrganizationAdmin) {
       throw new Error('組織一覧へのアクセス権限がありません');
     }
     let organizations: any[] = [];
     
-    if (isAdmin) {
+    if (isSystemAdmin) {
       // システム管理者: 全組織取得
       const result = await dynamodb.send(new ScanCommand({
         TableName: process.env.DYNAMODB_TABLE_ORGANIZATION,
@@ -33,33 +33,14 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       }));
       organizations = result.Items || [];
       
-    } else if (isAgencyAdmin) {
-      // 代理店管理者: 自組織 + 配下の販売店
-      
-      // 自組織
-      const selfResult = await dynamodb.send(new QueryCommand({
+    } else if (isOrganizationAdmin) {
+      // 組織管理者: 自組織のみ取得
+      const result = await dynamodb.send(new QueryCommand({
         TableName: process.env.DYNAMODB_TABLE_ORGANIZATION,
         KeyConditionExpression: 'organizationId = :orgId',
         ExpressionAttributeValues: { ':orgId': user.organizationId },
       }));
-      
-      // 配下の販売店
-      const childResult = await dynamodb.send(new QueryCommand({
-        TableName: process.env.DYNAMODB_TABLE_ORGANIZATION,
-        IndexName: 'parentId-index',
-        KeyConditionExpression: 'parentId = :parentId',
-        FilterExpression: '#status = :active',
-        ExpressionAttributeNames: { '#status': 'status' },
-        ExpressionAttributeValues: {
-          ':parentId': user.organizationId,
-          ':active': 'active',
-        },
-      }));
-      
-      organizations = [
-        ...(selfResult.Items || []),
-        ...(childResult.Items || []),
-      ];
+      organizations = result.Items || [];
     }
     
     // タイプフィルタ
