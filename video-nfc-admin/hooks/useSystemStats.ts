@@ -57,10 +57,24 @@ export function useSystemStats(startDate?: string, endDate?: string) {
   const { user } = useAuth();
   const isSystemAdmin = user?.groups?.includes('system-admin');
 
+  // デバッグログを追加
+  console.log('🔍 [useSystemStats] Debug:', {
+    user: user,
+    groups: user?.groups,
+    isSystemAdmin: isSystemAdmin,
+    groupsType: typeof user?.groups,
+    groupsLength: user?.groups?.length
+  });
+
   return useQuery<SystemStats>({
     queryKey: ['systemStats', startDate, endDate],
     queryFn: async () => {
       if (!isSystemAdmin) {
+        console.error('❌ [useSystemStats] 権限エラー:', {
+          user: user,
+          groups: user?.groups,
+          isSystemAdmin: isSystemAdmin
+        });
         throw new Error('システム管理者のみアクセス可能です');
       }
       
