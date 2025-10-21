@@ -181,11 +181,11 @@ function WatchContent() {
         </div>
       )}
 
-      {/* 動画タイトル（左上） - より目立つデザイン */}
+      {/* 動画タイトル（左上） - モダン＆ミニマル */}
       {videoData?.title && (
-        <div className="absolute top-4 left-4 z-20 bg-black/80 rounded-xl px-6 py-4 shadow-2xl">
+        <div className="absolute top-4 left-4 z-20 backdrop-blur-md bg-gradient-to-r from-black/60 to-black/40 rounded-lg px-4 py-2 shadow-lg">
           <h1 
-            className="text-2xl md:text-3xl font-bold"
+            className="text-lg md:text-xl font-medium"
             style={{ color: branding.colors.text }}
           >
             {videoData.title}
