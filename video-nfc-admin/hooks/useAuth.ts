@@ -33,18 +33,28 @@ export function useAuth(): UseAuthResult {
   // Cognito認証状態の確認
   const checkAuthStatus = async () => {
     try {
-      console.log('checkAuthStatus: 開始');
+      console.log('🔍 [useAuth] checkAuthStatus: 開始');
       configureAmplify();
-      console.log('checkAuthStatus: Amplify設定完了');
+      console.log('🔍 [useAuth] Amplify設定完了');
       
       const currentUser = await getCurrentUser();
-      console.log('checkAuthStatus: 現在のユーザー取得完了', currentUser);
+      console.log('🔍 [useAuth] 現在のユーザー取得完了', currentUser);
       
       const session = await fetchAuthSession();
-      console.log('checkAuthStatus: セッション取得完了', session);
+      console.log('🔍 [useAuth] セッション取得完了', session);
       
       const idToken = session.tokens?.idToken;
+      console.log('🔍 [useAuth] idToken取得:', !!idToken);
+      
+      if (!idToken) {
+        console.error('❌ [useAuth] idTokenが取得できません');
+        setUser(null);
+        setIsLoading(false);
+        return;
+      }
+      
       const groups = (idToken?.payload?.['cognito:groups'] as string[]) || [];
+      console.log('🔍 [useAuth] groups取得:', groups);
       
       // idTokenから直接カスタム属性を取得（より確実）
       const organizationId = idToken?.payload?.['custom:organizationId'] as string;
@@ -63,7 +73,7 @@ export function useAuth(): UseAuthResult {
         organizationName: organizationName || attributes['custom:organizationName'],
       };
       
-      console.log('useAuth Debug:', {
+      console.log('🔍 [useAuth] useAuth Debug:', {
         currentUser: currentUser.username,
         idTokenPayload: idToken?.payload,
         attributes: attributes,
@@ -73,10 +83,10 @@ export function useAuth(): UseAuthResult {
         organizationName: userData.organizationName
       });
       
-      console.log('checkAuthStatus: ユーザーデータ設定', userData);
+      console.log('🔍 [useAuth] ユーザーデータ設定', userData);
       setUser(userData);
       setIsLoading(false);
-      console.log('checkAuthStatus: 完了');
+      console.log('🔍 [useAuth] 完了');
     } catch (error) {
       console.log('認証状態確認エラー:', error);
       // 未認証の場合
