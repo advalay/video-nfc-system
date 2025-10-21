@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { SystemStats, OrganizationStat, Organization, Shop } from '../types/shared';
 import { apiGet } from '../lib/api-client';
+import { useAuth } from './useAuth';
 
 export type { OrganizationStat };
 
@@ -53,9 +54,16 @@ function transformBackendResponse(backendData: any): SystemStats {
 }
 
 export function useSystemStats(startDate?: string, endDate?: string) {
+  const { user } = useAuth();
+  const isSystemAdmin = user?.groups?.includes('system-admin');
+
   return useQuery<SystemStats>({
     queryKey: ['systemStats', startDate, endDate],
     queryFn: async () => {
+      if (!isSystemAdmin) {
+        throw new Error('システム管理者のみアクセス可能です');
+      }
+      
       // API呼び出し
       let endpoint = '/system/stats';
       const params = new URLSearchParams();
@@ -66,7 +74,7 @@ export function useSystemStats(startDate?: string, endDate?: string) {
       const backendData = await apiGet<any>(endpoint);
       return transformBackendResponse(backendData);
     },
-    enabled: true,
+    enabled: isSystemAdmin, // システム管理者の場合のみクエリを有効化
     staleTime: 10 * 60 * 1000, // 10分間キャッシュ（長くする）
     retry: 0, // リトライを無効化
     refetchOnWindowFocus: false, // ウィンドウフォーカス時の再取得を無効化

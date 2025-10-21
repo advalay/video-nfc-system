@@ -33,11 +33,15 @@ interface UseShopStatsResult {
 }
 
 export function useShopStats(shopId?: string): UseShopStatsResult {
-  // システム統計を取得
-  const { data: systemStats, isLoading, error, refetch } = useSystemStats();
-  
   // 認証されたユーザー情報を取得
   const { user } = useAuth();
+  
+  // システム管理者の場合のみシステム統計を取得
+  const isSystemAdmin = user?.groups?.includes('system-admin');
+  const { data: systemStats, isLoading, error, refetch } = useSystemStats();
+  
+  // システム管理者以外の場合、APIを呼ばずに空データを返す（暫定対応）
+  const shouldUseSystemStats = isSystemAdmin;
 
   // 権限に応じてデータをフィルタリング
   const stats: ShopStats | null = systemStats ? (() => {
@@ -172,12 +176,24 @@ export function useShopStats(shopId?: string): UseShopStatsResult {
     }
   })() : null;
 
+  // システム管理者以外で、システム統計が取得できない場合は空データを返す
+  const fallbackStats: ShopStats = {
+    totalVideos: 0,
+    totalSize: 0,
+    monthlyVideos: 0,
+    weeklyVideos: 0,
+    monthlyTrend: [],
+    shops: []
+  };
+
   return {
-    stats,
-    isLoading,
-    error: error ? String(error) : null,
+    stats: shouldUseSystemStats ? stats : fallbackStats,
+    isLoading: shouldUseSystemStats ? isLoading : false,
+    error: shouldUseSystemStats ? (error ? String(error) : null) : null,
     refetch: async () => {
-      await refetch();
+      if (shouldUseSystemStats) {
+        await refetch();
+      }
     }
   };
 }
