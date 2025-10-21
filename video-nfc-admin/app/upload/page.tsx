@@ -17,6 +17,7 @@ export default function UploadPage() {
   
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
   
@@ -81,7 +82,7 @@ export default function UploadPage() {
     if (!selectedFile) return;
     
     configureAmplify();
-    await upload(selectedFile, title || selectedFile.name);
+    await upload(selectedFile, title || '');
   };
 
   const handleCopyUrl = async () => {
@@ -101,6 +102,7 @@ export default function UploadPage() {
   const handleReset = () => {
     setSelectedFile(null);
     setTitle('');
+    setDescription('');
     reset();
   };
 
@@ -221,6 +223,18 @@ export default function UploadPage() {
                       placeholder="動画のタイトルを入力"
                     />
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      説明
+                    </label>
+                    <textarea
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-gray-900 placeholder:text-gray-500"
+                      placeholder="動画の説明を入力（任意）"
+                    />
+                  </div>
                 </div>
               </div>
             )}
@@ -318,6 +332,12 @@ export default function UploadPage() {
                   <span className="text-gray-600">サイズ:</span>
                   <span className="font-medium text-gray-900">{formatFileSize(result.size || selectedFile?.size || 0)}</span>
                 </div>
+                {description && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">説明:</span>
+                    <span className="font-medium text-gray-900">{description}</span>
+                  </div>
+                )}
               </div>
             </div>
 

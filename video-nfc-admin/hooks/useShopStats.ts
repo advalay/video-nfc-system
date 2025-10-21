@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Shop } from '../types/shared';
 import { useSystemStats } from './useSystemStats';
+import { useOrganizationStats } from './useOrganizationStats';
 import { useAuth } from './useAuth';
 
 interface ShopStats {
@@ -18,6 +19,10 @@ interface ShopStats {
   shops: Array<{
     shopId: string;
     shopName: string;
+    organizationName?: string;
+    contactPerson?: string;
+    contactEmail?: string;
+    contactPhone?: string;
     totalVideos: number;
     totalSize: number;
     monthlyVideos: number;
@@ -36,39 +41,42 @@ export function useShopStats(shopId?: string): UseShopStatsResult {
   // 認証されたユーザー情報を取得
   const { user } = useAuth();
   
-  // システム管理者の場合のみシステム統計を取得
+  // 権限チェック
   const isSystemAdmin = user?.groups?.includes('system-admin');
-  const { data: systemStats, isLoading, error, refetch } = useSystemStats();
+  const isOrganizationAdmin = user?.groups?.includes('organization-admin');
+  const isShopAdmin = user?.groups?.includes('shop-admin');
   
-  // システム管理者以外の場合、APIを呼ばずに空データを返す（暫定対応）
+  // 権限に応じて適切なAPIを呼び出し
   const shouldUseSystemStats = isSystemAdmin;
+  const shouldUseOrganizationStats = isOrganizationAdmin || isShopAdmin;
+  
+  // 常に両方のフックを呼び出す（React Hooksのルールに従う）
+  const { data: systemStats, isLoading: systemLoading, error: systemError, refetch: systemRefetch } = useSystemStats();
+  const { data: organizationStats, isLoading: orgLoading, error: orgError, refetch: orgRefetch } = useOrganizationStats();
+  
+  // ローディング状態とエラーを統合
+  const isLoading = shouldUseSystemStats ? systemLoading : (shouldUseOrganizationStats ? orgLoading : false);
+  const error = shouldUseSystemStats ? systemError : (shouldUseOrganizationStats ? orgError : null);
+  const refetch = async () => {
+    if (shouldUseSystemStats) {
+      await systemRefetch();
+    } else if (shouldUseOrganizationStats) {
+      await orgRefetch();
+    }
+  };
 
   // 権限に応じてデータをフィルタリング
-  const stats: ShopStats | null = systemStats ? (() => {
-    const isSystemAdmin = user?.groups?.includes('system-admin');
-    console.log('useShopStats Debug:', {
-      user: user?.id,
-      organizationId: user?.organizationId,
-      groups: user?.groups,
-      isSystemAdmin,
-      systemStats: systemStats ? {
-        totalOrganizations: systemStats.totalOrganizations,
-        organizationStats: systemStats.organizationStats?.map(org => ({
-          organizationId: org.organizationId,
-          organizationName: org.organizationName,
-          shopsCount: org.shops?.length || 0
-        }))
-      } : null
-    });
-
-    console.log('Target organization ID:', user?.organizationId);
-
-    if (isSystemAdmin) {
+  const stats: ShopStats | null = (() => {
+    if (shouldUseSystemStats && systemStats) {
       // システム管理者: 全組織の全販売店を集計
       const allShops = systemStats.organizationStats?.flatMap(org => 
         org.shops.map(shop => ({
           shopId: shop.shopId,
           shopName: shop.shopName,
+          organizationName: org.organizationName,
+          contactPerson: shop.contactPerson,
+          contactEmail: shop.contactEmail,
+          contactPhone: shop.contactPhone,
           totalVideos: shop.totalVideos || 0,
           totalSize: shop.totalSize || 0,
           monthlyVideos: shop.monthlyVideos || 0,
@@ -84,30 +92,11 @@ export function useShopStats(shopId?: string): UseShopStatsResult {
         monthlyTrend: systemStats.monthlyTrend || [],
         shops: allShops
       };
-    } else {
-      // 販売店管理者かどうかを確認
-      const isShopAdmin = user?.groups?.includes('shop-admin');
-      
+    } else if (shouldUseOrganizationStats && organizationStats) {
+      // 組織管理者または販売店管理者: 組織統計を使用
       if (isShopAdmin && user?.shopId) {
         // 販売店管理者: 自店舗のみの統計を表示
-        const targetOrgId = user?.organizationId;
-        const myOrg = systemStats.organizationStats?.find(
-          org => org.organizationId === targetOrgId
-        );
-        
-        if (!myOrg) {
-          return {
-            totalVideos: 0,
-            totalSize: 0,
-            monthlyVideos: 0,
-            weeklyVideos: 0,
-            monthlyTrend: [],
-            shops: []
-          };
-        }
-        
-        // 自店舗のみを抽出
-        const myShop = myOrg.shops.find(
+        const myShop = organizationStats.shopStats?.find(
           shop => shop.shopId === user.shopId
         );
         
@@ -123,60 +112,52 @@ export function useShopStats(shopId?: string): UseShopStatsResult {
         }
         
         return {
-          totalVideos: myShop.totalVideos || 0,
+          totalVideos: myShop.videoCount || 0,
           totalSize: myShop.totalSize || 0,
-          monthlyVideos: myShop.monthlyVideos || 0,
-          weeklyVideos: myShop.weeklyVideos || 0,
-          monthlyTrend: [],
+          monthlyVideos: myShop.monthlyCount || 0,
+          weeklyVideos: myShop.weeklyCount || 0,
+          monthlyTrend: organizationStats.monthlyTrend || [],
           shops: [{
             shopId: myShop.shopId,
             shopName: myShop.shopName,
-            totalVideos: myShop.totalVideos || 0,
+            organizationName: user?.organizationName || '自社',
+            contactPerson: myShop.contactPerson,
+            contactEmail: myShop.contactEmail,
+            contactPhone: myShop.contactPhone,
+            totalVideos: myShop.videoCount || 0,
             totalSize: myShop.totalSize || 0,
-            monthlyVideos: myShop.monthlyVideos || 0,
-            weeklyVideos: myShop.weeklyVideos || 0
+            monthlyVideos: myShop.monthlyCount || 0,
+            weeklyVideos: myShop.weeklyCount || 0
           }]
         };
-      }
-      
-      // パートナー企業: 自組織の販売店のみを抽出
-      const targetOrgId = user?.organizationId;
-      console.log('Target organization ID:', targetOrgId);
-      
-      const myOrg = systemStats.organizationStats?.find(
-        org => org.organizationId === targetOrgId
-      );
-
-      if (!myOrg) {
+      } else {
+        // 組織管理者: 自組織の販売店のみを抽出
         return {
-          totalVideos: 0,
-          totalSize: 0,
-          monthlyVideos: 0,
-          weeklyVideos: 0,
-          monthlyTrend: [],
-          shops: []
+          totalVideos: organizationStats.totalVideos || 0,
+          totalSize: organizationStats.totalSize || 0,
+          monthlyVideos: organizationStats.monthlyVideos || 0,
+          weeklyVideos: organizationStats.weeklyVideos || 0,
+          monthlyTrend: organizationStats.monthlyTrend || [],
+          shops: organizationStats.shopStats?.map(shop => ({
+            shopId: shop.shopId,
+            shopName: shop.shopName,
+            organizationName: user?.organizationName || '自社',
+            contactPerson: shop.contactPerson,
+            contactEmail: shop.contactEmail,
+            contactPhone: shop.contactPhone,
+            totalVideos: shop.videoCount || 0,
+            totalSize: shop.totalSize || 0,
+            monthlyVideos: shop.monthlyCount || 0,
+            weeklyVideos: shop.weeklyCount || 0
+          })) || []
         };
       }
-
-      return {
-        totalVideos: myOrg.totalVideos || 0,
-        totalSize: myOrg.totalSize || 0,
-        monthlyVideos: myOrg.monthlyVideos || 0,
-        weeklyVideos: myOrg.weeklyVideos || 0,
-        monthlyTrend: systemStats.monthlyTrend || [],
-        shops: myOrg.shops.map(shop => ({
-          shopId: shop.shopId,
-          shopName: shop.shopName,
-          totalVideos: shop.totalVideos || 0,
-          totalSize: shop.totalSize || 0,
-          monthlyVideos: shop.monthlyVideos || 0,
-          weeklyVideos: shop.weeklyVideos || 0
-        }))
-      };
     }
-  })() : null;
+    
+    return null;
+  })();
 
-  // システム管理者以外で、システム統計が取得できない場合は空データを返す
+  // データが取得できない場合は空データを返す
   const fallbackStats: ShopStats = {
     totalVideos: 0,
     totalSize: 0,
@@ -187,13 +168,9 @@ export function useShopStats(shopId?: string): UseShopStatsResult {
   };
 
   return {
-    stats: shouldUseSystemStats ? stats : fallbackStats,
-    isLoading: shouldUseSystemStats ? isLoading : false,
-    error: shouldUseSystemStats ? (error ? String(error) : null) : null,
-    refetch: async () => {
-      if (shouldUseSystemStats) {
-        await refetch();
-      }
-    }
+    stats: stats || fallbackStats,
+    isLoading,
+    error: error ? String(error) : null,
+    refetch
   };
 }

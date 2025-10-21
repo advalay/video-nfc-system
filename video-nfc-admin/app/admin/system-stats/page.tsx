@@ -203,7 +203,6 @@ const OrganizationStats = memo(({
                   </div>
                   <div>
                     <h4 className="font-medium text-gray-900">{shop.shopName}</h4>
-                    <p className="text-sm text-gray-600">{shop.shopId}</p>
                   </div>
                 </div>
                 <div className="space-y-2">

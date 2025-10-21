@@ -1,5 +1,6 @@
 import { fetchAuthSession } from 'aws-amplify/auth';
 import { configureAmplify } from './amplify-config';
+import { UpdateShopInput } from '../types/shared';
 
 const API_BASE_URL = 'https://rwwiyktk7e.execute-api.ap-northeast-1.amazonaws.com/dev';
 
@@ -182,7 +183,7 @@ export async function updateOrganization(
  */
 export async function updateShop(
   shopId: string, 
-  data: { shopName?: string; contactEmail?: string; contactPhone?: string; status?: string }
+  data: UpdateShopInput
 ): Promise<any> {
   return apiPatch<any>(`/shops/${shopId}`, data);
 }

@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback, memo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../hooks/useAuth';
 import { useSystemStats } from '../../../hooks/useSystemStats';
+import { useOrganizationStats } from '../../../hooks/useOrganizationStats';
 import { Layout } from '../../../components/Layout';
 import { ProtectedRoute } from '../../../components/ProtectedRoute';
 import OrganizationEditModal from '../../../components/OrganizationEditModal';
@@ -11,9 +12,10 @@ import CreateOrganizationModal from '../../../components/CreateOrganizationModal
 import OrganizationCreatedModal from '../../../components/OrganizationCreatedModal';
 import CreateShopModal from '../../../components/CreateShopModal';
 import ShopCreatedModal from '../../../components/ShopCreatedModal';
+import ShopEditModal from '../../../components/ShopEditModal';
 import { Building2, Plus, Edit, Trash2, Store, ChevronDown, ChevronRight, Key, Copy, Eye, EyeOff } from 'lucide-react';
 import { Organization, Shop, UpdateOrganizationInput } from '../../../types/shared';
-import { updateOrganization, deleteShop } from '../../../lib/api-client';
+import { updateOrganization, deleteShop, updateShop } from '../../../lib/api-client';
 
 
 // ユーティリティはコンポーネント外に定義し、再生成を避ける
@@ -35,31 +37,34 @@ const generateShopCredentials = (shop: Shop) => {
 
 type ShopRowProps = {
   shop: Shop;
+  isSystemAdmin: boolean;
   onShowCredentials: (shop: Shop) => void;
   onEditShop: (shop: Shop) => void;
   onDeleteShop: (shop: Shop) => void;
 };
 
-const ShopRow = memo(function ShopRow({ shop, onShowCredentials, onEditShop, onDeleteShop }: ShopRowProps) {
+const ShopRow = memo(function ShopRow({ shop, isSystemAdmin, onShowCredentials, onEditShop, onDeleteShop }: ShopRowProps) {
   return (
     <tr className="hover:bg-gray-50">
-      <td className="px-6 py-4 whitespace-nowrap">
+      <td className="px-4 py-4 whitespace-nowrap w-32">
         <div className="flex items-center">
           <Store className="w-4 h-4 text-gray-400 mr-2" />
           <span className="text-sm font-medium text-gray-900">{shop.shopName}</span>
         </div>
       </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-        {shop.contactEmail || '-'}
+      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 w-48">
+        <div className="truncate" title={shop.contactEmail || '-'}>
+          {shop.contactEmail || '-'}
+        </div>
       </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 w-32">
         {shop.contactPhone || '-'}
       </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{shop.totalVideos}本</td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatFileSize(shop.totalSize)}</td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{shop.monthlyVideos}本</td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{shop.weeklyVideos}本</td>
-      <td className="px-6 py-4 whitespace-nowrap">
+      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 w-24">{shop.totalVideos}本</td>
+      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 w-24">{formatFileSize(shop.totalSize)}</td>
+      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 w-24">{shop.monthlyVideos}本</td>
+      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 w-24">{shop.weeklyVideos}本</td>
+      <td className="px-4 py-4 whitespace-nowrap w-20">
         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
           shop.status === 'active' 
             ? 'bg-green-100 text-green-800' 
@@ -68,7 +73,7 @@ const ShopRow = memo(function ShopRow({ shop, onShowCredentials, onEditShop, onD
           {shop.status === 'active' ? '有効' : '無効'}
         </span>
       </td>
-      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+      <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium w-24">
         <div className="flex items-center justify-end space-x-2">
           <button
             onClick={() => onShowCredentials(shop)}
@@ -84,13 +89,15 @@ const ShopRow = memo(function ShopRow({ shop, onShowCredentials, onEditShop, onD
           >
             <Edit className="w-4 h-4" />
           </button>
-          <button
-            onClick={() => onDeleteShop(shop)}
-            className="text-red-600 hover:text-red-900 p-1"
-            title="削除"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+          {isSystemAdmin && (
+            <button
+              onClick={() => onDeleteShop(shop)}
+              className="text-red-600 hover:text-red-900 p-1"
+              title="削除"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </td>
     </tr>
@@ -191,34 +198,35 @@ const OrganizationRow = memo(function OrganizationRow({
       {expanded && (
         <div className="bg-white border-t">
           {org.shops && org.shops.length > 0 ? (
-            <table className="min-w-full divide-y divide-gray-200">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
                     店舗名
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
                     連絡先メール
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
                     連絡先電話
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
                     総動画数
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
                     総容量
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
                     今月の動画数
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
                     今週の動画数
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
                     ステータス
                   </th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
                     操作
                   </th>
                 </tr>
@@ -228,6 +236,7 @@ const OrganizationRow = memo(function OrganizationRow({
                   <ShopRow
                     key={shop.shopId}
                     shop={shop}
+                    isSystemAdmin={isSystemAdmin}
                     onShowCredentials={onShowCredentials}
                     onEditShop={onEditShop}
                     onDeleteShop={onDeleteShop}
@@ -235,6 +244,7 @@ const OrganizationRow = memo(function OrganizationRow({
                 ))}
               </tbody>
             </table>
+            </div>
           ) : (
             <div className="px-6 py-4 text-center text-sm text-gray-500">店舗データがありません</div>
           )}
@@ -279,27 +289,63 @@ export default function OrganizationsPage() {
     isExistingUser?: boolean;
   } | null>(null);
 
+  // 販売店編集モーダル関連
+  const [showShopEditModal, setShowShopEditModal] = useState(false);
+  const [selectedShopForEdit, setSelectedShopForEdit] = useState<Shop | null>(null);
+
   // 権限チェック
   const isSystemAdmin = user?.groups?.includes('system-admin');
   const isOrganizationAdmin = user?.groups?.includes('organization-admin');
 
-  // システム統計データを取得（組織管理でも同じデータを使用）
-  const { data: systemStats, isLoading, error, refetch } = useSystemStats();
+  // 権限に応じて適切なデータを取得
+  const { data: systemStats, isLoading: systemLoading, error: systemError, refetch: systemRefetch } = useSystemStats();
+  const { data: organizationStats, isLoading: orgLoading, error: orgError, refetch: orgRefetch } = useOrganizationStats();
+  
+  // 権限に応じて使用するデータを選択
+  const isLoading = isSystemAdmin ? systemLoading : orgLoading;
+  const error = isSystemAdmin ? systemError : orgError;
+  const refetch = isSystemAdmin ? systemRefetch : orgRefetch;
   
   // 組織データを抽出
-  const organizations = systemStats?.organizationStats || [];
+  const organizations = isSystemAdmin 
+    ? (systemStats?.organizationStats || [])
+    : (organizationStats ? [{
+        organizationId: user?.organizationId || '',
+        organizationName: user?.organizationName || '自社',
+        shopCount: organizationStats.shopStats?.length || 0,
+        totalVideos: organizationStats.totalVideos || 0,
+        totalSize: organizationStats.totalSize || 0,
+        monthlyVideos: organizationStats.monthlyVideos || 0,
+        weeklyVideos: organizationStats.weeklyVideos || 0,
+        createdAt: new Date().toISOString(),
+        status: 'active' as const,
+        shops: organizationStats.shopStats?.map(shop => ({
+          shopId: shop.shopId,
+          shopName: shop.shopName,
+          organizationId: user?.organizationId || '',
+          contactPerson: shop.contactPerson || '',
+          contactEmail: shop.contactEmail || '',
+          contactPhone: shop.contactPhone || '',
+          totalVideos: shop.videoCount || 0,
+          totalSize: shop.totalSize || 0,
+          monthlyVideos: shop.monthlyCount || 0,
+          weeklyVideos: shop.weeklyCount || 0,
+          status: 'active' as const,
+          createdAt: new Date().toISOString()
+        })) || []
+      }] : []);
 
   // データフィルタリング: 権限に応じて表示する組織を制限
   const displayOrganizations = useMemo(() => {
     if (isSystemAdmin) {
       return organizations; // 全組織を表示
     }
-    if (isOrganizationAdmin && user?.organizationId) {
-      // 自社のみ表示
-      return organizations.filter(org => org.organizationId === user.organizationId);
+    if (isOrganizationAdmin) {
+      // 組織管理者は自社のみ表示（既にフィルタリング済み）
+      return organizations;
     }
     return [];
-  }, [isSystemAdmin, isOrganizationAdmin, organizations, user?.organizationId]);
+  }, [isSystemAdmin, isOrganizationAdmin, organizations]);
 
   // 同時に1組織のみ展開するように制限
   const toggleOrganization = useCallback((orgId: string) => {
@@ -319,9 +365,22 @@ export default function OrganizationsPage() {
   }, []);
 
   const handleEditShop = useCallback((shop: Shop) => {
-    // 販売店編集はPhase 4で実装予定
-    alert('販売店編集機能は、パートナー企業用の販売店管理ページで利用できます。\n\nPhase 4で実装予定です。');
+    setSelectedShopForEdit(shop);
+    setShowShopEditModal(true);
   }, []);
+
+  const handleSaveShop = useCallback(async (shopId: string, data: any) => {
+    try {
+      await updateShop(shopId, data);
+      await refetch();
+      setShowShopEditModal(false);
+      setSelectedShopForEdit(null);
+      alert('販売店情報を更新しました');
+    } catch (error: any) {
+      console.error('Error updating shop:', error);
+      throw new Error(error.message || '更新に失敗しました');
+    }
+  }, [refetch]);
 
   const handleDeleteShop = useCallback(async (shop: Shop) => {
     // マネタイズへの影響を警告
@@ -615,6 +674,14 @@ export default function OrganizationsPage() {
           onClose={() => setShowEditModal(false)}
           organization={selectedOrganization}
           onSave={handleSaveOrganization}
+        />
+
+        {/* 販売店編集モーダル */}
+        <ShopEditModal
+          isOpen={showShopEditModal}
+          onClose={() => setShowShopEditModal(false)}
+          shop={selectedShopForEdit}
+          onSave={handleSaveShop}
         />
 
         {/* 組織作成モーダル */}

@@ -5,6 +5,7 @@ export interface Shop {
   shopId: string;
   shopName: string;
   organizationId: string;
+  contactPerson?: string;
   contactEmail?: string;
   contactPhone?: string;
   totalVideos: number;
@@ -62,12 +63,13 @@ export interface OrganizationStat {
   shopStats: Array<{
     shopId: string;
     shopName: string;
+    contactPerson?: string;
+    contactEmail?: string;
+    contactPhone?: string;
     videoCount: number;
     totalSize: number;
     monthlyCount: number;
     weeklyCount: number;
-    contactEmail?: string;
-    contactPhone?: string;
   }>;
 }
 
@@ -136,6 +138,7 @@ export interface CreateShopInput {
 // 販売店更新用の入力型
 export interface UpdateShopInput {
   shopName?: string;
+  contactPerson?: string;
   contactEmail?: string;
   contactPhone?: string;
   status?: 'active' | 'inactive' | 'suspended';
