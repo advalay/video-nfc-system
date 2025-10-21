@@ -16,8 +16,8 @@ export function configureAmplify(): void {
   Amplify.configure({
     Auth: {
       Cognito: {
-        userPoolId: userPoolId || 'ap-northeast-1_gtvMJ70ot',
-        userPoolClientId: userPoolClientId || '6o0knadh7s8v164r6a8kvp7m0n',
+        userPoolId: userPoolId || 'ap-northeast-1_tRsVTmwXn',
+        userPoolClientId: userPoolClientId || '55qo2n0meafpoop59indgeejq4',
         loginWith: {
           email: true,
         },

@@ -4,6 +4,13 @@ import { UpdateShopInput } from '../types/shared';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://7two0yvy5k.execute-api.ap-northeast-1.amazonaws.com/prod';
 
+// デバッグ用ログ
+console.log('API Configuration:', {
+  NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
+  API_BASE_URL: API_BASE_URL,
+  NODE_ENV: process.env.NODE_ENV
+});
+
 export class ApiError extends Error {
   constructor(
     message: string,
