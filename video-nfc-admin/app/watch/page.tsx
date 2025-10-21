@@ -131,10 +131,10 @@ function WatchContent() {
     );
   }
 
-  // 動画プレイヤー表示
+  // 動画プレイヤー表示（全画面）
   return (
     <div 
-      className="min-h-screen flex flex-col items-center justify-center p-0"
+      className="min-h-screen w-full flex flex-col items-center justify-center p-0"
       style={{ 
         backgroundColor: branding.colors.background,
         color: branding.colors.text,
@@ -193,8 +193,8 @@ function WatchContent() {
         </div>
       )}
 
-      {/* 動画プレイヤー */}
-      <div className="w-full max-w-7xl mx-auto flex items-center justify-center">
+      {/* 動画プレイヤー（全画面表示） */}
+      <div className="w-full h-screen flex items-center justify-center">
         <video
           ref={videoRef}
           src={videoData?.videoUrl}
@@ -203,10 +203,7 @@ function WatchContent() {
           controlsList="nodownload"
           playsInline
           preload="auto"
-          className="w-full h-auto max-h-screen shadow-2xl"
-          style={{
-            maxHeight: 'calc(100vh - 2rem)',
-          }}
+          className="w-full h-full object-contain"
         >
           <track kind="captions" />
           お使いのブラウザは動画の再生に対応していません。
