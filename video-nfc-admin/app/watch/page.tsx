@@ -193,7 +193,7 @@ function WatchContent() {
         </div>
       )}
 
-      {/* 動画プレイヤー（全画面表示） */}
+      {/* 動画プレイヤー（画面幅100%表示） */}
       <div className="w-full h-screen flex items-center justify-center">
         <video
           ref={videoRef}
@@ -203,7 +203,7 @@ function WatchContent() {
           controlsList="nodownload"
           playsInline
           preload="auto"
-          className="w-full h-full object-contain"
+          className="w-full h-full object-cover"
         >
           <track kind="captions" />
           お使いのブラウザは動画の再生に対応していません。
