@@ -185,8 +185,7 @@ function WatchContent() {
       {videoData?.title && (
         <div className="absolute top-4 left-4 z-20 backdrop-blur-md bg-gradient-to-r from-black/60 to-black/40 rounded-lg px-4 py-2 shadow-lg">
           <h1 
-            className="text-lg md:text-xl font-medium"
-            style={{ color: branding.colors.text }}
+            className="text-lg md:text-xl font-medium text-white"
           >
             {videoData.title}
           </h1>
