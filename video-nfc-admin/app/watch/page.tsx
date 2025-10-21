@@ -162,26 +162,7 @@ function WatchContent() {
         </div>
       )}
 
-      {/* 企業名（設定されている場合） */}
-      {branding.companyName.enabled && (
-        <div 
-          className={`absolute z-20 p-4 ${
-            branding.companyName.position === 'top-left' ? 'top-0 left-0' :
-            branding.companyName.position === 'top-center' ? 'top-0 left-1/2 -translate-x-1/2' :
-            branding.companyName.position === 'top-right' ? 'top-0 right-0' :
-            branding.companyName.position === 'bottom-left' ? 'bottom-0 left-0' :
-            branding.companyName.position === 'bottom-center' ? 'bottom-0 left-1/2 -translate-x-1/2' :
-            'bottom-0 right-0'
-          }`}
-        >
-          <p 
-            className={`font-bold text-${branding.companyName.fontSize}`}
-            style={{ color: branding.colors.text }}
-          >
-            {branding.companyName.text}
-          </p>
-        </div>
-      )}
+      {/* 企業名は非表示（動画タイトルを優先） */}
 
       {/* ウォーターマーク（設定されている場合） */}
       {branding.watermark.enabled && (
@@ -200,11 +181,11 @@ function WatchContent() {
         </div>
       )}
 
-      {/* 動画タイトル（左上） */}
+      {/* 動画タイトル（左上） - より目立つデザイン */}
       {videoData?.title && (
-        <div className="absolute top-4 left-4 z-20 bg-black/60 rounded-lg px-3 py-2">
+        <div className="absolute top-4 left-4 z-20 bg-black/80 rounded-xl px-6 py-4 shadow-2xl">
           <h1 
-            className="text-sm font-medium"
+            className="text-2xl md:text-3xl font-bold"
             style={{ color: branding.colors.text }}
           >
             {videoData.title}
