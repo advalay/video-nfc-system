@@ -5,16 +5,18 @@ import { fetchAuthSession } from 'aws-amplify/auth';
 import { configureAmplify } from '../lib/amplify-config';
 
 export interface OrganizationStats {
-  organizationName: string;
   organizationId: string;
-  totalShops: number;
+  shopCount: number;
   totalVideos: number;
   totalSize: number;
-  totalMonthlyVideos: number;
-  totalWeeklyVideos: number;
+  monthlyVideos: number;
+  weeklyVideos: number;
   shopStats: Array<{
     shopId: string;
     shopName: string;
+    contactPerson?: string;
+    contactEmail?: string;
+    contactPhone?: string;
     videoCount: number;
     totalSize: number;
     monthlyCount: number;
@@ -28,7 +30,7 @@ export interface OrganizationStats {
 }
 
 export function useOrganizationStats(startDate?: string, endDate?: string) {
-  const API_URL = process.env.NEXT_PUBLIC_API_URL;
+  const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
   return useQuery<OrganizationStats>({
     queryKey: ['organizationStats', startDate, endDate],
@@ -48,6 +50,8 @@ export function useOrganizationStats(startDate?: string, endDate?: string) {
 
       const url = `${API_URL}/organization/stats${params.toString() ? `?${params.toString()}` : ''}`;
 
+      console.log('Fetching organization stats from:', url);
+
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -58,10 +62,12 @@ export function useOrganizationStats(startDate?: string, endDate?: string) {
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.error('Organization stats API error:', response.status, errorText);
         throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
       }
 
       const result = await response.json();
+      console.log('Organization stats response:', result);
 
       if (!result.success) {
         throw new Error(result.error?.message || '統計データの取得に失敗しました');
