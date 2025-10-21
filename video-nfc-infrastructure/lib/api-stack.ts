@@ -612,7 +612,8 @@ export class ApiStack extends cdk.Stack {
       'GET',
       new apigateway.LambdaIntegration(listOrganizationsFn, lambdaIntegrationOptions),
       {
-        authorizationType: apigateway.AuthorizationType.NONE,
+        authorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
         requestParameters: {
           'method.request.querystring.type': false,
           'method.request.querystring.parentId': false,
@@ -790,14 +791,15 @@ export class ApiStack extends cdk.Stack {
       }
     );
 
-    // GET /system/stats - 開発環境では認証をスキップ
+    // GET /system/stats - システム管理者のみアクセス可能
     const systemResource = this.restApi.root.addResource('system');
     const systemStatsResource = systemResource.addResource('stats');
     systemStatsResource.addMethod(
       'GET',
       new apigateway.LambdaIntegration(getSystemStatsFn, lambdaIntegrationOptions),
       {
-        authorizationType: apigateway.AuthorizationType.NONE,
+        authorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
       }
     );
 
