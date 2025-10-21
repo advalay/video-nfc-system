@@ -55,7 +55,9 @@ function transformBackendResponse(backendData: any): SystemStats {
 
 export function useSystemStats(startDate?: string, endDate?: string) {
   const { user } = useAuth();
-  const isSystemAdmin = user?.groups?.includes('system-admin');
+  
+  // より安全な権限判定
+  const isSystemAdmin = user?.groups && Array.isArray(user.groups) && user.groups.includes('system-admin');
 
   // デバッグログを追加
   console.log('🔍 [useSystemStats] Debug:', {
@@ -63,17 +65,31 @@ export function useSystemStats(startDate?: string, endDate?: string) {
     groups: user?.groups,
     isSystemAdmin: isSystemAdmin,
     groupsType: typeof user?.groups,
-    groupsLength: user?.groups?.length
+    groupsLength: user?.groups?.length,
+    userExists: !!user,
+    groupsExists: !!user?.groups
   });
 
   return useQuery<SystemStats>({
     queryKey: ['systemStats', startDate, endDate],
     queryFn: async () => {
+      // より詳細なエラーメッセージ
+      if (!user) {
+        console.error('❌ [useSystemStats] ユーザー情報が取得できません');
+        throw new Error('認証情報が取得できません。ログインし直してください。');
+      }
+      
+      if (!user.groups || !Array.isArray(user.groups)) {
+        console.error('❌ [useSystemStats] グループ情報が取得できません:', user.groups);
+        throw new Error('グループ情報が取得できません。ログインし直してください。');
+      }
+      
       if (!isSystemAdmin) {
         console.error('❌ [useSystemStats] 権限エラー:', {
           user: user,
           groups: user?.groups,
-          isSystemAdmin: isSystemAdmin
+          isSystemAdmin: isSystemAdmin,
+          expectedGroup: 'system-admin'
         });
         throw new Error('システム管理者のみアクセス可能です');
       }
