@@ -54,7 +54,7 @@ function transformBackendResponse(backendData: any): SystemStats {
 }
 
 export function useSystemStats(startDate?: string, endDate?: string) {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   
   // より安全な権限判定
   const isSystemAdmin = user?.groups && Array.isArray(user.groups) && user.groups.includes('system-admin');
@@ -67,7 +67,8 @@ export function useSystemStats(startDate?: string, endDate?: string) {
     groupsType: typeof user?.groups,
     groupsLength: user?.groups?.length,
     userExists: !!user,
-    groupsExists: !!user?.groups
+    groupsExists: !!user?.groups,
+    isLoading: isLoading
   });
 
   return useQuery<SystemStats>({
@@ -104,7 +105,7 @@ export function useSystemStats(startDate?: string, endDate?: string) {
       const backendData = await apiGet<any>(endpoint);
       return transformBackendResponse(backendData);
     },
-    enabled: isSystemAdmin, // システム管理者の場合のみクエリを有効化
+    enabled: !isLoading && isSystemAdmin, // 認証完了後かつシステム管理者の場合のみクエリを有効化
     staleTime: 10 * 60 * 1000, // 10分間キャッシュ（長くする）
     retry: 0, // リトライを無効化
     refetchOnWindowFocus: false, // ウィンドウフォーカス時の再取得を無効化
