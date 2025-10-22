@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Shop } from '../types/shared';
 import { useSystemStats } from './useSystemStats';
 import { useOrganizationStats } from './useOrganizationStats';
-import { useMyShopStats } from './useMyShopStats';
+import { useMyShopStats } from '@/hooks/useMyShopStats';
 import { useAuth } from './useAuth';
 
 interface ShopStats {
