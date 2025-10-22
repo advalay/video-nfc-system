@@ -317,18 +317,21 @@ export default function OrganizationsPage() {
         totalSize: organizationStats.totalSize || 0,
         monthlyVideos: organizationStats.monthlyVideos || 0,
         weeklyVideos: organizationStats.weeklyVideos || 0,
+        status: 'active' as const,
         createdAt: new Date().toISOString(),
         shops: organizationStats.shopStats?.map(shop => ({
           shopId: shop.shopId,
           shopName: shop.shopName,
-          contactPerson: shop.contactPerson || '',
-          contactEmail: shop.contactEmail || '',
-          contactPhone: shop.contactPhone || '',
+          organizationId: user?.organizationId || '',
+          contactPerson: (shop as any).contactPerson || '',
+          contactEmail: (shop as any).contactEmail || '',
+          contactPhone: (shop as any).contactPhone || '',
           totalVideos: shop.videoCount || 0,
           totalSize: shop.totalSize || 0,
           monthlyVideos: shop.monthlyCount || 0,
           weeklyVideos: shop.weeklyCount || 0,
-          status: 'active' as const
+          status: 'active' as const,
+          createdAt: new Date().toISOString()
         })) || []
       }] : []);
 
