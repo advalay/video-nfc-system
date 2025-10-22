@@ -318,11 +318,9 @@ export default function OrganizationsPage() {
         monthlyVideos: organizationStats.monthlyVideos || 0,
         weeklyVideos: organizationStats.weeklyVideos || 0,
         createdAt: new Date().toISOString(),
-        status: 'active' as const,
         shops: organizationStats.shopStats?.map(shop => ({
           shopId: shop.shopId,
           shopName: shop.shopName,
-          organizationId: user?.organizationId || '',
           contactPerson: shop.contactPerson || '',
           contactEmail: shop.contactEmail || '',
           contactPhone: shop.contactPhone || '',
@@ -330,8 +328,7 @@ export default function OrganizationsPage() {
           totalSize: shop.totalSize || 0,
           monthlyVideos: shop.monthlyCount || 0,
           weeklyVideos: shop.weeklyCount || 0,
-          status: 'active' as const,
-          createdAt: new Date().toISOString()
+          status: 'active' as const
         })) || []
       }] : []);
 

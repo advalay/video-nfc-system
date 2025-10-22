@@ -11,6 +11,7 @@ interface User {
   organizationId?: string;
   shopId?: string;
   organizationName?: string;
+  shopName?: string;
 }
 
 interface UseAuthResult {
@@ -33,33 +34,25 @@ export function useAuth(): UseAuthResult {
   // Cognito認証状態の確認
   const checkAuthStatus = async () => {
     try {
-      console.log('🔍 [useAuth] checkAuthStatus: 開始');
       configureAmplify();
-      console.log('🔍 [useAuth] Amplify設定完了');
       
       const currentUser = await getCurrentUser();
-      console.log('🔍 [useAuth] 現在のユーザー取得完了', currentUser);
-      
       const session = await fetchAuthSession();
-      console.log('🔍 [useAuth] セッション取得完了', session);
-      
       const idToken = session.tokens?.idToken;
-      console.log('🔍 [useAuth] idToken取得:', !!idToken);
       
       if (!idToken) {
-        console.error('❌ [useAuth] idTokenが取得できません');
         setUser(null);
         setIsLoading(false);
         return;
       }
       
       const groups = (idToken?.payload?.['cognito:groups'] as string[]) || [];
-      console.log('🔍 [useAuth] groups取得:', groups);
       
       // idTokenから直接カスタム属性を取得（より確実）
       const organizationId = idToken?.payload?.['custom:organizationId'] as string;
       const shopId = idToken?.payload?.['custom:shopId'] as string;
       const organizationName = idToken?.payload?.['custom:organizationName'] as string;
+      const shopName = idToken?.payload?.['custom:shopName'] as string;
       
       // フォールバック: currentUserのattributesも試す
       const attributes = (currentUser as any).attributes || {};
@@ -71,22 +64,11 @@ export function useAuth(): UseAuthResult {
         organizationId: organizationId || attributes['custom:organizationId'],
         shopId: shopId || attributes['custom:shopId'],
         organizationName: organizationName || attributes['custom:organizationName'],
+        shopName: shopName || attributes['custom:shopName'],
       };
       
-      console.log('🔍 [useAuth] useAuth Debug:', {
-        currentUser: currentUser.username,
-        idTokenPayload: idToken?.payload,
-        attributes: attributes,
-        groups: groups,
-        userData: userData,
-        organizationId: userData.organizationId,
-        organizationName: userData.organizationName
-      });
-      
-      console.log('🔍 [useAuth] ユーザーデータ設定', userData);
       setUser(userData);
       setIsLoading(false);
-      console.log('🔍 [useAuth] 完了');
     } catch (error) {
       console.log('認証状態確認エラー:', error);
       // 未認証の場合

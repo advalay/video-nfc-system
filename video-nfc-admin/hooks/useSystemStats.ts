@@ -9,8 +9,6 @@ export type { OrganizationStat };
 
 // バックエンドのレスポンスをフロントエンドの型に変換
 function transformBackendResponse(backendData: any): SystemStats {
-  console.log('Backend data received:', JSON.stringify(backendData, null, 2));
-  
   const result = {
     totalOrganizations: backendData.totalOrganizations || 0,
     totalShops: backendData.totalShops || 0,
@@ -20,8 +18,6 @@ function transformBackendResponse(backendData: any): SystemStats {
     totalWeeklyVideos: backendData.totalWeeklyVideos || 0,
     monthlyTrend: backendData.monthlyTrend || [],
     organizationStats: (backendData.organizationStats || []).map((orgStat: OrganizationStat): Organization => {
-      console.log('Processing organization:', orgStat.organizationId, 'shopStats:', orgStat.shopStats);
-      
       return {
         organizationId: orgStat.organizationId,
         organizationName: orgStat.organizationName,
@@ -49,7 +45,6 @@ function transformBackendResponse(backendData: any): SystemStats {
     })
   };
   
-  console.log('Transformed result:', JSON.stringify(result, null, 2));
   return result;
 }
 
@@ -58,18 +53,6 @@ export function useSystemStats(startDate?: string, endDate?: string) {
   
   // より安全な権限判定
   const isSystemAdmin = user?.groups && Array.isArray(user.groups) && user.groups.includes('system-admin');
-
-  // デバッグログを追加
-  console.log('🔍 [useSystemStats] Debug:', {
-    user: user,
-    groups: user?.groups,
-    isSystemAdmin: isSystemAdmin,
-    groupsType: typeof user?.groups,
-    groupsLength: user?.groups?.length,
-    userExists: !!user,
-    groupsExists: !!user?.groups,
-    isLoading: isLoading
-  });
 
   return useQuery<SystemStats>({
     queryKey: ['systemStats', startDate, endDate],
@@ -106,9 +89,7 @@ export function useSystemStats(startDate?: string, endDate?: string) {
       return transformBackendResponse(backendData);
     },
     enabled: !isLoading && isSystemAdmin, // 認証完了後かつシステム管理者の場合のみクエリを有効化
-    staleTime: 10 * 60 * 1000, // 10分間キャッシュ（長くする）
-    retry: 0, // リトライを無効化
-    refetchOnWindowFocus: false, // ウィンドウフォーカス時の再取得を無効化
-    refetchOnMount: false, // マウント時の再取得を無効化
+    staleTime: 5 * 60 * 1000, // 5分間キャッシュ
+    retry: 1, // 1回リトライ
   });
 }
