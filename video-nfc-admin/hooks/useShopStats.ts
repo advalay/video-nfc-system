@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Shop } from '../types/shared';
 import { useSystemStats } from './useSystemStats';
 import { useOrganizationStats } from './useOrganizationStats';
+import { useMyShopStats } from './useMyShopStats';
 import { useAuth } from './useAuth';
 
 interface ShopStats {
@@ -20,9 +21,6 @@ interface ShopStats {
     shopId: string;
     shopName: string;
     organizationName?: string;
-    contactPerson?: string;
-    contactEmail?: string;
-    contactPhone?: string;
     totalVideos: number;
     totalSize: number;
     monthlyVideos: number;
@@ -48,20 +46,28 @@ export function useShopStats(shopId?: string): UseShopStatsResult {
   
   // 権限に応じて適切なAPIを呼び出し
   const shouldUseSystemStats = isSystemAdmin;
-  const shouldUseOrganizationStats = isOrganizationAdmin || isShopAdmin;
+  const shouldUseOrganizationStats = isOrganizationAdmin;
+  const shouldUseMyShopStats = isShopAdmin;
   
-  // 常に両方のフックを呼び出す（React Hooksのルールに従う）
+  // 常にすべてのフックを呼び出す（React Hooksのルールに従う）
   const { data: systemStats, isLoading: systemLoading, error: systemError, refetch: systemRefetch } = useSystemStats();
   const { data: organizationStats, isLoading: orgLoading, error: orgError, refetch: orgRefetch } = useOrganizationStats();
+  const { data: myShopStats, isLoading: myShopLoading, error: myShopError, refetch: myShopRefetch } = useMyShopStats();
   
   // ローディング状態とエラーを統合
-  const isLoading = shouldUseSystemStats ? systemLoading : (shouldUseOrganizationStats ? orgLoading : false);
-  const error = shouldUseSystemStats ? systemError : (shouldUseOrganizationStats ? orgError : null);
+  const isLoading = shouldUseSystemStats ? systemLoading : 
+                    (shouldUseOrganizationStats ? orgLoading : 
+                    (shouldUseMyShopStats ? myShopLoading : false));
+  const error = shouldUseSystemStats ? systemError : 
+                (shouldUseOrganizationStats ? orgError : 
+                (shouldUseMyShopStats ? myShopError : null));
   const refetch = async () => {
     if (shouldUseSystemStats) {
       await systemRefetch();
     } else if (shouldUseOrganizationStats) {
       await orgRefetch();
+    } else if (shouldUseMyShopStats) {
+      await myShopRefetch();
     }
   };
 
@@ -92,66 +98,48 @@ export function useShopStats(shopId?: string): UseShopStatsResult {
         monthlyTrend: systemStats.monthlyTrend || [],
         shops: allShops
       };
+    } else if (shouldUseMyShopStats && myShopStats) {
+      // 販売店管理者: 自店舗のみの統計を表示（新しい専用API使用）
+      return {
+        totalVideos: myShopStats.totalVideos || 0,
+        totalSize: myShopStats.totalSize || 0,
+        monthlyVideos: myShopStats.monthlyVideos || 0,
+        weeklyVideos: myShopStats.weeklyVideos || 0,
+        monthlyTrend: myShopStats.monthlyTrend || [],
+        shops: [{
+          shopId: myShopStats.shopId,
+          shopName: user?.shopName || '自店舗',
+          organizationName: user?.organizationName || '自社',
+          contactPerson: '',
+          contactEmail: '',
+          contactPhone: '',
+          totalVideos: myShopStats.totalVideos || 0,
+          totalSize: myShopStats.totalSize || 0,
+          monthlyVideos: myShopStats.monthlyVideos || 0,
+          weeklyVideos: myShopStats.weeklyVideos || 0
+        }]
+      };
     } else if (shouldUseOrganizationStats && organizationStats) {
-      // 組織管理者または販売店管理者: 組織統計を使用
-      if (isShopAdmin && user?.shopId) {
-        // 販売店管理者: 自店舗のみの統計を表示
-        const myShop = organizationStats.shopStats?.find(
-          shop => shop.shopId === user.shopId
-        );
-        
-        if (!myShop) {
-          return {
-            totalVideos: 0,
-            totalSize: 0,
-            monthlyVideos: 0,
-            weeklyVideos: 0,
-            monthlyTrend: [],
-            shops: []
-          };
-        }
-        
-        return {
-          totalVideos: myShop.videoCount || 0,
-          totalSize: myShop.totalSize || 0,
-          monthlyVideos: myShop.monthlyCount || 0,
-          weeklyVideos: myShop.weeklyCount || 0,
-          monthlyTrend: organizationStats.monthlyTrend || [],
-          shops: [{
-            shopId: myShop.shopId,
-            shopName: myShop.shopName,
-            organizationName: user?.organizationName || '自社',
-            contactPerson: myShop.contactPerson,
-            contactEmail: myShop.contactEmail,
-            contactPhone: myShop.contactPhone,
-            totalVideos: myShop.videoCount || 0,
-            totalSize: myShop.totalSize || 0,
-            monthlyVideos: myShop.monthlyCount || 0,
-            weeklyVideos: myShop.weeklyCount || 0
-          }]
-        };
-      } else {
-        // 組織管理者: 自組織の販売店のみを抽出
-        return {
-          totalVideos: organizationStats.totalVideos || 0,
-          totalSize: organizationStats.totalSize || 0,
-          monthlyVideos: organizationStats.monthlyVideos || 0,
-          weeklyVideos: organizationStats.weeklyVideos || 0,
-          monthlyTrend: organizationStats.monthlyTrend || [],
-          shops: organizationStats.shopStats?.map(shop => ({
-            shopId: shop.shopId,
-            shopName: shop.shopName,
-            organizationName: user?.organizationName || '自社',
-            contactPerson: shop.contactPerson,
-            contactEmail: shop.contactEmail,
-            contactPhone: shop.contactPhone,
-            totalVideos: shop.videoCount || 0,
-            totalSize: shop.totalSize || 0,
-            monthlyVideos: shop.monthlyCount || 0,
-            weeklyVideos: shop.weeklyCount || 0
-          })) || []
-        };
-      }
+      // 組織管理者: 自組織の販売店のみを抽出
+      return {
+        totalVideos: organizationStats.totalVideos || 0,
+        totalSize: organizationStats.totalSize || 0,
+        monthlyVideos: organizationStats.monthlyVideos || 0,
+        weeklyVideos: organizationStats.weeklyVideos || 0,
+        monthlyTrend: organizationStats.monthlyTrend || [],
+        shops: organizationStats.shopStats?.map(shop => ({
+          shopId: shop.shopId,
+          shopName: shop.shopName,
+          organizationName: user?.organizationName || '自社',
+          contactPerson: (shop as any).contactPerson || '',
+          contactEmail: (shop as any).contactEmail || '',
+          contactPhone: (shop as any).contactPhone || '',
+          totalVideos: shop.videoCount || 0,
+          totalSize: shop.totalSize || 0,
+          monthlyVideos: shop.monthlyCount || 0,
+          weeklyVideos: shop.weeklyCount || 0
+        })) || []
+      };
     }
     
     return null;

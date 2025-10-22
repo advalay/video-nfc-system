@@ -2,14 +2,7 @@ import { fetchAuthSession } from 'aws-amplify/auth';
 import { configureAmplify } from './amplify-config';
 import { UpdateShopInput } from '../types/shared';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://7two0yvy5k.execute-api.ap-northeast-1.amazonaws.com/prod';
-
-// デバッグ用ログ
-console.log('API Configuration:', {
-  NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
-  API_BASE_URL: API_BASE_URL,
-  NODE_ENV: process.env.NODE_ENV
-});
+const API_BASE_URL = 'https://rwwiyktk7e.execute-api.ap-northeast-1.amazonaws.com/dev';
 
 export class ApiError extends Error {
   constructor(
@@ -93,8 +86,16 @@ export async function apiClient<T>(
     const data = await response.json();
 
     if (!response.ok) {
+      // 409エラーの場合は具体的なメッセージを優先
+      let errorMessage = `HTTP error! status: ${response.status}`;
+      if (response.status === 409 && data.error) {
+        errorMessage = data.error;
+      } else if (data.error?.message) {
+        errorMessage = data.error.message;
+      }
+      
       throw new ApiError(
-        data.error?.message || `HTTP error! status: ${response.status}`,
+        errorMessage,
         response.status,
         data.error?.code
       );
@@ -118,11 +119,33 @@ export async function apiClient<T>(
 
     // ネットワークエラーやパースエラー
     if (error instanceof Error) {
-      // ユーザーに分かりやすいメッセージ
-      throw new ApiError('ネットワークに接続できません。時間をおいて再試行してください。', 0);
+      const errorMessage = error.message;
+      
+      // CORSエラーの場合
+      if (errorMessage?.includes('CORS') || errorMessage?.includes('blocked by CORS policy')) {
+        throw new ApiError('CORSエラーが発生しました。管理者にご連絡ください。', 0);
+      }
+      
+      // 502 Bad Gatewayエラーの場合
+      if (errorMessage?.includes('502') || errorMessage?.includes('Bad Gateway')) {
+        throw new ApiError('サーバーエラーが発生しました。しばらく時間をおいて再試行してください。', 502);
+      }
+      
+      // 認証エラーの場合
+      if (errorMessage?.includes('401') || errorMessage?.includes('Unauthorized')) {
+        throw new ApiError('認証に失敗しました。ログインし直してください。', 401);
+      }
+      
+      // 権限エラーの場合
+      if (errorMessage?.includes('403') || errorMessage?.includes('Forbidden')) {
+        throw new ApiError('アクセス権限がありません。管理者にご連絡ください。', 403);
+      }
+      
+      // その他のネットワークエラー
+      throw new ApiError('通信エラーが発生しました。時間をおいて再試行してください。', 0);
     }
 
-    throw new ApiError('Unknown error occurred', 0);
+    throw new ApiError('予期しないエラーが発生しました。', 0);
   }
 }
 

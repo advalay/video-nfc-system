@@ -12,6 +12,7 @@ interface UploadResult {
   videoUrl: string;
   thumbnailUrl: string;
   title: string;
+  description?: string;
   size: number;
 }
 
@@ -20,7 +21,7 @@ interface UseUploadResult {
   progress: UploadProgress;
   result: UploadResult | null;
   error: string | null;
-  upload: (file: File, title: string) => Promise<void>;
+  upload: (file: File, title: string, description?: string) => Promise<void>;
   reset: () => void;
 }
 
@@ -30,7 +31,7 @@ export function useUpload(): UseUploadResult {
   const [result, setResult] = useState<UploadResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const upload = useCallback(async (file: File, title: string) => {
+  const upload = useCallback(async (file: File, title: string, description?: string) => {
     setIsUploading(true);
     setProgress({ loaded: 0, total: 0, percentage: 0 });
     setResult(null);
