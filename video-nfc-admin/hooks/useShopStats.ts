@@ -51,7 +51,7 @@ export function useShopStats(shopId?: string): UseShopStatsResult {
   
   // 常にすべてのフックを呼び出す（React Hooksのルールに従う）
   const { data: systemStats, isLoading: systemLoading, error: systemError, refetch: systemRefetch } = useSystemStats();
-  const { data: organizationStats, isLoading: orgLoading, error: orgError, refetch: orgRefetch } = useOrganizationStats();
+  const { data: organizationStats, isLoading: orgLoading, error: orgError, refetch: orgRefetch } = useOrganizationStats(undefined, undefined, shouldUseOrganizationStats);
   const { data: myShopStats, isLoading: myShopLoading, error: myShopError, refetch: myShopRefetch } = useMyShopStats();
   
   // ローディング状態とエラーを統合
