@@ -14,9 +14,6 @@ export interface OrganizationStats {
   shopStats: Array<{
     shopId: string;
     shopName: string;
-    contactPerson?: string;
-    contactEmail?: string;
-    contactPhone?: string;
     videoCount: number;
     totalSize: number;
     monthlyCount: number;
@@ -29,7 +26,7 @@ export interface OrganizationStats {
   }>;
 }
 
-export function useOrganizationStats(startDate?: string, endDate?: string) {
+export function useOrganizationStats(startDate?: string, endDate?: string, enabled: boolean = true) {
   const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
   return useQuery<OrganizationStats>({
@@ -75,7 +72,7 @@ export function useOrganizationStats(startDate?: string, endDate?: string) {
 
       return result.data;
     },
-    enabled: true,
+    enabled,
     staleTime: 5 * 60 * 1000, // 5分間キャッシュ
     retry: 3,
   });
