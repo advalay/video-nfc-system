@@ -94,6 +94,7 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
       Bucket: bucketName,
       Key: s3Key,
       ContentType: contentType,
+      ChecksumAlgorithm: 'CRC32', // チェックサムアルゴリズムを明示的に指定
     });
     const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 3600 }); // 1時間有効
 
