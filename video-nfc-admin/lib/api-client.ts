@@ -2,7 +2,7 @@ import { fetchAuthSession } from 'aws-amplify/auth';
 import { configureAmplify } from './amplify-config';
 import { UpdateShopInput } from '../types/shared';
 
-const API_BASE_URL = 'https://rwwiyktk7e.execute-api.ap-northeast-1.amazonaws.com/dev';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://rwwiyktk7e.execute-api.ap-northeast-1.amazonaws.com/dev';
 
 export class ApiError extends Error {
   constructor(
