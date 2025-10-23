@@ -299,7 +299,7 @@ export default function OrganizationsPage() {
 
   // 権限に応じて適切なデータを取得
   const { data: systemStats, isLoading: systemLoading, error: systemError, refetch: systemRefetch } = useSystemStats();
-  const { data: organizationStats, isLoading: orgLoading, error: orgError, refetch: orgRefetch } = useOrganizationStats();
+  const { data: organizationStats, isLoading: orgLoading, error: orgError, refetch: orgRefetch } = useOrganizationStats(undefined, undefined, isOrganizationAdmin && !isSystemAdmin);
   
   // 権限に応じて使用するデータを選択
   const isLoading = isSystemAdmin ? systemLoading : orgLoading;
