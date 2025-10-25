@@ -42,8 +42,13 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
       };
     }
 
-    // organizationId と shopId が必須
-    if (!organizationId || !shopId) {
+    const body = event.body ? JSON.parse(event.body) : {};
+    
+    // リクエストボディにshopIdがあればそれを使用、なければclaimsから取得
+    const targetShopId = body.shopId || shopId;
+
+    // organizationId は必須
+    if (!organizationId) {
       return {
         statusCode: 400,
         headers: {
@@ -54,13 +59,49 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
           success: false,
           error: {
             code: 'INVALID_USER_ATTRIBUTES',
-            message: 'User organizationId and shopId are required',
+            message: 'User organizationId is required',
           },
         }),
       };
     }
 
-    const body = event.body ? JSON.parse(event.body) : {};
+    // 組織管理者の場合、shopIdの指定が必須
+    if (userGroups.includes('organization-admin') && !targetShopId) {
+      return {
+        statusCode: 400,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+        body: JSON.stringify({
+          success: false,
+          error: {
+            code: 'INVALID_PARAMETER',
+            message: 'shopId is required for organization administrators',
+          },
+        }),
+      };
+    }
+
+    // shop-adminの場合はclaimsのshopIdを使用、それ以外はリクエストのshopIdを使用
+    const finalShopId = userGroups.includes('shop-admin') ? shopId : targetShopId;
+
+    if (!finalShopId) {
+      return {
+        statusCode: 400,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+        body: JSON.stringify({
+          success: false,
+          error: {
+            code: 'INVALID_PARAMETER',
+            message: 'shopId is required',
+          },
+        }),
+      };
+    }
     const fileName: string = body.fileName;
     const fileSize: number = body.fileSize;
     const contentType: string = body.contentType;
@@ -87,7 +128,7 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
     // videoIdを生成
     const videoId = uuidv4();
     const timestamp = Date.now();
-    const s3Key = `videos/${organizationId}/${shopId}/${videoId}/${fileName}`;
+    const s3Key = `videos/${organizationId}/${finalShopId}/${videoId}/${fileName}`;
 
     // S3署名付きURL生成（CRC32チェックサムはクライアント側で送信）
     const command = new PutObjectCommand({
@@ -112,7 +153,7 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
           
           // 組織情報
           organizationId,
-          shopId,
+          shopId: finalShopId,
           
           // 動画情報
           fileName,

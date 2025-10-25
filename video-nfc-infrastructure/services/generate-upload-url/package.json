@@ -4,14 +4,13 @@
   "description": "Generate pre-signed URL for video upload",
   "main": "index.js",
   "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.637.0",
-    "@aws-sdk/client-s3": "^3.637.0",
-    "@aws-sdk/lib-dynamodb": "^3.637.0",
-    "@aws-sdk/s3-request-presigner": "^3.637.0",
-    "uuid": "^9.0.0"
+    "@aws-sdk/client-dynamodb": "^3.917.0",
+    "@aws-sdk/client-s3": "^3.917.0",
+    "@aws-sdk/lib-dynamodb": "^3.917.0",
+    "@aws-sdk/s3-request-presigner": "^3.917.0",
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "@types/uuid": "^10.0.0"
   }
 }
-

@@ -72,33 +72,19 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       }
 
       if (userExists) {
-        // 既存ユーザーの属性を更新
-        await cognitoClient.send(new AdminUpdateUserAttributesCommand({
-          UserPoolId: USER_POOL_ID,
-          Username: username,
-          UserAttributes: [
-            { Name: 'custom:shopId', Value: shopId },
-            { Name: 'custom:organizationId', Value: organizationId },
-            { Name: 'custom:shopName', Value: shopName },
-            { Name: 'custom:role', Value: 'shop-admin' },
-          ],
-        }));
-
-        // グループに追加（既に追加されている場合はエラーにならない）
-        try {
-          await cognitoClient.send(new AdminAddUserToGroupCommand({
-            UserPoolId: USER_POOL_ID,
-            Username: username,
-            GroupName: 'shop-admin',
-          }));
-        } catch (error: any) {
-          // グループに既に所属している場合は無視
-          if (error.name !== 'UserNotFoundException') {
-            logInfo('グループ追加スキップ（既に所属）', { username }, event);
-          }
-        }
-
-        logInfo('既存ユーザー更新成功', { username, shopId, organizationId }, event);
+        // 既存メールアドレスの場合はエラーを返す
+        return {
+          statusCode: 409,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+          },
+          body: JSON.stringify({
+            success: false,
+            error: 'このメールアドレスは既に登録されています。別のメールアドレスをご使用ください。',
+            code: 'EMAIL_ALREADY_EXISTS'
+          }),
+        };
       } else {
         // 新規ユーザー作成
         await cognitoClient.send(new AdminCreateUserCommand({
@@ -232,9 +218,9 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
           shopId,
           shopName,
           email,
-          ...(userExists ? {} : { tempPassword }), // 既存ユーザーの場合はパスワードを返さない
+          tempPassword, // 新規ユーザーのみ（既存ユーザーは上でエラーを返す）
           loginUrl: process.env.LOGIN_URL || 'https://your-app.com/login',
-          isExistingUser: userExists,
+          isExistingUser: false, // ここに到達するのは新規ユーザーのみ
         },
       }),
     };
