@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../hooks/useAuth';
 import { useShopStats } from '../../../hooks/useShopStats';
+import { useMyShopStats } from '../../../hooks/useMyShopStats';
 import { Layout } from '../../../components/Layout';
 import { ProtectedRoute } from '../../../components/ProtectedRoute';
 import { 
@@ -23,6 +24,9 @@ export default function ShopStatsPage() {
   const router = useRouter();
   const { user } = useAuth();
   
+  // 販売店管理者かどうかを判定
+  const isShopAdmin = user?.groups?.includes('shop-admin');
+  
   // 期間選択の状態
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
@@ -35,7 +39,11 @@ export default function ShopStatsPage() {
   const [sortBy, setSortBy] = useState<'name' | 'videos' | 'size' | 'monthly'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   
-  const { stats, isLoading, error, refetch } = useShopStats();
+  // 販売店管理者は自店舗の統計、組織管理者は配下店舗の統計を取得
+  const myShopResult = useMyShopStats();
+  const orgShopResult = useShopStats();
+  
+  const { stats, isLoading, error, refetch } = isShopAdmin ? myShopResult : orgShopResult;
 
   // フィルタリングとソート機能
   const filteredAndSortedShops = useMemo(() => {
@@ -180,17 +188,6 @@ export default function ShopStatsPage() {
     );
   }
 
-  // 販売店管理者かどうかを判定
-  const isShopAdmin = user?.groups?.includes('shop-admin');
-  
-  // デバッグ用ログ
-  console.log('ShopStatsPage Debug:', {
-    user: user,
-    groups: user?.groups,
-    isShopAdmin: isShopAdmin,
-    organizationId: user?.organizationId,
-    shopId: user?.shopId
-  });
 
   return (
     <ProtectedRoute allowedRoles={['system-admin', 'organization-admin', 'shop-admin', 'shop-user']}>
