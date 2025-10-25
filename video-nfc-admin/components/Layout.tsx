@@ -93,9 +93,15 @@ export function Layout({ children }: LayoutProps) {
             <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
               {user.email.charAt(0).toUpperCase()}
             </div>
-            <div>
-              <p className="text-sm font-medium text-gray-900">{user.organizationName}</p>
-              <p className="text-xs text-gray-500">{user.email}</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-900 truncate">
+                {isSystemAdmin 
+                  ? 'システム管理' 
+                  : isShopAdmin 
+                    ? user.shopName || user.organizationName || '販売店'
+                    : user.organizationName || '組織'}
+              </p>
+              <p className="text-xs text-gray-500 truncate">{user.email}</p>
             </div>
           </div>
         </div>
