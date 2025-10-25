@@ -130,13 +130,18 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
     const timestamp = Date.now();
     const s3Key = `videos/${organizationId}/${finalShopId}/${videoId}/${fileName}`;
 
-    // S3署名付きURL生成（暗号化はS3バケットのデフォルト設定に任せる）
+    // S3署名付きURL生成
     const command = new PutObjectCommand({
       Bucket: bucketName,
       Key: s3Key,
       ContentType: contentType,
     });
-    const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 3600 }); // 1時間有効
+    let uploadUrl = await getSignedUrl(s3, command, { expiresIn: 3600 }); // 1時間有効
+    
+    // AWS SDK v3が自動的に追加するx-amz-checksum-crc32パラメータを削除
+    // このパラメータがあるとクライアントがchecksumを計算して送信する必要があるが、
+    // その実装がないため、クライアントが単純にPUTリクエストを送信できるように削除する
+    uploadUrl = uploadUrl.replace(/[?&]x-amz-checksum-crc32=[^&]*/g, '');
 
     // 請求月（YYYY-MM形式）
     const billingMonth = new Date().toISOString().slice(0, 7);
