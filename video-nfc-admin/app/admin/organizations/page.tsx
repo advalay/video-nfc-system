@@ -28,12 +28,7 @@ const formatFileSize = (bytes: number): string => {
   return `${size.toFixed(2)} ${sizes[i]}`;
 };
 
-// 店舗のID/PASS生成（モック）
-const generateShopCredentials = (shop: Shop) => {
-  const email = `${shop.shopId}@${shop.organizationId}.com`;
-  const password = `shop_${shop.shopId.slice(-6)}_${Math.random().toString(36).slice(-4)}`;
-  return { email, password };
-};
+// 削除: モック関数は不要（実際のデータを使用）
 
 type ShopRowProps = {
   shop: Shop;
@@ -323,6 +318,7 @@ export default function OrganizationsPage() {
           shopId: shop.shopId,
           shopName: shop.shopName,
           organizationId: user?.organizationId || '',
+          email: (shop as any).email || '', // ログイン用メールアドレス
           contactPerson: (shop as any).contactPerson || '',
           contactEmail: (shop as any).contactEmail || '',
           contactPhone: (shop as any).contactPhone || '',
@@ -594,76 +590,57 @@ export default function OrganizationsPage() {
                 </button>
               </div>
 
-              {(() => {
-                const credentials = generateShopCredentials(selectedShop);
-                return (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        メールアドレス（ID）
-                      </label>
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="text"
-                          value={credentials.email}
-                          readOnly
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm"
-                        />
-                        <button
-                          onClick={() => handleCopyCredentials(credentials.email)}
-                          className="p-2 text-gray-600 hover:text-gray-900"
-                          title="コピー"
-                        >
-                          <Copy className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        パスワード
-                      </label>
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type={showPassword ? 'text' : 'password'}
-                          value={credentials.password}
-                          readOnly
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm"
-                        />
-                        <button
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="p-2 text-gray-600 hover:text-gray-900"
-                          title={showPassword ? 'パスワードを隠す' : 'パスワードを表示'}
-                        >
-                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                        <button
-                          onClick={() => handleCopyCredentials(credentials.password)}
-                          className="p-2 text-gray-600 hover:text-gray-900"
-                          title="コピー"
-                        >
-                          <Copy className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="flex space-x-3 pt-4">
-                      <button
-                        onClick={() => handleResetPassword(selectedShop)}
-                        className="flex-1 bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors"
-                      >
-                        パスワードリセット
-                      </button>
-                      <button
-                        onClick={() => setShowCredentialsModal(false)}
-                        className="flex-1 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
-                      >
-                        閉じる
-                      </button>
-                    </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    メールアドレス（ID）
+                  </label>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="text"
+                      value={selectedShop.email}
+                      readOnly
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm font-mono"
+                    />
+                    <button
+                      onClick={() => handleCopyCredentials(selectedShop.email)}
+                      className="p-2 text-gray-600 hover:text-gray-900"
+                      title="コピー"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
                   </div>
-                );
-              })()}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    パスワード
+                  </label>
+                  <div className="px-3 py-3 border border-gray-200 rounded-lg bg-gray-50">
+                    <p className="text-sm text-gray-600">
+                      セキュリティのため、パスワードは表示できません。
+                    </p>
+                    <p className="text-sm text-gray-600 mt-1">
+                      パスワードを変更する必要がある場合は、下の「パスワードリセット」ボタンをクリックしてください。
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex space-x-3 pt-4">
+                  <button
+                    onClick={() => handleResetPassword(selectedShop)}
+                    className="flex-1 bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors"
+                  >
+                    パスワードリセット
+                  </button>
+                  <button
+                    onClick={() => setShowCredentialsModal(false)}
+                    className="flex-1 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
+                  >
+                    閉じる
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}

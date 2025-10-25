@@ -5,6 +5,7 @@ export interface Shop {
   shopId: string;
   shopName: string;
   organizationId: string;
+  email: string; // ログイン用メールアドレス
   contactPerson?: string;
   contactEmail?: string;
   contactPhone?: string;
@@ -63,6 +64,7 @@ export interface OrganizationStat {
   shopStats: Array<{
     shopId: string;
     shopName: string;
+    email?: string; // ログイン用メールアドレス
     contactPerson?: string;
     contactEmail?: string;
     contactPhone?: string;

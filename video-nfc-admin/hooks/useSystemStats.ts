@@ -32,6 +32,8 @@ function transformBackendResponse(backendData: any): SystemStats {
           shopId: shopStat.shopId,
           shopName: shopStat.shopName,
           organizationId: orgStat.organizationId,
+          email: (shopStat as any).email || '', // ログイン用メールアドレス
+          contactPerson: (shopStat as any).contactPerson || '',
           contactEmail: shopStat.contactEmail || '',
           contactPhone: shopStat.contactPhone || '',
           totalVideos: shopStat.videoCount || 0,
