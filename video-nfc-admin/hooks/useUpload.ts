@@ -108,9 +108,10 @@ export function useUpload(): UseUploadResult {
         });
 
         // S3へPUTリクエスト
-        // Pre-signed URLには既に必要なパラメータが含まれているため、追加のヘッダーは不要
+        // Pre-signed URLに含まれる署名は、リクエストのすべてのヘッダーと一致する必要がある
+        // Content-TypeはPre-signed URL生成時に指定したものと完全に一致させる
         xhr.open('PUT', uploadUrl);
-        xhr.setRequestHeader('Content-Type', file.type);
+        // Content-Typeヘッダーは不要（URLに含まれている）
         xhr.send(file);
       });
 
