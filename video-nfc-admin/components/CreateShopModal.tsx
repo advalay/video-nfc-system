@@ -98,7 +98,7 @@ export default function CreateShopModal({
         shopId: response.shopId,
         shopName: response.shopName,
         email: response.email,
-        tempPassword: response.tempPassword || '',
+        tempPassword: response.tempPassword || '', // undefinedの場合は空文字列
         loginUrl: response.loginUrl || window.location.origin + '/login'
       });
       
