@@ -147,6 +147,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
                 shopId: item.shopId as string,
                 shopName: item.shopName as string,
                 organizationId: item.organizationId as string,
+                email: item.email as string, // ログイン用メールアドレス
                 status: item.status as string,
                 contactPerson: item.contactPerson as string,
                 contactEmail: item.contactEmail as string,
