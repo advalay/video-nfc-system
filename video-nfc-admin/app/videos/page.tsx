@@ -272,7 +272,7 @@ export default function VideosPage() {
                       ステータス
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      組織・店舗
+                      {user?.groups?.includes('system-admin') ? '組織・店舗' : '店舗名'}
                     </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       操作
@@ -328,10 +328,16 @@ export default function VideosPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <div>
-                          <div className="font-medium">{video.organizationName}</div>
-                          <div className="text-gray-500">{video.shopName}</div>
-                        </div>
+                        {user?.groups?.includes('system-admin') ? (
+                          // システム管理者: 組織名 + 店舗名
+                          <div>
+                            <span className="font-medium">{video.organizationName}</span>
+                            <span className="text-gray-500"> - {video.shopName}</span>
+                          </div>
+                        ) : (
+                          // 組織管理者・店舗管理者: 店舗名のみ
+                          <div className="font-medium">{video.shopName}</div>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end space-x-2">
