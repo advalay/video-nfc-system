@@ -12,7 +12,6 @@ interface UploadResult {
   videoUrl: string;
   thumbnailUrl: string;
   title: string;
-  description: string;
   size: number;
   duration: number;
 }
@@ -22,7 +21,7 @@ interface UseUploadResult {
   progress: UploadProgress;
   result: UploadResult | null;
   error: string | null;
-  upload: (file: File, title: string, description: string) => Promise<void>;
+  upload: (file: File, title: string) => Promise<void>;
   reset: () => void;
 }
 
@@ -32,7 +31,7 @@ export function useUpload(): UseUploadResult {
   const [result, setResult] = useState<UploadResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const upload = useCallback(async (file: File, title: string, description: string) => {
+  const upload = useCallback(async (file: File, title: string) => {
     setIsUploading(true);
     setProgress({ loaded: 0, total: 0, percentage: 0 });
     setResult(null);
@@ -59,7 +58,6 @@ export function useUpload(): UseUploadResult {
         fileSize: file.size,
         contentType: file.type,
         title: title || file.name,
-        description: description || '',
       };
 
       console.log('リクエスト内容:', requestBody);
@@ -151,7 +149,6 @@ export function useUpload(): UseUploadResult {
         videoUrl: `https://example.com/videos/${videoId}`, // 実際のCloudFront URLに置き換え
         thumbnailUrl: `https://via.placeholder.com/300x200?text=${encodeURIComponent(title)}`,
         title,
-        description,
         size: file.size,
         duration: 0, // 実際の動画長は別途取得が必要
       };
