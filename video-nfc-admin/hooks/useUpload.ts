@@ -102,10 +102,9 @@ export function useUpload(): UseUploadResult {
         });
 
         // S3へPUTリクエスト
+        // Pre-signed URLには既に必要なパラメータが含まれているため、追加のヘッダーは不要
         xhr.open('PUT', uploadUrl);
         xhr.setRequestHeader('Content-Type', file.type);
-        // S3バケットのデフォルト暗号化設定に合わせる
-        xhr.setRequestHeader('x-amz-server-side-encryption', 'AES256');
         xhr.send(file);
       });
 
