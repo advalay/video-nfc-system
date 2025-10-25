@@ -85,62 +85,47 @@ export function useUpload(): UseUploadResult {
       const { uploadUrl, videoId, s3Key } = uploadUrlData.data;
       console.log('✔ 署名付きURL取得成功:', { videoId, uploadUrl: uploadUrl.substring(0, 100) + '...' });
 
-      // Step 2: S3に直接アップロード
+      // Step 2: S3に直接アップロード（Fetch APIを使用）
       console.log('Step 2: S3へアップロード中...');
       
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
+      // URLからchecksumパラメータを抽出
+      const urlObj = new URL(uploadUrl);
+      const checksumAlgo = urlObj.searchParams.get('x-amz-sdk-checksum-algorithm');
+      const checksumValue = urlObj.searchParams.get('x-amz-checksum-crc32');
+      
+      // チェックサムパラメータがURLに含まれている場合はログに記録
+      if (checksumAlgo || checksumValue) {
+        console.log('⚠ チェックサムパラメータがURLに含まれています:', { checksumAlgo, checksumValue });
+        console.log('⚠ ブラウザのXMLHttpRequestはCRC32を計算できません');
+        console.log('⚠ S3は署名を検証して403エラーを返します');
+      }
+      
+      // fetch APIを使用
+      const response = await fetch(uploadUrl, {
+        method: 'PUT',
+        body: file,
+        headers: {
+          'Content-Type': file.type,
+        },
+      });
 
-        // アップロード進捗の監視
-        xhr.upload.addEventListener('progress', (e) => {
-          if (e.lengthComputable) {
-            const percentage = Math.round((e.loaded / e.total) * 100);
-            console.log(`アップロード進捗: ${percentage}%`);
-            setProgress({
-              loaded: e.loaded,
-              total: e.total,
-              percentage,
-            });
-          }
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('●×× アップロードエラー:', {
+          status: response.status,
+          statusText: response.statusText,
+          response: errorText,
         });
+        throw new Error(`S3 アップロード失敗: ${response.status} ${response.statusText}`);
+      }
 
-        // アップロード完了
-        xhr.addEventListener('load', () => {
-          if (xhr.status === 200) {
-            console.log('✔ S3アップロード成功');
-            resolve();
-          } else {
-            console.error('●×× アップロードエラー:', {
-              status: xhr.status,
-              statusText: xhr.statusText,
-              response: xhr.responseText,
-            });
-            reject(new Error(`S3 アップロード失敗: ${xhr.status} ${xhr.statusText}`));
-          }
-        });
-
-        // エラーハンドリング
-        xhr.addEventListener('error', () => {
-          console.error('●×× ネットワークエラー');
-          reject(new Error('ネットワークエラーが発生しました'));
-        });
-
-        xhr.addEventListener('abort', () => {
-          console.error('●×× アップロード中止');
-          reject(new Error('アップロードが中止されました'));
-        });
-
-        // S3への PUT リクエスト
-        xhr.open('PUT', uploadUrl);
-        
-        // 必須ヘッダーを設定
-        xhr.setRequestHeader('Content-Type', file.type);
-        // 注: x-amz-server-side-encryption ヘッダーは削除
-        // S3バケットのデフォルト暗号化設定（S3_MANAGED）に任せる
-        // Pre-signed URLに含まれていないパラメータを送信すると、403エラーになる
-        
-        // ファイルを送信
-        xhr.send(file);
+      console.log('✔ S3アップロード成功');
+      
+      // 進捗を100%に設定
+      setProgress({
+        loaded: file.size,
+        total: file.size,
+        percentage: 100,
       });
 
       // Step 3: アップロード完了
