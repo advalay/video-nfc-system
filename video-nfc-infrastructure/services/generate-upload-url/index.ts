@@ -131,17 +131,21 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
     const s3Key = `videos/${organizationId}/${finalShopId}/${videoId}/${fileName}`;
 
     // S3署名付きURL生成
+    // 注意: AWS SDK v3のgetSignedUrlは、署名にすべてのリクエストパラメータを含める
+    // そのため、Commandに指定したパラメータがすべて署名に含まれ、クライアントは完全に一致するリクエストを送信する必要がある
+    // ChecksumAlgorithmやその他の複雑なパラメータを指定しないことで、シンプルなPUTリクエストのみを要求する
     const command = new PutObjectCommand({
       Bucket: bucketName,
       Key: s3Key,
       ContentType: contentType,
+      // ChecksumAlgorithm、ContentMD5、ServerSideEncryptionなどは指定しない
+      // Pre-signed URLにこれらのパラメータが含まれると、クライアントも同じパラメータを送信する必要がある
     });
-    let uploadUrl = await getSignedUrl(s3, command, { expiresIn: 3600 }); // 1時間有効
     
-    // AWS SDK v3が自動的に追加するx-amz-checksum-crc32パラメータを削除
-    // このパラメータがあるとクライアントがchecksumを計算して送信する必要があるが、
-    // その実装がないため、クライアントが単純にPUTリクエストを送信できるように削除する
-    uploadUrl = uploadUrl.replace(/[?&]x-amz-checksum-crc32=[^&]*/g, '');
+    const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 3600 }); // 1時間有効
+    
+    // デバッグ用: Pre-signed URLをログ出力
+    console.log('Generated pre-signed URL:', uploadUrl.substring(0, 200) + '...');
 
     // 請求月（YYYY-MM形式）
     const billingMonth = new Date().toISOString().slice(0, 7);
