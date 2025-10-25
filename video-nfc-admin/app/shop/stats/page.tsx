@@ -43,7 +43,26 @@ export default function ShopStatsPage() {
   const myShopResult = useMyShopStats();
   const orgShopResult = useShopStats();
   
-  const { stats, isLoading, error, refetch } = isShopAdmin ? myShopResult : orgShopResult;
+  // useMyShopStats は useQuery の結果を返すため、data プロパティから値を取得
+  const stats = isShopAdmin ? (myShopResult.data ? {
+    totalVideos: myShopResult.data.totalVideos,
+    totalSize: myShopResult.data.totalSize,
+    monthlyVideos: myShopResult.data.monthlyVideos,
+    weeklyVideos: myShopResult.data.weeklyVideos,
+    shops: [{
+      shopId: myShopResult.data.shopId,
+      shopName: user?.shopName || '自店舗',
+      organizationName: user?.organizationName,
+      totalVideos: myShopResult.data.totalVideos,
+      totalSize: myShopResult.data.totalSize,
+      monthlyVideos: myShopResult.data.monthlyVideos,
+      weeklyVideos: myShopResult.data.weeklyVideos,
+    }]
+  } : null) : orgShopResult.stats;
+  
+  const isLoading = isShopAdmin ? myShopResult.isLoading : orgShopResult.isLoading;
+  const error = isShopAdmin ? (myShopResult.error ? String(myShopResult.error.message) : null) : orgShopResult.error;
+  const refetch = isShopAdmin ? myShopResult.refetch : orgShopResult.refetch;
 
   // フィルタリングとソート機能
   const filteredAndSortedShops = useMemo(() => {
