@@ -61,8 +61,14 @@ export function useUpload(): UseUploadResult {
         expiresIn: number;
       }>('/videos/upload-url', requestBody);
 
-      const { videoId, uploadUrl } = uploadUrlResponse;
+      let { videoId, uploadUrl } = uploadUrlResponse;
       console.log('✅ 署名付きURL取得成功:', { videoId, uploadUrl: uploadUrl.substring(0, 50) + '...' });
+      
+      // AWS SDK v3が自動的に追加するx-amz-checksum-crc32パラメータを削除
+      // このパラメータがあるとクライアントがchecksumを計算して送信する必要があるが、
+      // その実装がないため、クライアントが単純にPUTリクエストを送信できるように削除する
+      uploadUrl = uploadUrl.replace(/[?&]x-amz-checksum-crc32=[^&]*/g, '');
+      console.log('✅ checksumパラメータ削除後のURL:', uploadUrl.substring(0, 100) + '...');
 
       // Step 2: S3へ直接アップロード（XMLHttpRequestでプログレストラッキング）
       console.log('Step 2: S3へアップロード中...');
