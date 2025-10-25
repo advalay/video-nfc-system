@@ -4,7 +4,6 @@ import { useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUpload } from '../../hooks/useUpload';
 import { useAuth } from '../../hooks/useAuth';
-import { useOrganizationStats } from '../../hooks/useOrganizationStats';
 import { formatFileSize, copyToClipboard } from '../../lib/utils';
 import { Upload, CheckCircle, ArrowLeft, X, Download, Copy, QrCode } from 'lucide-react';
 import { QRModal } from '../../components/QRModal';
@@ -20,11 +19,7 @@ export default function UploadPage() {
   
   const isOrganizationAdmin = user?.groups?.includes('organization-admin');
   
-  // 組織管理者の場合、配下の店舗を取得
-  const { data: orgStats } = useOrganizationStats(undefined, undefined, isOrganizationAdmin);
-  
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [selectedShopId, setSelectedShopId] = useState<string>('');
   const [title, setTitle] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
@@ -94,14 +89,8 @@ export default function UploadPage() {
       return;
     }
     
-    // 組織管理者の場合、店舗選択が必須
-    if (isOrganizationAdmin && !selectedShopId) {
-      toast.error('アップロード先の店舗を選択してください');
-      return;
-    }
-    
     configureAmplify();
-    await upload(selectedFile, title, selectedShopId || undefined);
+    await upload(selectedFile, title, undefined);
   };
 
   const handleCopyUrl = async () => {
@@ -121,7 +110,6 @@ export default function UploadPage() {
   const handleReset = () => {
     setSelectedFile(null);
     setTitle('');
-    setSelectedShopId('');
     reset();
   };
 
@@ -151,8 +139,8 @@ export default function UploadPage() {
         {!result ? (
           // アップロード前・中
           <div className="space-y-8">
-            {/* ドラッグ&ドロップエリア */}
-            {!isUploading && (
+            {/* ドラッグ&ドロップエリア（店舗管理者のみ） */}
+            {!isOrganizationAdmin && !isUploading && (
               <div
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
@@ -223,33 +211,44 @@ export default function UploadPage() {
               </div>
             )}
 
-            {/* ファイル情報入力フォーム */}
-            {selectedFile && !isUploading && (
+            {/* 組織管理者向けメッセージ */}
+            {isOrganizationAdmin && (
+              <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-300 rounded-lg p-8 shadow-sm">
+                <div className="max-w-2xl mx-auto space-y-4">
+                  <div className="flex items-start space-x-4">
+                    <div className="flex-shrink-0">
+                      <Upload className="w-8 h-8 text-blue-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold text-blue-900 mb-3">
+                        動画のアップロードについて
+                      </h3>
+                      <div className="space-y-3 text-blue-800">
+                        <p className="leading-relaxed">
+                          組織管理者は、動画を直接アップロードすることはできません。
+                        </p>
+                        <p className="leading-relaxed font-medium">
+                          動画のアップロードは各販売店の管理者が行います。
+                        </p>
+                        <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                          <p className="text-sm text-blue-700">
+                            💡 ヒント: 販売店の管理者に動画をアップロードしてもらうよう依頼してください。
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ファイル情報入力フォーム（店舗管理者のみ） */}
+            {!isOrganizationAdmin && selectedFile && !isUploading && (
               <div className="bg-white rounded-lg shadow p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                   動画情報
                 </h3>
                 <div className="space-y-4">
-                  {/* 組織管理者の場合のみ店舗選択 */}
-                  {isOrganizationAdmin && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        アップロード先店舗 *
-                      </label>
-                      <select
-                        value={selectedShopId}
-                        onChange={(e) => setSelectedShopId(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-gray-900"
-                      >
-                        <option value="">店舗を選択してください</option>
-                        {orgStats?.shopStats?.map((shop) => (
-                          <option key={shop.shopId} value={shop.shopId}>
-                            {shop.shopName}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       タイトル *
@@ -302,8 +301,8 @@ export default function UploadPage() {
               </div>
             )}
 
-            {/* アクションボタン */}
-            {selectedFile && !isUploading && (
+            {/* アクションボタン（店舗管理者のみ） */}
+            {!isOrganizationAdmin && selectedFile && !isUploading && (
               <div className="flex space-x-4">
                 <button
                   onClick={handleUpload}
