@@ -23,6 +23,10 @@ interface Video {
 interface ShopStat {
     shopId: string;
     shopName: string;
+    email?: string; // ログイン用メールアドレス
+    contactPerson?: string;
+    contactEmail?: string;
+    contactPhone?: string;
     videoCount: number;
     totalSize: number;
     monthlyCount: number;
@@ -84,7 +88,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
             TableName: process.env.DYNAMODB_TABLE_SHOP!,
             FilterExpression: 'organizationId = :organizationId',
             ExpressionAttributeValues: {
-                ':organizationId': { S: userOrganizationId }
+                ':organizationId': userOrganizationId
             }
         };
 
@@ -93,23 +97,26 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
             shopId: item.shopId as string,
             shopName: item.shopName as string,
             organizationId: item.organizationId as string,
-            status: item.status as string
+            status: item.status as string,
+            contactPerson: item.contactPerson as string,
+            contactEmail: item.contactEmail as string,
+            contactPhone: item.contactPhone as string
         }));
 
         // 期間指定がある場合のフィルタリング
         let filterExpression = 'organizationId = :organizationId';
         let expressionAttributeValues: { [key: string]: any } = {
-            ':organizationId': { S: userOrganizationId }
+            ':organizationId': userOrganizationId
         };
 
         if (startDate || endDate) {
             if (startDate) {
                 filterExpression += ' AND uploadDate >= :startDate';
-                expressionAttributeValues[':startDate'] = { S: startDate };
+                expressionAttributeValues[':startDate'] = startDate;
             }
             if (endDate) {
                 filterExpression += ' AND uploadDate <= :endDate';
-                expressionAttributeValues[':endDate'] = { S: endDate };
+                expressionAttributeValues[':endDate'] = endDate;
             }
         }
 
@@ -143,8 +150,12 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         // 現在の日時を取得
         const now = new Date();
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        
+        // 週の開始日を月曜日に設定（日曜日=0, 月曜日=1, ..., 土曜日=6）
         const startOfWeek = new Date(now);
-        startOfWeek.setDate(now.getDate() - now.getDay());
+        const dayOfWeek = now.getDay(); // 0=日曜日, 1=月曜日, ..., 6=土曜日
+        const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // 日曜日の場合は-6、それ以外は1-dayOfWeek
+        startOfWeek.setDate(now.getDate() + daysToMonday);
         startOfWeek.setHours(0, 0, 0, 0);
 
         // 販売店ごとの統計を計算
@@ -156,6 +167,10 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
             return {
                 shopId: shop.shopId,
                 shopName: shop.shopName,
+                email: shop.email || '', // ログイン用メールアドレス
+                contactPerson: shop.contactPerson || '',
+                contactEmail: shop.contactEmail || '',
+                contactPhone: shop.contactPhone || '',
                 videoCount: shopVideos.length,
                 totalSize: shopVideos.reduce((sum, video) => sum + (video.fileSize || 0), 0),
                 monthlyCount: monthlyVideos.length,
