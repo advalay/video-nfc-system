@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 
+// S3Client設定
 const s3 = new S3Client({});
 const dynamoClient = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(dynamoClient);
@@ -42,13 +43,8 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
       };
     }
 
-    const body = event.body ? JSON.parse(event.body) : {};
-    
-    // リクエストボディにshopIdがあればそれを使用、なければclaimsから取得
-    const targetShopId = body.shopId || shopId;
-
-    // organizationId は必須
-    if (!organizationId) {
+    // organizationId と shopId が必須
+    if (!organizationId || !shopId) {
       return {
         statusCode: 400,
         headers: {
@@ -59,49 +55,13 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
           success: false,
           error: {
             code: 'INVALID_USER_ATTRIBUTES',
-            message: 'User organizationId is required',
+            message: 'User organizationId and shopId are required',
           },
         }),
       };
     }
 
-    // 組織管理者の場合、shopIdの指定が必須
-    if (userGroups.includes('organization-admin') && !targetShopId) {
-      return {
-        statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-        body: JSON.stringify({
-          success: false,
-          error: {
-            code: 'INVALID_PARAMETER',
-            message: 'shopId is required for organization administrators',
-          },
-        }),
-      };
-    }
-
-    // shop-adminの場合はclaimsのshopIdを使用、それ以外はリクエストのshopIdを使用
-    const finalShopId = userGroups.includes('shop-admin') ? shopId : targetShopId;
-
-    if (!finalShopId) {
-      return {
-        statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-        body: JSON.stringify({
-          success: false,
-          error: {
-            code: 'INVALID_PARAMETER',
-            message: 'shopId is required',
-          },
-        }),
-      };
-    }
+    const body = event.body ? JSON.parse(event.body) : {};
     const fileName: string = body.fileName;
     const fileSize: number = body.fileSize;
     const contentType: string = body.contentType;
@@ -128,24 +88,20 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
     // videoIdを生成
     const videoId = uuidv4();
     const timestamp = Date.now();
-    const s3Key = `videos/${organizationId}/${finalShopId}/${videoId}/${fileName}`;
+    const s3Key = `videos/${organizationId}/${shopId}/${videoId}/${fileName}`;
 
     // S3署名付きURL生成
-    // 注意: AWS SDK v3のgetSignedUrlは、署名にすべてのリクエストパラメータを含める
-    // そのため、Commandに指定したパラメータがすべて署名に含まれ、クライアントは完全に一致するリクエストを送信する必要がある
-    // ChecksumAlgorithmやその他の複雑なパラメータを指定しないことで、シンプルなPUTリクエストのみを要求する
+    // 注: AWS SDK v3が自動的にチェックサムパラメータ（x-amz-checksum-crc32）を付与するが、
+    // ブラウザはCRC32を計算できないため、signableHeadersでhostのみを署名対象にする
     const command = new PutObjectCommand({
       Bucket: bucketName,
       Key: s3Key,
       ContentType: contentType,
-      // ChecksumAlgorithm、ContentMD5、ServerSideEncryptionなどは指定しない
-      // Pre-signed URLにこれらのパラメータが含まれると、クライアントも同じパラメータを送信する必要がある
     });
-    
-    const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 3600 }); // 1時間有効
-    
-    // デバッグ用: Pre-signed URL全体をログ出力
-    console.log('Generated pre-signed URL (full):', uploadUrl);
+    const uploadUrl = await getSignedUrl(s3, command, { 
+      expiresIn: 3600,
+      signableHeaders: new Set(['host']), // hostのみ署名、チェックサム関連を除外
+    });
 
     // 請求月（YYYY-MM形式）
     const billingMonth = new Date().toISOString().slice(0, 7);
@@ -160,7 +116,7 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
           
           // 組織情報
           organizationId,
-          shopId: finalShopId,
+          shopId,
           
           // 動画情報
           fileName,
