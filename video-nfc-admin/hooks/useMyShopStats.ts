@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import { configureAmplify } from '../lib/amplify-config';
+import { useAuth } from './useAuth';
 
 export interface MyShopStats {
   shopId: string;
@@ -20,9 +21,14 @@ export interface MyShopStats {
 
 export function useMyShopStats(startDate?: string, endDate?: string) {
   const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+  const { user } = useAuth();
+
+  // shop-adminのみ有効化
+  const isShopAdmin = user?.groups?.includes('shop-admin');
 
   return useQuery<MyShopStats>({
     queryKey: ['myShopStats', startDate, endDate],
+    enabled: isShopAdmin, // shop-adminのみ実行
     queryFn: async () => {
       configureAmplify();
       const session = await fetchAuthSession();
@@ -64,7 +70,6 @@ export function useMyShopStats(startDate?: string, endDate?: string) {
 
       return result.data;
     },
-    enabled: true,
     staleTime: 5 * 60 * 1000, // 5分間キャッシュ
     retry: 3,
   });
