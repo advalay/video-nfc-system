@@ -194,6 +194,17 @@ export class ApiStack extends cdk.Stack {
       description: 'Update shop (organization-admin only)',
     });
 
+    // Lambda関数: resetShopPassword
+    const resetShopPasswordFn = new lambda.Function(this, 'ResetShopPasswordFn', {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      handler: 'handlers/resetShopPassword.handler',
+      code: lambda.Code.fromAsset('lambda/dist'),
+      memorySize: 512,
+      timeout: cdk.Duration.seconds(29),
+      environment: commonEnvironment,
+      description: 'Reset shop password (send password reset email)',
+    });
+
     // Lambda関数: deleteShop
     const deleteShopFn = new lambda.Function(this, 'DeleteShopFn', {
       runtime: lambda.Runtime.NODEJS_20_X,
@@ -304,6 +315,17 @@ export class ApiStack extends cdk.Stack {
       description: 'Get system statistics (system-admin only)',
     });
 
+    // Lambda関数: getOrganizationStats
+    const getOrganizationStatsFn = new lambda.Function(this, 'GetOrganizationStatsFn', {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      handler: 'handlers/getOrganizationStats.handler',
+      code: lambda.Code.fromAsset('lambda/dist'),
+      memorySize: 512,
+      timeout: cdk.Duration.seconds(29),
+      environment: commonEnvironment,
+      description: 'Get organization statistics',
+    });
+
     // 全Lambda関数を配列に追加（監視用）
     this.lambdaFunctions.push(
       generateUploadUrlFn,
@@ -319,6 +341,7 @@ export class ApiStack extends cdk.Stack {
       deleteOrganizationFn,
       createShopFn,
       updateShopFn,
+      resetShopPasswordFn,
       deleteShopFn,
       createApprovalRequestFn,
       submitApprovalFormFn,
@@ -327,7 +350,8 @@ export class ApiStack extends cdk.Stack {
       approveRequestFn,
       rejectRequestFn,
       getShopStatsFn,
-      getSystemStatsFn
+      getSystemStatsFn,
+      getOrganizationStatsFn
     );
 
     // S3権限の付与
@@ -375,6 +399,7 @@ export class ApiStack extends cdk.Stack {
     deleteOrganizationFn.addToRolePolicy(dynamoReadWritePolicy);
     createShopFn.addToRolePolicy(dynamoReadWritePolicy);
     updateShopFn.addToRolePolicy(dynamoReadWritePolicy);
+    resetShopPasswordFn.addToRolePolicy(dynamoReadWritePolicy);
     deleteShopFn.addToRolePolicy(dynamoReadWritePolicy);
     createApprovalRequestFn.addToRolePolicy(dynamoReadWritePolicy);
     submitApprovalFormFn.addToRolePolicy(dynamoReadWritePolicy);
@@ -384,6 +409,7 @@ export class ApiStack extends cdk.Stack {
     rejectRequestFn.addToRolePolicy(dynamoReadWritePolicy);
     getShopStatsFn.addToRolePolicy(dynamoReadWritePolicy);
     getSystemStatsFn.addToRolePolicy(dynamoReadWritePolicy);
+    getOrganizationStatsFn.addToRolePolicy(dynamoReadWritePolicy);
 
     // Cognito権限（承認Lambda用）
     const cognitoAdminPolicy = new iam.PolicyStatement({
@@ -394,6 +420,7 @@ export class ApiStack extends cdk.Stack {
         'cognito-idp:AdminSetUserPassword',
         'cognito-idp:AdminGetUser',
         'cognito-idp:AdminUpdateUserAttributes',
+        'cognito-idp:AdminResetUserPassword',
       ],
       resources: [`arn:aws:cognito-idp:${this.region}:${accountId}:userpool/${userPoolId}`],
     });
@@ -401,6 +428,7 @@ export class ApiStack extends cdk.Stack {
     approveRequestFn.addToRolePolicy(cognitoAdminPolicy);
     createOrganizationFn.addToRolePolicy(cognitoAdminPolicy);
     createShopFn.addToRolePolicy(cognitoAdminPolicy);
+    resetShopPasswordFn.addToRolePolicy(cognitoAdminPolicy);
 
     // SNS権限（メール送信用）
     if (snsTopicArn) {
@@ -458,7 +486,7 @@ export class ApiStack extends cdk.Stack {
           'https://*.cloudfront.net',
           'https://*.amplifyapp.com',
         ],
-        allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
         allowHeaders: [
           'Content-Type',
           'Authorization',
@@ -687,6 +715,22 @@ export class ApiStack extends cdk.Stack {
       }
     );
 
+    // /shops/{shopId}/reset-password
+    const resetPasswordResource = shopIdResource.addResource('reset-password');
+
+    // POST /shops/{shopId}/reset-password - パスワードリセットメール送信（管理者のみ）
+    resetPasswordResource.addMethod(
+      'POST',
+      new apigateway.LambdaIntegration(resetShopPasswordFn, lambdaIntegrationOptions),
+      {
+        authorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+        requestParameters: {
+          'method.request.path.shopId': true,
+        },
+      }
+    );
+
     // DELETE /shops/{shopId} - 販売店削除（システム管理者のみ）
     shopIdResource.addMethod(
       'DELETE',
@@ -797,6 +841,18 @@ export class ApiStack extends cdk.Stack {
     systemStatsResource.addMethod(
       'GET',
       new apigateway.LambdaIntegration(getSystemStatsFn, lambdaIntegrationOptions),
+      {
+        authorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+      }
+    );
+
+    // GET /organization/stats - 組織管理者とシステム管理者がアクセス可能
+    const organizationResource = this.restApi.root.addResource('organization');
+    const organizationStatsResource = organizationResource.addResource('stats');
+    organizationStatsResource.addMethod(
+      'GET',
+      new apigateway.LambdaIntegration(getOrganizationStatsFn, lambdaIntegrationOptions),
       {
         authorizer,
         authorizationType: apigateway.AuthorizationType.COGNITO,
