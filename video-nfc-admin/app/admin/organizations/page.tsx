@@ -15,7 +15,7 @@ import ShopCreatedModal from '../../../components/ShopCreatedModal';
 import ShopEditModal from '../../../components/ShopEditModal';
 import { Building2, Plus, Edit, Trash2, Store, ChevronDown, ChevronRight, Key, Copy, Eye, EyeOff } from 'lucide-react';
 import { Organization, Shop, UpdateOrganizationInput } from '../../../types/shared';
-import { updateOrganization, deleteShop, updateShop } from '../../../lib/api-client';
+import { updateOrganization, deleteShop, updateShop, resetShopPassword } from '../../../lib/api-client';
 
 
 // ユーティリティはコンポーネント外に定義し、再生成を避ける
@@ -407,10 +407,18 @@ export default function OrganizationsPage() {
     }
   }, []);
 
-  const handleResetPassword = useCallback((shop: Shop) => {
-    if (confirm(`「${shop.shopName}」のパスワードをリセットしますか？`)) {
-      // TODO: パスワードリセットのAPI呼び出し
-      alert('パスワードをリセットしました');
+  const handleResetPassword = useCallback(async (shop: Shop) => {
+    const message = `「${shop.shopName}」のパスワードリセットメールを送信しますか？\n\n送信先: ${shop.email}`;
+    
+    if (confirm(message)) {
+      try {
+        const result = await resetShopPassword(shop.shopId);
+        alert(`パスワードリセットメールを ${shop.email} に送信しました。\n\nメールに記載されたリンクから、新しいパスワードを設定してください。`);
+        setShowCredentialsModal(false);
+      } catch (error: any) {
+        console.error('Error resetting password:', error);
+        alert(error.message || 'パスワードリセットメールの送信に失敗しました。');
+      }
     }
   }, []);
 
