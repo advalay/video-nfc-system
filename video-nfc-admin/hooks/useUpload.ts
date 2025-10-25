@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { apiPost } from '../lib/api-client';
+import { fetchAuthSession } from 'aws-amplify/auth';
 
 interface UploadProgress {
   loaded: number;
@@ -12,8 +12,9 @@ interface UploadResult {
   videoUrl: string;
   thumbnailUrl: string;
   title: string;
-  description?: string;
+  description: string;
   size: number;
+  duration: number;
 }
 
 interface UseUploadResult {
@@ -21,7 +22,7 @@ interface UseUploadResult {
   progress: UploadProgress;
   result: UploadResult | null;
   error: string | null;
-  upload: (file: File, title: string, description?: string) => Promise<void>;
+  upload: (file: File, title: string, description: string) => Promise<void>;
   reset: () => void;
 }
 
@@ -31,126 +32,135 @@ export function useUpload(): UseUploadResult {
   const [result, setResult] = useState<UploadResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const upload = useCallback(async (file: File, title: string, shopId?: string) => {
+  const upload = useCallback(async (file: File, title: string, description: string) => {
     setIsUploading(true);
     setProgress({ loaded: 0, total: 0, percentage: 0 });
     setResult(null);
     setError(null);
 
     try {
-      // Step 1: 署名付きURL取得
-      console.log('📤 Step 1: 署名付きURL取得中...');
+      const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
       
-      const requestBody: any = {
+      if (!API_URL) {
+        throw new Error('API URLが設定されていません');
+      }
+
+      // Step 1: 署名付きURLを取得
+      console.log('Step 1: 署名付きURL取得中...');
+      const session = await fetchAuthSession();
+      const idToken = session.tokens?.idToken?.toString();
+
+      if (!idToken) {
+        throw new Error('認証トークンが取得できません');
+      }
+
+      const requestBody = {
         fileName: file.name,
         fileSize: file.size,
         contentType: file.type,
         title: title || file.name,
+        description: description || '',
       };
-      
-      // 組織管理者がshopIdを指定した場合
-      if (shopId) {
-        requestBody.shopId = shopId;
-      }
-      
+
       console.log('リクエスト内容:', requestBody);
-      
-      const uploadUrlResponse = await apiPost<{
-        videoId: string;
-        uploadUrl: string;
-        expiresIn: number;
-      }>('/videos/upload-url', requestBody);
 
-      let { videoId, uploadUrl } = uploadUrlResponse;
-      console.log('✅ 署名付きURL取得成功:', { videoId, uploadUrl: uploadUrl.substring(0, 50) + '...' });
-      
-      // AWS SDK v3が自動的に追加するx-amz-checksum-crc32パラメータを削除
-      // このパラメータがあるとクライアントがchecksumを計算して送信する必要があるが、
-      // その実装がないため、クライアントが単純にPUTリクエストを送信できるように削除する
-      uploadUrl = uploadUrl.replace(/[?&]x-amz-checksum-crc32=[^&]*/g, '');
-      console.log('✅ checksumパラメータ削除後のURL:', uploadUrl.substring(0, 100) + '...');
+      const uploadUrlResponse = await fetch(`${API_URL}/videos/upload-url`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${idToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
 
-      // Step 2: S3へ直接アップロード（XMLHttpRequestでプログレストラッキング）
+      if (!uploadUrlResponse.ok) {
+        const errorText = await uploadUrlResponse.text();
+        throw new Error(`署名付きURL取得失敗: ${uploadUrlResponse.status} ${errorText}`);
+      }
+
+      const uploadUrlData = await uploadUrlResponse.json();
+
+      if (!uploadUrlData.success) {
+        throw new Error(uploadUrlData.error?.message || '署名付きURLの取得に失敗しました');
+      }
+
+      const { uploadUrl, videoId, s3Key } = uploadUrlData.data;
+      console.log('✔ 署名付きURL取得成功:', { videoId, uploadUrl: uploadUrl.substring(0, 100) + '...' });
+
+      // Step 2: S3に直接アップロード
       console.log('Step 2: S3へアップロード中...');
+      
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
 
-        // プログレス更新
+        // アップロード進捗の監視
         xhr.upload.addEventListener('progress', (e) => {
           if (e.lengthComputable) {
             const percentage = Math.round((e.loaded / e.total) * 100);
+            console.log(`アップロード進捗: ${percentage}%`);
             setProgress({
               loaded: e.loaded,
               total: e.total,
               percentage,
             });
-            console.log(`アップロード進捗: ${percentage}%`);
           }
         });
 
         // アップロード完了
         xhr.addEventListener('load', () => {
           if (xhr.status === 200) {
-            console.log('S3アップロード成功');
+            console.log('✔ S3アップロード成功');
             resolve();
           } else {
-            reject(new Error(`S3アップロード失敗: ${xhr.status} ${xhr.statusText}`));
+            console.error('●×× アップロードエラー:', {
+              status: xhr.status,
+              statusText: xhr.statusText,
+              response: xhr.responseText,
+            });
+            reject(new Error(`S3 アップロード失敗: ${xhr.status} ${xhr.statusText}`));
           }
         });
 
         // エラーハンドリング
         xhr.addEventListener('error', () => {
+          console.error('●×× ネットワークエラー');
           reject(new Error('ネットワークエラーが発生しました'));
         });
 
         xhr.addEventListener('abort', () => {
-          reject(new Error('アップロードがキャンセルされました'));
+          console.error('●×× アップロード中止');
+          reject(new Error('アップロードが中止されました'));
         });
 
-        // S3へPUTリクエスト
-        // Pre-signed URLに含まれる署名は、リクエストのすべてのヘッダーと一致する必要がある
-        // Content-TypeはPre-signed URL生成時に指定したものと完全に一致させる
+        // S3への PUT リクエスト
         xhr.open('PUT', uploadUrl);
-        // Content-Typeヘッダーは不要（URLに含まれている）
+        
+        // 必須ヘッダーを設定
+        xhr.setRequestHeader('Content-Type', file.type);
+        xhr.setRequestHeader('x-amz-server-side-encryption', 'AES256'); // S3バケットの暗号化に合わせる
+        
+        // ファイルを送信
         xhr.send(file);
       });
 
-      // Step 3: 結果を設定
-      console.log('Step 3: アップロード完了');
-      const videoUrl = `${window.location.origin}/watch?id=${videoId}`;
+      // Step 3: アップロード完了
+      console.log('✔ アップロード完了');
       
-      setResult({
+      const uploadResult: UploadResult = {
         videoId,
-        videoUrl,
-        thumbnailUrl: '', // サムネイルは後で生成される
-        title: title || file.name,
+        videoUrl: `https://example.com/videos/${videoId}`, // 実際のCloudFront URLに置き換え
+        thumbnailUrl: `https://via.placeholder.com/300x200?text=${encodeURIComponent(title)}`,
+        title,
+        description,
         size: file.size,
-      });
+        duration: 0, // 実際の動画長は別途取得が必要
+      };
 
-      console.log('✅ アップロード処理完了:', { videoId, videoUrl });
+      setResult(uploadResult);
+      
     } catch (err: any) {
-      console.error('❌ アップロードエラー詳細:', {
-        error: err,
-        message: err.message,
-        status: err.statusCode,
-        code: err.code
-      });
-      
-      // エラーメッセージの詳細化
-      let errorMessage = 'アップロードに失敗しました';
-      
-      if (err.statusCode === 403) {
-        errorMessage = '❌ アクセスが拒否されました。権限を確認してください。';
-      } else if (err.statusCode === 401) {
-        errorMessage = '❌ 認証に失敗しました。ログインし直してください。';
-      } else if (err.message?.includes('CORS')) {
-        errorMessage = '❌ CORSエラーが発生しました。ブラウザをリフレッシュしてください。';
-      } else if (err.message?.includes('ネットワーク')) {
-        errorMessage = '❌ ネットワークに接続できません。時間をおいて再試行してください。';
-      } else if (err.message) {
-        errorMessage = err.message;
-      }
-      
+      console.error('●×× アップロードエラー詳細:', err);
+      const errorMessage = err.message || 'アップロードに失敗しました';
       setError(errorMessage);
     } finally {
       setIsUploading(false);
