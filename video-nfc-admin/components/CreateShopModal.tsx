@@ -13,9 +13,8 @@ interface CreateShopModalProps {
     shopId: string;
     shopName: string;
     email: string;
-    tempPassword?: string;
+    tempPassword: string;
     loginUrl: string;
-    isExistingUser?: boolean;
   }) => void;
 }
 
@@ -99,9 +98,8 @@ export default function CreateShopModal({
         shopId: response.shopId,
         shopName: response.shopName,
         email: response.email,
-        tempPassword: response.tempPassword || undefined,
-        loginUrl: response.loginUrl || window.location.origin + '/login',
-        isExistingUser: response.isExistingUser
+        tempPassword: response.tempPassword || '',
+        loginUrl: response.loginUrl || window.location.origin + '/login'
       });
       
       onClose();
@@ -117,12 +115,6 @@ export default function CreateShopModal({
       
     } catch (error: any) {
       console.error('販売店作成エラー:', error);
-      console.error('エラーの詳細:', {
-        message: error.message,
-        statusCode: error.statusCode,
-        code: error.code,
-        stack: error.stack
-      });
       
       // エラーメッセージを表示
       const errorMessage = error.message || '販売店の作成に失敗しました';
