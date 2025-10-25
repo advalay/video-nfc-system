@@ -135,7 +135,9 @@ export function useUpload(): UseUploadResult {
         
         // 必須ヘッダーを設定
         xhr.setRequestHeader('Content-Type', file.type);
-        xhr.setRequestHeader('x-amz-server-side-encryption', 'AES256'); // S3バケットの暗号化に合わせる
+        // 注: x-amz-server-side-encryption ヘッダーは削除
+        // S3バケットのデフォルト暗号化設定（S3_MANAGED）に任せる
+        // Pre-signed URLに含まれていないパラメータを送信すると、403エラーになる
         
         // ファイルを送信
         xhr.send(file);
