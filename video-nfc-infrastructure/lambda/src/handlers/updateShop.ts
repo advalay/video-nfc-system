@@ -19,9 +19,9 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       throw new Error('shopId（パスパラメータ）が必須です');
     }
     
-    // 権限チェック: organization-admin のみ
-    if (!user.groups.includes('organization-admin')) {
-      throw new Error('販売店の更新は組織管理者のみ実行できます');
+    // 権限チェック: system-admin または organization-admin
+    if (!user.groups.includes('system-admin') && !user.groups.includes('organization-admin')) {
+      throw new Error('販売店の更新は管理者のみ実行できます');
     }
     
     // 販売店の存在確認と所属組織チェック
@@ -34,8 +34,8 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       throw new Error(`販売店が見つかりません（shopId: ${shopId}）`);
     }
     
-    // ユーザーが所属する組織の販売店かチェック
-    if (user.organizationId !== existingShop.Item.organizationId) {
+    // organization-adminの場合のみ、自社の販売店かチェック
+    if (user.groups.includes('organization-admin') && user.organizationId !== existingShop.Item.organizationId) {
       throw new Error('自社の販売店のみ更新できます');
     }
     
@@ -48,6 +48,11 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       updateExpressions.push('#name = :name');
       attributeNames['#name'] = 'shopName';
       attributeValues[':name'] = body.shopName;
+    }
+    
+    if (body.contactPerson !== undefined) {
+      updateExpressions.push('contactPerson = :contactPerson');
+      attributeValues[':contactPerson'] = body.contactPerson;
     }
     
     if (body.contactEmail !== undefined) {
