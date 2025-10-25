@@ -117,6 +117,12 @@ export default function CreateShopModal({
       
     } catch (error: any) {
       console.error('販売店作成エラー:', error);
+      console.error('エラーの詳細:', {
+        message: error.message,
+        statusCode: error.statusCode,
+        code: error.code,
+        stack: error.stack
+      });
       
       // エラーメッセージを表示
       const errorMessage = error.message || '販売店の作成に失敗しました';
