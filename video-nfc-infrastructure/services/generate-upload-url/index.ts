@@ -1,14 +1,10 @@
 import { APIGatewayProxyHandler, APIGatewayProxyResult } from 'aws-lambda';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import AWS from 'aws-sdk';
 import { v4 as uuidv4 } from 'uuid';
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 
-// S3Client設定
-const s3 = new S3Client({});
-const dynamoClient = new DynamoDBClient({});
-const docClient = DynamoDBDocumentClient.from(dynamoClient);
+// AWS SDK v2設定（チェックサム問題を回避）
+const s3 = new AWS.S3();
+const dynamodb = new AWS.DynamoDB.DocumentClient();
 
 const bucketName = process.env.S3_BUCKET_NAME!;
 const tableName = process.env.DYNAMODB_TABLE_VIDEO!;
@@ -90,17 +86,13 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
     const timestamp = Date.now();
     const s3Key = `videos/${organizationId}/${shopId}/${videoId}/${fileName}`;
 
-    // S3署名付きURL生成
-    // 注: AWS SDK v3が自動的にチェックサムパラメータ（x-amz-checksum-crc32）を付与するが、
-    // ブラウザはCRC32を計算できないため、signableHeadersでhostのみを署名対象にする
-    const command = new PutObjectCommand({
+    // S3署名付きURL生成（AWS SDK v2使用）
+    // 注: AWS SDK v2では自動チェックサム付与が発生しない
+    const uploadUrl = s3.getSignedUrl('putObject', {
       Bucket: bucketName,
       Key: s3Key,
       ContentType: contentType,
-    });
-    const uploadUrl = await getSignedUrl(s3, command, { 
-      expiresIn: 3600,
-      signableHeaders: new Set(['host']), // hostのみ署名、チェックサム関連を除外
+      Expires: 3600,
     });
 
     // 請求月（YYYY-MM形式）
@@ -108,42 +100,40 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
 
     // DynamoDBにメタデータを保存
     const now = new Date().toISOString();
-    await docClient.send(
-      new PutCommand({
-        TableName: tableName,
-        Item: {
-          videoId,
-          
-          // 組織情報
-          organizationId,
-          shopId,
-          
-          // 動画情報
-          fileName,
-          fileSize,
-          s3Key,
-          title,
-          description,
-          
-          // アップロード情報
-          uploader: userEmail,
-          uploaderRole: userRole,
-          uploadDate: now,
-          uploadedAt: now,
-          
-          // ステータス（即完了）
-          status: 'completed',
-          
-          // 請求情報
-          billingMonth,
-          billingStatus: 'pending',
-          
-          // タイムスタンプ
-          createdAt: now,
-          updatedAt: now,
-        },
-      })
-    );
+    await dynamodb.put({
+      TableName: tableName,
+      Item: {
+        videoId,
+        
+        // 組織情報
+        organizationId,
+        shopId,
+        
+        // 動画情報
+        fileName,
+        fileSize,
+        s3Key,
+        title,
+        description,
+        
+        // アップロード情報
+        uploader: userEmail,
+        uploaderRole: userRole,
+        uploadDate: now,
+        uploadedAt: now,
+        
+        // ステータス（即完了）
+        status: 'completed',
+        
+        // 請求情報
+        billingMonth,
+        billingStatus: 'pending',
+        
+        // タイムスタンプ
+        createdAt: now,
+        updatedAt: now,
+      },
+    }).promise();
 
     return {
       statusCode: 200,
