@@ -85,20 +85,8 @@ export function useUpload(): UseUploadResult {
       const { uploadUrl, videoId, s3Key } = uploadUrlData.data;
       console.log('✔ 署名付きURL取得成功:', { videoId, uploadUrl: uploadUrl.substring(0, 100) + '...' });
 
-      // Step 2: S3に直接アップロード（Fetch APIを使用）
+      // Step 2: S3に直接アップロード
       console.log('Step 2: S3へアップロード中...');
-      
-      // URLからchecksumパラメータを抽出
-      const urlObj = new URL(uploadUrl);
-      const checksumAlgo = urlObj.searchParams.get('x-amz-sdk-checksum-algorithm');
-      const checksumValue = urlObj.searchParams.get('x-amz-checksum-crc32');
-      
-      // チェックサムパラメータがURLに含まれている場合はログに記録
-      if (checksumAlgo || checksumValue) {
-        console.log('⚠ チェックサムパラメータがURLに含まれています:', { checksumAlgo, checksumValue });
-        console.log('⚠ ブラウザのXMLHttpRequestはCRC32を計算できません');
-        console.log('⚠ S3は署名を検証して403エラーを返します');
-      }
       
       // fetch APIを使用
       const response = await fetch(uploadUrl, {
