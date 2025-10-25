@@ -25,6 +25,10 @@ interface Video {
 interface ShopStat {
     shopId: string;
     shopName: string;
+    email?: string; // ログイン用メールアドレス
+    contactPerson?: string;
+    contactEmail?: string;
+    contactPhone?: string;
     videoCount: number;
     totalSize: number;
     monthlyCount: number;
@@ -143,7 +147,10 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
                 shopId: item.shopId as string,
                 shopName: item.shopName as string,
                 organizationId: item.organizationId as string,
-                status: item.status as string
+                status: item.status as string,
+                contactPerson: item.contactPerson as string,
+                contactEmail: item.contactEmail as string,
+                contactPhone: item.contactPhone as string
             };
             console.log('Processing shop item:', JSON.stringify(shop, null, 2));
             return shop;
@@ -202,7 +209,10 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
                 shopId: shop.id,
                 shopName: shop.name,
                 email: shop.email,
-                status: shop.status
+                status: shop.status,
+                contactPerson: '',
+                contactEmail: '',
+                contactPhone: ''
             }));
             const allOrgShops = [...normalizedOrgShops, ...orgShopsFromShopTable];
             const uniqueShops = allOrgShops.filter((shop, index, self) => 
@@ -237,6 +247,10 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
                 organizationStatsMap[org.organizationId].shopStats.push({
                     shopId: shop.shopId,
                     shopName: shop.shopName,
+                    email: shop.email || '', // ログイン用メールアドレス
+                    contactPerson: shop.contactPerson || '',
+                    contactEmail: shop.contactEmail || '',
+                    contactPhone: shop.contactPhone || '',
                     videoCount: 0,
                     totalSize: 0,
                     monthlyCount: 0,
@@ -248,8 +262,12 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         // 現在の日時を取得
         const now = new Date();
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        
+        // 週の開始日を月曜日に設定（日曜日=0, 月曜日=1, ..., 土曜日=6）
         const startOfWeek = new Date(now);
-        startOfWeek.setDate(now.getDate() - now.getDay());
+        const dayOfWeek = now.getDay(); // 0=日曜日, 1=月曜日, ..., 6=土曜日
+        const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // 日曜日の場合は-6、それ以外は1-dayOfWeek
+        startOfWeek.setDate(now.getDate() + daysToMonday);
         startOfWeek.setHours(0, 0, 0, 0);
 
         // 動画データから統計を計算
