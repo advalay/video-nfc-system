@@ -30,6 +30,11 @@ export function useMyShopStats(startDate?: string, endDate?: string) {
     queryKey: ['myShopStats', startDate, endDate],
     enabled: isShopAdmin, // shop-adminのみ実行
     queryFn: async () => {
+      // 二重チェック: shop-admin以外は即座にエラーをthrow（APIリクエストを発生させない）
+      if (!isShopAdmin) {
+        throw new Error('Shop admin only');
+      }
+
       configureAmplify();
       const session = await fetchAuthSession();
       const idToken = session.tokens?.idToken?.toString();
@@ -45,8 +50,6 @@ export function useMyShopStats(startDate?: string, endDate?: string) {
 
       const url = `${API_URL}/shop/stats${params.toString() ? `?${params.toString()}` : ''}`;
 
-      console.log('Fetching shop stats from:', url);
-
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -57,12 +60,10 @@ export function useMyShopStats(startDate?: string, endDate?: string) {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Shop stats API error:', response.status, errorText);
         throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
       }
 
       const result = await response.json();
-      console.log('Shop stats response:', result);
 
       if (!result.success) {
         throw new Error(result.error?.message || '統計データの取得に失敗しました');
@@ -71,7 +72,7 @@ export function useMyShopStats(startDate?: string, endDate?: string) {
       return result.data;
     },
     staleTime: 5 * 60 * 1000, // 5分間キャッシュ
-    retry: 3,
+    retry: false, // リトライも無効化
   });
 }
 
