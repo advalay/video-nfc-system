@@ -3,6 +3,8 @@
 import { useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUpload } from '../../hooks/useUpload';
+import { useAuth } from '../../hooks/useAuth';
+import { useOrganizationStats } from '../../hooks/useOrganizationStats';
 import { formatFileSize, copyToClipboard } from '../../lib/utils';
 import { Upload, CheckCircle, ArrowLeft, X, Download, Copy, QrCode } from 'lucide-react';
 import { QRModal } from '../../components/QRModal';
@@ -13,11 +15,17 @@ import toast from 'react-hot-toast';
 
 export default function UploadPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const { upload, isUploading, progress, result, error, reset } = useUpload();
   
+  const isOrganizationAdmin = user?.groups?.includes('organization-admin');
+  
+  // 組織管理者の場合、配下の店舗を取得
+  const { data: orgStats } = useOrganizationStats(undefined, undefined, isOrganizationAdmin);
+  
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedShopId, setSelectedShopId] = useState<string>('');
   const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
   
@@ -81,8 +89,19 @@ export default function UploadPage() {
   const handleUpload = async () => {
     if (!selectedFile) return;
     
+    if (!title.trim()) {
+      toast.error('タイトルを入力してください');
+      return;
+    }
+    
+    // 組織管理者の場合、店舗選択が必須
+    if (isOrganizationAdmin && !selectedShopId) {
+      toast.error('アップロード先の店舗を選択してください');
+      return;
+    }
+    
     configureAmplify();
-    await upload(selectedFile, title || '', description || '');
+    await upload(selectedFile, title, selectedShopId || undefined);
   };
 
   const handleCopyUrl = async () => {
@@ -102,7 +121,7 @@ export default function UploadPage() {
   const handleReset = () => {
     setSelectedFile(null);
     setTitle('');
-    setDescription('');
+    setSelectedShopId('');
     reset();
   };
 
@@ -211,6 +230,26 @@ export default function UploadPage() {
                   動画情報
                 </h3>
                 <div className="space-y-4">
+                  {/* 組織管理者の場合のみ店舗選択 */}
+                  {isOrganizationAdmin && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        アップロード先店舗 *
+                      </label>
+                      <select
+                        value={selectedShopId}
+                        onChange={(e) => setSelectedShopId(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-gray-900"
+                      >
+                        <option value="">店舗を選択してください</option>
+                        {orgStats?.shopStats?.map((shop) => (
+                          <option key={shop.shopId} value={shop.shopId}>
+                            {shop.shopName}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       タイトル *
@@ -221,18 +260,6 @@ export default function UploadPage() {
                       onChange={(e) => setTitle(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-gray-900 placeholder:text-gray-500"
                       placeholder="動画のタイトルを入力"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      説明
-                    </label>
-                    <textarea
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-gray-900 placeholder:text-gray-500"
-                      placeholder="動画の説明を入力（任意）"
                     />
                   </div>
                 </div>
@@ -332,12 +359,6 @@ export default function UploadPage() {
                   <span className="text-gray-600">サイズ:</span>
                   <span className="font-medium text-gray-900">{formatFileSize(result.size || selectedFile?.size || 0)}</span>
                 </div>
-                {(description || result.description) && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">説明:</span>
-                    <span className="font-medium text-gray-900">{description || result.description}</span>
-                  </div>
-                )}
               </div>
             </div>
 

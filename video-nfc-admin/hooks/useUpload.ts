@@ -31,7 +31,7 @@ export function useUpload(): UseUploadResult {
   const [result, setResult] = useState<UploadResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const upload = useCallback(async (file: File, title: string, description?: string) => {
+  const upload = useCallback(async (file: File, title: string, shopId?: string) => {
     setIsUploading(true);
     setProgress({ loaded: 0, total: 0, percentage: 0 });
     setResult(null);
@@ -40,23 +40,26 @@ export function useUpload(): UseUploadResult {
     try {
       // Step 1: 署名付きURL取得
       console.log('📤 Step 1: 署名付きURL取得中...');
-      console.log('リクエスト内容:', {
+      
+      const requestBody: any = {
         fileName: file.name,
         fileSize: file.size,
         contentType: file.type,
-        title: title || file.name
-      });
+        title: title || file.name,
+      };
+      
+      // 組織管理者がshopIdを指定した場合
+      if (shopId) {
+        requestBody.shopId = shopId;
+      }
+      
+      console.log('リクエスト内容:', requestBody);
       
       const uploadUrlResponse = await apiPost<{
         videoId: string;
         uploadUrl: string;
         expiresIn: number;
-      }>('/videos/upload-url', {
-        fileName: file.name,
-        fileSize: file.size,
-        contentType: file.type,
-        title: title || file.name,
-      });
+      }>('/videos/upload-url', requestBody);
 
       const { videoId, uploadUrl } = uploadUrlResponse;
       console.log('✅ 署名付きURL取得成功:', { videoId, uploadUrl: uploadUrl.substring(0, 50) + '...' });
