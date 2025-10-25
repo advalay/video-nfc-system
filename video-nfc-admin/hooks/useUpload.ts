@@ -1,43 +1,6 @@
 import { useState, useCallback } from 'react';
 import { apiPost } from '../lib/api-client';
 
-// CRC32計算用のヘルパー関数
-async function calculateCRC32(file: File): Promise<string> {
-  const arrayBuffer = await file.arrayBuffer();
-  const bytes = new Uint8Array(arrayBuffer);
-  
-  // CRC32テーブル生成
-  const makeCRCTable = () => {
-    let c;
-    const crcTable = [];
-    for (let n = 0; n < 256; n++) {
-      c = n;
-      for (let k = 0; k < 8; k++) {
-        c = ((c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1));
-      }
-      crcTable[n] = c;
-    }
-    return crcTable;
-  };
-
-  const crcTable = makeCRCTable();
-  let crc = 0 ^ (-1);
-
-  for (let i = 0; i < bytes.length; i++) {
-    crc = (crc >>> 8) ^ crcTable[(crc ^ bytes[i]) & 0xFF];
-  }
-
-  const crc32 = (crc ^ (-1)) >>> 0;
-  
-  // Base64エンコード（4バイトのビッグエンディアン整数として）
-  const buffer = new ArrayBuffer(4);
-  const view = new DataView(buffer);
-  view.setUint32(0, crc32, false); // ビッグエンディアン
-  
-  const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
-  return base64;
-}
-
 interface UploadProgress {
   loaded: number;
   total: number;
@@ -98,13 +61,8 @@ export function useUpload(): UseUploadResult {
       const { videoId, uploadUrl } = uploadUrlResponse;
       console.log('✅ 署名付きURL取得成功:', { videoId, uploadUrl: uploadUrl.substring(0, 50) + '...' });
 
-      // Step 2: CRC32チェックサム計算
-      console.log('Step 2: CRC32チェックサム計算中...');
-      const crc32Checksum = await calculateCRC32(file);
-      console.log('✅ CRC32チェックサム計算完了:', crc32Checksum);
-
-      // Step 3: S3へ直接アップロード（XMLHttpRequestでプログレストラッキング）
-      console.log('Step 3: S3へアップロード中...');
+      // Step 2: S3へ直接アップロード（XMLHttpRequestでプログレストラッキング）
+      console.log('Step 2: S3へアップロード中...');
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
 
@@ -143,12 +101,11 @@ export function useUpload(): UseUploadResult {
         // S3へPUTリクエスト
         xhr.open('PUT', uploadUrl);
         xhr.setRequestHeader('Content-Type', file.type);
-        xhr.setRequestHeader('x-amz-checksum-crc32', crc32Checksum); // CRC32チェックサムヘッダー追加
         xhr.send(file);
       });
 
-      // Step 4: 結果を設定
-      console.log('Step 4: アップロード完了');
+      // Step 3: 結果を設定
+      console.log('Step 3: アップロード完了');
       const videoUrl = `${window.location.origin}/watch?id=${videoId}`;
       
       setResult({
