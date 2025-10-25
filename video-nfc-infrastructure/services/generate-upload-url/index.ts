@@ -130,12 +130,11 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
     const timestamp = Date.now();
     const s3Key = `videos/${organizationId}/${finalShopId}/${videoId}/${fileName}`;
 
-    // S3署名付きURL生成（暗号化パラメータを含める）
+    // S3署名付きURL生成（暗号化はS3バケットのデフォルト設定に任せる）
     const command = new PutObjectCommand({
       Bucket: bucketName,
       Key: s3Key,
       ContentType: contentType,
-      ServerSideEncryption: 'AES256', // S3 managed encryption
     });
     const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 3600 }); // 1時間有効
 
