@@ -144,8 +144,8 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
     
     const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 3600 }); // 1時間有効
     
-    // デバッグ用: Pre-signed URLをログ出力
-    console.log('Generated pre-signed URL:', uploadUrl.substring(0, 200) + '...');
+    // デバッグ用: Pre-signed URL全体をログ出力
+    console.log('Generated pre-signed URL (full):', uploadUrl);
 
     // 請求月（YYYY-MM形式）
     const billingMonth = new Date().toISOString().slice(0, 7);
