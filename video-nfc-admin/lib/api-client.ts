@@ -219,6 +219,13 @@ export async function updateShop(
 }
 
 /**
+ * 販売店のパスワードをリセット（パスワードリセットメール送信）
+ */
+export async function resetShopPassword(shopId: string): Promise<any> {
+  return apiPost<any>(`/shops/${shopId}/reset-password`, {});
+}
+
+/**
  * 販売店を削除
  */
 export async function deleteShop(shopId: string): Promise<any> {
