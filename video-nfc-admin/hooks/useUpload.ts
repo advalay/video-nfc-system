@@ -83,15 +83,7 @@ export function useUpload(): UseUploadResult {
       }
 
       const { uploadUrl, videoId, s3Key } = uploadUrlData.data;
-      
-      // チェックサムパラメータを削除（AWS SDK v3が自動追加する x-amz-checksum-* を削除）
-      let cleanUploadUrl = uploadUrl.replace(/[?&]x-amz-checksum-[^&]*/g, '');
-      
-      console.log('✔ 署名付きURL取得成功:', {
-        videoId,
-        originalUrl: uploadUrl.substring(0, 100) + '...',
-        cleanedUrl: cleanUploadUrl.substring(0, 100) + '...'
-      });
+      console.log('✔ 署名付きURL取得成功:', { videoId, uploadUrl: uploadUrl.substring(0, 100) + '...' });
 
       // Step 2: S3に直接アップロード
       console.log('Step 2: S3へアップロード中...');
@@ -139,7 +131,7 @@ export function useUpload(): UseUploadResult {
         });
 
         // S3への PUT リクエスト
-        xhr.open('PUT', cleanUploadUrl); // チェックサム削除後のURLを使用
+        xhr.open('PUT', uploadUrl);
         
         // 必須ヘッダーを設定
         xhr.setRequestHeader('Content-Type', file.type);
