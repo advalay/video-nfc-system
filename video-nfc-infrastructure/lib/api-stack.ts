@@ -447,6 +447,7 @@ export class ApiStack extends cdk.Stack {
         'cognito-idp:AdminGetUser',
         'cognito-idp:AdminUpdateUserAttributes',
         'cognito-idp:AdminResetUserPassword',
+        'cognito-idp:AdminListGroupsForUser', // マルチロール対応: グループ確認に必要
       ],
       resources: [`arn:aws:cognito-idp:${this.region}:${accountId}:userpool/${userPoolId}`],
     });
