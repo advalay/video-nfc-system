@@ -114,7 +114,7 @@ export default function VideosPage() {
     const now = Date.now();
     const hoursPassed = (now - uploadTime) / (1000 * 60 * 60);
     
-    return hoursPassed < 48; // 48時間以内のみ削除可能
+    return hoursPassed < 24; // 24時間以内のみ削除可能
   };
 
   const handleCopyUrl = async (videoId: string) => {
@@ -135,7 +135,7 @@ export default function VideosPage() {
 
   const handleDelete = async (videoId: string, uploadDate: string) => {
     if (!canDelete(uploadDate)) {
-      alert('動画は48時間経過後は削除できません');
+      alert('動画は24時間経過後は削除できません');
       return;
     }
 
@@ -154,7 +154,7 @@ export default function VideosPage() {
       console.error('Delete error:', err);
       
       if (err.error?.code === 'DELETE_NOT_ALLOWED') {
-        alert('動画は48時間経過後は削除できません');
+        alert('動画は24時間経過後は削除できません');
       } else {
         alert(err.message || '動画の削除に失敗しました');
       }
