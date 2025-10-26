@@ -6,7 +6,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { Layout } from '../../components/Layout';
 import { ProtectedRoute } from '../../components/ProtectedRoute';
 import { formatFileSize, formatUploadDateTime } from '../../lib/utils';
-import { Copy, QrCode, Trash2, Plus, Search, Upload, Video, HardDrive } from 'lucide-react';
+import { Copy, QrCode, Trash2, Plus, Search, Upload, Video, HardDrive, Info } from 'lucide-react';
 import { QRModal } from '../../components/QRModal';
 
 // モック動画データを生成する関数
@@ -78,6 +78,8 @@ export default function VideosPage() {
   const [error, setError] = useState<string | null>(null);
   const [qrOpen, setQrOpen] = useState(false);
   const [qrVideo, setQrVideo] = useState<{ id: string; url: string } | null>(null);
+  const [showIdModal, setShowIdModal] = useState(false);
+  const [selectedVideoId, setSelectedVideoId] = useState('');
 
   // 販売店管理者かどうかを判定
   const isShopAdmin = user?.groups?.includes('shop-admin');
@@ -291,11 +293,11 @@ export default function VideosPage() {
                               className="text-left"
                             >
                               <div className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer">
-                                {video.fileName}
+                                {video.title || video.fileName}
                               </div>
                             </button>
-                            <div className="text-sm text-gray-500">
-                              ID: {video.videoId}
+                            <div className="text-xs text-gray-400 mt-0.5">
+                              {video.fileName}
                             </div>
                           </div>
                         </div>
@@ -341,6 +343,17 @@ export default function VideosPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end space-x-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedVideoId(video.videoId);
+                              setShowIdModal(true);
+                            }}
+                            className="text-gray-400 hover:text-gray-600 p-1"
+                            title="動画ID表示"
+                          >
+                            <Info className="w-4 h-4" />
+                          </button>
                           <button
                             onClick={() => handleCopyUrl(video.videoId)}
                             className="text-blue-600 hover:text-blue-900 p-1"
@@ -389,6 +402,46 @@ export default function VideosPage() {
           videoId={qrVideo.id}
           videoUrl={qrVideo.url}
         />
+      )}
+      
+      {/* 動画IDモーダル */}
+      {showIdModal && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" 
+          onClick={() => setShowIdModal(false)}
+        >
+          <div 
+            className="bg-white rounded-lg p-6 max-w-md w-full mx-4" 
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold mb-4">動画ID</h3>
+            <div className="flex items-center space-x-2 bg-gray-50 p-3 rounded border">
+              <code className="flex-1 text-sm font-mono break-all text-gray-700">
+                {selectedVideoId}
+              </code>
+              <button
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(selectedVideoId);
+                    alert('動画IDをコピーしました');
+                  } catch (err) {
+                    console.error('Copy failed:', err);
+                  }
+                }}
+                className="text-blue-600 hover:text-blue-800 flex-shrink-0"
+                title="コピー"
+              >
+                <Copy className="w-4 h-4" />
+              </button>
+            </div>
+            <button
+              onClick={() => setShowIdModal(false)}
+              className="mt-4 w-full bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded transition-colors"
+            >
+              閉じる
+            </button>
+          </div>
+        </div>
       )}
     </ProtectedRoute>
   );

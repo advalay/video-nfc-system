@@ -129,7 +129,7 @@ export function useUpload(): UseUploadResult {
       
       const uploadResult: UploadResult = {
         videoId,
-        videoUrl: `https://example.com/videos/${videoId}`, // 実際のCloudFront URLに置き換え
+        videoUrl: `${window.location.origin}/watch?id=${videoId}`, // 正しい視聴URL
         thumbnailUrl: `https://via.placeholder.com/300x200?text=${encodeURIComponent(title)}`,
         title,
         size: file.size,
