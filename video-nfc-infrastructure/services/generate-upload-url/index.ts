@@ -87,13 +87,19 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
     const s3Key = `videos/${organizationId}/${shopId}/${videoId}/${fileName}`;
 
     // S3署名付きURL生成（AWS SDK v2使用）
-    // 注: AWS SDK v2では自動チェックサム付与が発生しない
-    const uploadUrl = s3.getSignedUrl('putObject', {
+    // 注: Object Lock有効バケットでは署名URLでのアップロードが制限される
+    // そのため、Pre-signed POST URLを使用する必要がある
+    const params = {
       Bucket: bucketName,
       Key: s3Key,
       ContentType: contentType,
       Expires: 3600,
-    });
+      Conditions: [
+        ['content-length-range', 0, 10 * 1024 * 1024 * 1024], // 最大10GB
+      ],
+    };
+    
+    const uploadUrl = s3.createPresignedPost(params);
 
     // 請求月（YYYY-MM形式）
     const billingMonth = new Date().toISOString().slice(0, 7);
@@ -135,6 +141,12 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
       },
     }).promise();
 
+    // fieldsにkeyを追加（必須）
+    const fieldsWithKey = {
+      ...uploadUrl.fields,
+      key: s3Key,
+    };
+
     return {
       statusCode: 200,
       headers: {
@@ -144,7 +156,8 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
       body: JSON.stringify({
         success: true,
         data: {
-          uploadUrl,
+          uploadUrl: uploadUrl.url,
+          fields: fieldsWithKey,
           videoId,
           s3Key,
           expiresIn: 3600,
