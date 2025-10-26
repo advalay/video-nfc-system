@@ -3,7 +3,7 @@ import { parseAuthUser } from '../lib/permissions';
 import { handleError, logInfo } from '../lib/errorHandler';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
-import { CognitoIdentityProviderClient, AdminCreateUserCommand, AdminAddUserToGroupCommand, AdminSetUserPasswordCommand, AdminGetUserCommand, AdminUpdateUserAttributesCommand } from '@aws-sdk/client-cognito-identity-provider';
+import { CognitoIdentityProviderClient, AdminCreateUserCommand, AdminAddUserToGroupCommand, AdminSetUserPasswordCommand, AdminGetUserCommand, AdminUpdateUserAttributesCommand, AdminListGroupsForUserCommand } from '@aws-sdk/client-cognito-identity-provider';
 import { generateTempPassword } from '../lib/password';
 
 const client = new DynamoDBClient({});
@@ -75,12 +75,17 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
     // 既存ユーザーが存在する場合の処理
     if (existingUser) {
-      // ユーザーのグループを取得
-      const userAttributes = existingUser.UserAttributes || [];
-      const userGroups = userAttributes.find(attr => attr.Name === 'custom:groups')?.Value || '';
+      // ユーザーのグループを取得（AdminListGroupsForUser APIを使用）
+      const listGroupsResult = await cognitoClient.send(new AdminListGroupsForUserCommand({
+        UserPoolId: USER_POOL_ID,
+        Username: username,
+      }));
+
+      const userGroupNames = (listGroupsResult.Groups || []).map(g => g.GroupName || '');
+      logInfo('既存ユーザーのグループ確認', { username, groups: userGroupNames }, event);
 
       // すでにshop-adminグループに所属している場合はエラー
-      if (userGroups.includes('shop-admin')) {
+      if (userGroupNames.includes('shop-admin')) {
         return {
           statusCode: 409,
           headers: {
@@ -97,7 +102,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
       // organization-adminの場合は、shop-adminグループを追加
       // （マルチロール対応：組織管理者が販売店管理者も兼務できるようにする）
-      if (userGroups.includes('organization-admin')) {
+      if (userGroupNames.includes('organization-admin')) {
         logInfo('既存の組織管理者に販売店管理者権限を追加', { email, shopId }, event);
 
         // この後、DynamoDB処理とCognitoグループ追加処理を実行
