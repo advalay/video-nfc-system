@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+*/node_modules/
+**/node_modules/
+
+# Build outputs
+cdk.out/
+cdk.out.new/
+dist/
+build/
+lambda/dist/
+*.js.map
+
+# CDK asset staging
+.cdk.staging/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment files
+.env
+.env.*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Test coverage
+coverage/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# MCP Server node_modules
+mcp-servers/*/node_modules/
+
+# Large generated files
+*.zip
+*.tar
+*.gz
+

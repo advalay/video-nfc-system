@@ -44,19 +44,17 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         const startDate = queryParams.startDate;
         const endDate = queryParams.endDate;
 
-        // システム管理者、組織管理者、販売店管理者のみアクセス可能
-        const isSystemAdmin = userGroups.includes('system-admin');
-        const isOrganizationAdmin = userGroups.includes('organization-admin');
+        // 販売店管理者のみアクセス可能
         const isShopAdmin = userGroups.includes('shop-admin');
         
-        if (!isSystemAdmin && !isOrganizationAdmin && !isShopAdmin) {
+        if (!isShopAdmin) {
             return {
                 statusCode: 403,
                 headers: CORS_HEADERS,
                 body: JSON.stringify({
                     success: false,
                     error: {
-                        message: 'Only system administrators, organization administrators, or shop administrators can access shop statistics'
+                        message: 'This endpoint is only accessible to shop administrators. Organization administrators should use /organization/stats endpoint.'
                     }
                 })
             };
