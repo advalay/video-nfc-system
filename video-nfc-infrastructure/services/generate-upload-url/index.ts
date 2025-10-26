@@ -91,8 +91,10 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
     // そのため、Pre-signed POST URLを使用する必要がある
     const params = {
       Bucket: bucketName,
-      Key: s3Key,
-      ContentType: contentType,
+      Fields: {
+        key: s3Key,
+        'Content-Type': contentType,
+      },
       Expires: 3600,
       Conditions: [
         ['content-length-range', 0, 10 * 1024 * 1024 * 1024], // 最大10GB
@@ -141,12 +143,6 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
       },
     }).promise();
 
-    // fieldsにkeyを追加（必須）
-    const fieldsWithKey = {
-      ...uploadUrl.fields,
-      key: s3Key,
-    };
-
     return {
       statusCode: 200,
       headers: {
@@ -157,7 +153,7 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
         success: true,
         data: {
           uploadUrl: uploadUrl.url,
-          fields: fieldsWithKey,
+          fields: uploadUrl.fields,
           videoId,
           s3Key,
           expiresIn: 3600,
