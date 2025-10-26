@@ -57,14 +57,14 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
       };
     }
 
-    // 48時間削除制限チェック
+    // 24時間削除制限チェック
     const uploadDate = result.Item.uploadDate;
     if (uploadDate) {
       const uploadTime = new Date(uploadDate).getTime();
       const now = Date.now();
       const hoursPassed = (now - uploadTime) / (1000 * 60 * 60);
       
-      if (hoursPassed >= 48) {
+      if (hoursPassed >= 24) {
         return {
           statusCode: 403,
           headers: {
@@ -75,7 +75,7 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
             success: false,
             error: {
               code: 'DELETE_NOT_ALLOWED',
-              message: '動画は48時間経過後は削除できません',
+              message: '動画は24時間経過後は削除できません',
             },
           }),
         };
