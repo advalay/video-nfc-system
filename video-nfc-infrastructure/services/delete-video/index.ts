@@ -82,21 +82,23 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
       }
     }
 
-    // アクセス制御：販売店ユーザーのみ削除可能（認証情報は任意チェーンで安全に参照）
+    // アクセス制御：組織管理者 or 販売店管理者のみ削除可能
     const claims: any = event.requestContext?.authorizer?.claims || {};
     const userGroups: string[] = (claims?.['cognito:groups'] as string[]) || [];
     const userId = (claims?.sub as string) || 'unknown';
     const userEmail = (claims?.email as string) || 'unknown';
     const sourceIp = (event.requestContext as any)?.identity?.sourceIp || (event.headers?.['x-forwarded-for'] || '').split(',')[0] || 'unknown';
 
-    // ショップ所属が必須（グループではなく属性で判定）
-    const userShopId = (claims?.['custom:shopId'] as string) || '';
-    if (!userShopId) {
+    // 組織管理者と販売店管理者のいずれかのみ削除可能
+    const isOrganizationAdmin = userGroups.includes('organization-admin');
+    const isShopAdmin = userGroups.includes('shop-admin');
+    
+    if (!isOrganizationAdmin && !isShopAdmin) {
       console.warn(JSON.stringify({
         level: 'WARN',
         action: 'DELETE_VIDEO',
         outcome: 'FORBIDDEN',
-        reason: 'Shop affiliation required',
+        reason: 'Only organization-admin and shop-admin can delete videos',
         videoId,
         requestId: event.requestContext.requestId,
         user: { userId, userEmail, userGroups },
@@ -114,47 +116,113 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
           success: false,
           error: {
             code: 'FORBIDDEN',
-            message: 'Shop affiliation required',
+            message: 'Only organization administrators and shop administrators can delete videos',
           },
         }),
       };
     }
 
-    // 販売店ユーザーの場合、自分の組織の動画のみ削除可能
-    const userOrganizationId = claims?.['custom:organizationId'] as string;
-    
     // 動画の所有者をチェック
     const videoOrganizationId = result.Item.organizationId;
     const videoShopId = result.Item.shopId;
     
-    if (videoShopId && videoShopId !== userShopId) {
-      console.warn(JSON.stringify({
-        level: 'WARN',
-        action: 'DELETE_VIDEO',
-        outcome: 'FORBIDDEN',
-        reason: 'Cannot delete video from different shop',
-        videoId,
-        requestId: event.requestContext.requestId,
-        user: { userId, userEmail, userOrganizationId, userShopId },
-        video: { videoOrganizationId, videoShopId },
-        sourceIp,
-        timestamp: new Date().toISOString(),
-      }));
+    // 組織管理者の場合: 自分の組織の動画のみ削除可能
+    if (isOrganizationAdmin) {
+      const userOrganizationId = claims?.['custom:organizationId'] as string;
+      
+      if (videoOrganizationId !== userOrganizationId) {
+        console.warn(JSON.stringify({
+          level: 'WARN',
+          action: 'DELETE_VIDEO',
+          outcome: 'FORBIDDEN',
+          reason: 'Cannot delete video from different organization',
+          videoId,
+          requestId: event.requestContext.requestId,
+          user: { userId, userEmail, userOrganizationId },
+          video: { videoOrganizationId, videoShopId },
+          sourceIp,
+          timestamp: new Date().toISOString(),
+        }));
 
-      return {
-        statusCode: 403,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-        body: JSON.stringify({
-          success: false,
-          error: {
-            code: 'FORBIDDEN',
-            message: 'You can only delete videos from your own shop',
+        return {
+          statusCode: 403,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
           },
-        }),
-      };
+          body: JSON.stringify({
+            success: false,
+            error: {
+              code: 'FORBIDDEN',
+              message: 'You can only delete videos from your own organization',
+            },
+          }),
+        };
+      }
+    }
+    
+    // 販売店管理者の場合: 自分の店舗の動画のみ削除可能
+    if (isShopAdmin) {
+      const userShopId = (claims?.['custom:shopId'] as string) || '';
+      
+      if (!userShopId) {
+        console.warn(JSON.stringify({
+          level: 'WARN',
+          action: 'DELETE_VIDEO',
+          outcome: 'FORBIDDEN',
+          reason: 'Shop ID not found in claims',
+          videoId,
+          requestId: event.requestContext.requestId,
+          user: { userId, userEmail, userGroups },
+          sourceIp,
+          timestamp: new Date().toISOString(),
+        }));
+
+        return {
+          statusCode: 403,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+          },
+          body: JSON.stringify({
+            success: false,
+            error: {
+              code: 'FORBIDDEN',
+              message: 'Shop ID not found in user claims',
+            },
+          }),
+        };
+      }
+      
+      if (videoShopId && videoShopId !== userShopId) {
+        console.warn(JSON.stringify({
+          level: 'WARN',
+          action: 'DELETE_VIDEO',
+          outcome: 'FORBIDDEN',
+          reason: 'Cannot delete video from different shop',
+          videoId,
+          requestId: event.requestContext.requestId,
+          user: { userId, userEmail, userShopId },
+          video: { videoOrganizationId, videoShopId },
+          sourceIp,
+          timestamp: new Date().toISOString(),
+        }));
+
+        return {
+          statusCode: 403,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+          },
+          body: JSON.stringify({
+            success: false,
+            error: {
+              code: 'FORBIDDEN',
+              message: 'You can only delete videos from your own shop',
+            },
+          }),
+        };
+      }
     }
 
     // 6時間制限は廃止。48時間ルール（上部）に一本化済み
