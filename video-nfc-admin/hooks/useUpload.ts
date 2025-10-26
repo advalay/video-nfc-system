@@ -82,19 +82,27 @@ export function useUpload(): UseUploadResult {
         throw new Error(uploadUrlData.error?.message || '署名付きURLの取得に失敗しました');
       }
 
-      const { uploadUrl, videoId, s3Key } = uploadUrlData.data;
-      console.log('✔ 署名付きURL取得成功:', { videoId, uploadUrl: uploadUrl.substring(0, 100) + '...' });
+      const { uploadUrl, fields, videoId, s3Key } = uploadUrlData.data;
+      console.log('✔ Pre-signed POST URL取得成功:', { videoId, uploadUrl: uploadUrl.substring(0, 100) + '...' });
 
-      // Step 2: S3に直接アップロード
+      // Step 2: S3に直接アップロード（Pre-signed POST形式）
       console.log('Step 2: S3へアップロード中...');
       
-      // fetch APIを使用
+      // FormDataを作成
+      const formData = new FormData();
+      
+      // すべてのfieldsをフォームデータに追加
+      Object.keys(fields).forEach(key => {
+        formData.append(key, fields[key]);
+      });
+      
+      // ファイルを最後に追加
+      formData.append('file', file);
+      
+      // Pre-signed POSTでアップロード
       const response = await fetch(uploadUrl, {
-        method: 'PUT',
-        body: file,
-        headers: {
-          'Content-Type': file.type,
-        },
+        method: 'POST',
+        body: formData,
       });
 
       if (!response.ok) {
