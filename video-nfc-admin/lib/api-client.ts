@@ -1,6 +1,6 @@
 import { fetchAuthSession } from 'aws-amplify/auth';
 import { configureAmplify } from './amplify-config';
-import { UpdateShopInput } from '../types/shared';
+import { UpdateShopInput, OrganizationAdmin } from '../types/shared';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://rwwiyktk7e.execute-api.ap-northeast-1.amazonaws.com/dev';
 
@@ -230,6 +230,21 @@ export async function resetShopPassword(shopId: string): Promise<any> {
  */
 export async function deleteShop(shopId: string): Promise<any> {
   return apiDelete<any>(`/shops/${shopId}`);
+}
+
+/**
+ * 組織管理者情報を取得
+ */
+export async function getOrganizationAdmin(organizationId: string): Promise<OrganizationAdmin> {
+  const response = await apiGet<any>(`/organizations/${organizationId}/admin`);
+  return response;
+}
+
+/**
+ * 組織管理者のパスワードをリセット（パスワードリセットメール送信）
+ */
+export async function resetOrganizationPassword(organizationId: string): Promise<any> {
+  return apiPost<any>(`/organizations/${organizationId}/reset-password`, {});
 }
 
 /**

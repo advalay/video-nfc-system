@@ -13,9 +13,10 @@ import OrganizationCreatedModal from '../../../components/OrganizationCreatedMod
 import CreateShopModal from '../../../components/CreateShopModal';
 import ShopCreatedModal from '../../../components/ShopCreatedModal';
 import ShopEditModal from '../../../components/ShopEditModal';
-import { Building2, Plus, Edit, Trash2, Store, ChevronDown, ChevronRight, Key, Copy, Eye, EyeOff } from 'lucide-react';
-import { Organization, Shop, UpdateOrganizationInput } from '../../../types/shared';
-import { updateOrganization, deleteShop, updateShop, resetShopPassword } from '../../../lib/api-client';
+import OrganizationAdminModal from '../../../components/OrganizationAdminModal';
+import { Building2, Plus, Edit, Trash2, Store, ChevronDown, ChevronRight, Key, Copy, Eye, EyeOff, User } from 'lucide-react';
+import { Organization, Shop, UpdateOrganizationInput, OrganizationAdmin } from '../../../types/shared';
+import { updateOrganization, deleteShop, updateShop, resetShopPassword, getOrganizationAdmin } from '../../../lib/api-client';
 
 
 // ユーティリティはコンポーネント外に定義し、再生成を避ける
@@ -105,6 +106,7 @@ type OrgRowProps = {
   isSystemAdmin: boolean;
   onToggle: (orgId: string) => void;
   onEditOrganization: (org: Organization) => void;
+  onShowAdminInfo: (organizationId: string) => void;
   onCreateShop: (org: Organization) => void;
   onShowCredentials: (shop: Shop) => void;
   onEditShop: (shop: Shop) => void;
@@ -117,6 +119,7 @@ const OrganizationRow = memo(function OrganizationRow({
   isSystemAdmin,
   onToggle, 
   onEditOrganization,
+  onShowAdminInfo,
   onCreateShop,
   onShowCredentials, 
   onEditShop, 
@@ -159,13 +162,22 @@ const OrganizationRow = memo(function OrganizationRow({
 
         <div className="flex items-center space-x-2">
           {isSystemAdmin && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onEditOrganization(org); }}
-              className="text-blue-600 hover:text-blue-900 p-1"
-              title="組織情報を編集"
-            >
-              <Edit className="w-4 h-4" />
-            </button>
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); onShowAdminInfo(org.organizationId); }}
+                className="text-purple-600 hover:text-purple-900 p-1"
+                title="管理者情報"
+              >
+                <User className="w-4 h-4" />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onEditOrganization(org); }}
+                className="text-blue-600 hover:text-blue-900 p-1"
+                title="組織情報を編集"
+              >
+                <Edit className="w-4 h-4" />
+              </button>
+            </>
           )}
         </div>
 
@@ -259,6 +271,9 @@ export default function OrganizationsPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedOrganization, setSelectedOrganization] = useState<Organization | null>(null);
+  const [showAdminModal, setShowAdminModal] = useState(false);
+  const [selectedOrganizationAdmin, setSelectedOrganizationAdmin] = useState<OrganizationAdmin | null>(null);
+  const [selectedOrganizationId, setSelectedOrganizationId] = useState<string>('');
   
   // 組織作成モーダル関連
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -378,6 +393,18 @@ export default function OrganizationsPage() {
       throw new Error(error.message || '更新に失敗しました');
     }
   }, [refetch]);
+
+  const handleShowAdminInfo = useCallback(async (organizationId: string) => {
+    try {
+      const adminInfo = await getOrganizationAdmin(organizationId);
+      setSelectedOrganizationAdmin(adminInfo);
+      setSelectedOrganizationId(organizationId);
+      setShowAdminModal(true);
+    } catch (error: any) {
+      console.error('Error fetching organization admin:', error);
+      alert(`組織管理者情報の取得に失敗しました: ${error.message || '不明なエラー'}`);
+    }
+  }, []);
 
   const handleDeleteShop = useCallback(async (shop: Shop) => {
     // マネタイズへの影響を警告
@@ -567,6 +594,7 @@ export default function OrganizationsPage() {
                       isSystemAdmin={isSystemAdmin || false}
                       onToggle={toggleOrganization}
                       onEditOrganization={handleEditOrganization}
+                      onShowAdminInfo={handleShowAdminInfo}
                       onCreateShop={handleCreateShop}
                       onShowCredentials={handleShowCredentials}
                       onEditShop={handleEditShop}
@@ -668,6 +696,18 @@ export default function OrganizationsPage() {
           onClose={() => setShowShopEditModal(false)}
           shop={selectedShopForEdit}
           onSave={handleSaveShop}
+        />
+
+        {/* 組織管理者情報モーダル */}
+        <OrganizationAdminModal
+          isOpen={showAdminModal}
+          onClose={() => {
+            setShowAdminModal(false);
+            setSelectedOrganizationAdmin(null);
+            setSelectedOrganizationId('');
+          }}
+          admin={selectedOrganizationAdmin}
+          organizationId={selectedOrganizationId}
         />
 
         {/* 組織作成モーダル */}

@@ -146,4 +146,11 @@ export interface UpdateShopInput {
   status?: 'active' | 'inactive' | 'suspended';
 }
 
+// 組織管理者情報
+export interface OrganizationAdmin {
+  email: string;
+  organizationName: string;
+  loginUrl: string;
+  createdAt: string;
+}
 
