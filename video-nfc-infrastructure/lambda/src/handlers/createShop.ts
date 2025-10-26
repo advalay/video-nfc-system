@@ -54,31 +54,69 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     // 既存メールアドレスの確認（Cognito作成前にチェック）
     const tempPassword = generateTempPassword();
     const username = email; // メールアドレスをユーザー名として使用
-    
+
+    // 既存ユーザーの確認
+    let existingUser = null;
     try {
-      await cognitoClient.send(new AdminGetUserCommand({
+      const getUserResult = await cognitoClient.send(new AdminGetUserCommand({
         UserPoolId: USER_POOL_ID,
         Username: username,
       }));
-      // ユーザーが存在する場合はエラーを返す
-      return {
-        statusCode: 409,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-        body: JSON.stringify({
-          success: false,
-          error: 'このメールアドレスは既に登録されています。別のメールアドレスをご使用ください。',
-          code: 'EMAIL_ALREADY_EXISTS'
-        }),
-      };
+      existingUser = getUserResult;
+      logInfo('既存ユーザーを発見', { username }, event);
     } catch (error: any) {
       if (error.name !== 'UserNotFoundException') {
         // UserNotFoundException以外のエラーは予期しないエラー
         throw error;
       }
       // UserNotFoundExceptionの場合は新規ユーザーとして続行
+      logInfo('新規ユーザーとして作成', { username }, event);
+    }
+
+    // 既存ユーザーが存在する場合の処理
+    if (existingUser) {
+      // ユーザーのグループを取得
+      const userAttributes = existingUser.UserAttributes || [];
+      const userGroups = userAttributes.find(attr => attr.Name === 'custom:groups')?.Value || '';
+
+      // すでにshop-adminグループに所属している場合はエラー
+      if (userGroups.includes('shop-admin')) {
+        return {
+          statusCode: 409,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+          },
+          body: JSON.stringify({
+            success: false,
+            error: 'このユーザーは既に販売店管理者として登録されています',
+            code: 'ALREADY_SHOP_ADMIN'
+          }),
+        };
+      }
+
+      // organization-adminの場合は、shop-adminグループを追加
+      // （マルチロール対応：組織管理者が販売店管理者も兼務できるようにする）
+      if (userGroups.includes('organization-admin')) {
+        logInfo('既存の組織管理者に販売店管理者権限を追加', { email, shopId }, event);
+
+        // この後、DynamoDB処理とCognitoグループ追加処理を実行
+        // （existingUserフラグによって処理が分岐する）
+      } else {
+        // organization-admin でも shop-admin でもない場合はエラー
+        return {
+          statusCode: 409,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+          },
+          body: JSON.stringify({
+            success: false,
+            error: 'このメールアドレスは既に別の役割で登録されています',
+            code: 'EMAIL_ALREADY_EXISTS'
+          }),
+        };
+      }
     }
     
     // 販売店データを作成
@@ -150,41 +188,66 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       };
     }
 
-    // DynamoDB成功後にCognitoユーザーを作成
+    // DynamoDB成功後にCognitoユーザーを作成または更新
     try {
-      // 新規ユーザー作成
-      await cognitoClient.send(new AdminCreateUserCommand({
-        UserPoolId: USER_POOL_ID,
-        Username: username,
-        UserAttributes: [
-          { Name: 'email', Value: email },
-          { Name: 'email_verified', Value: 'true' },
-          { Name: 'custom:shopId', Value: shopId },
-          { Name: 'custom:organizationId', Value: organizationId },
-          { Name: 'custom:shopName', Value: shopName },
-          { Name: 'custom:organizationName', Value: organization.Item.organizationName },
-          { Name: 'custom:role', Value: 'shop-admin' },
-        ],
-        TemporaryPassword: tempPassword,
-        MessageAction: 'SUPPRESS', // メール送信を抑制
-      }));
+      if (existingUser) {
+        // 既存ユーザー（組織管理者）に販売店管理者権限を追加
+        logInfo('既存ユーザーに販売店管理者権限を追加開始', { username, shopId }, event);
 
-      // ユーザーをshop-adminグループに追加
-      await cognitoClient.send(new AdminAddUserToGroupCommand({
-        UserPoolId: USER_POOL_ID,
-        Username: username,
-        GroupName: 'shop-admin',
-      }));
+        // shop-adminグループに追加
+        await cognitoClient.send(new AdminAddUserToGroupCommand({
+          UserPoolId: USER_POOL_ID,
+          Username: username,
+          GroupName: 'shop-admin',
+        }));
 
-      // パスワードを永続化（初回ログイン時に変更を強制しない）
-      await cognitoClient.send(new AdminSetUserPasswordCommand({
-        UserPoolId: USER_POOL_ID,
-        Username: username,
-        Password: tempPassword,
-        Permanent: true,
-      }));
+        // shopId属性を更新
+        await cognitoClient.send(new AdminUpdateUserAttributesCommand({
+          UserPoolId: USER_POOL_ID,
+          Username: username,
+          UserAttributes: [
+            { Name: 'custom:shopId', Value: shopId },
+            { Name: 'custom:shopName', Value: shopName },
+          ],
+        }));
 
-      logInfo('販売店ユーザーアカウント作成成功', { username, shopId, organizationId }, event);
+        logInfo('既存ユーザーに販売店管理者権限を追加成功', { username, shopId, organizationId }, event);
+
+      } else {
+        // 新規ユーザー作成
+        await cognitoClient.send(new AdminCreateUserCommand({
+          UserPoolId: USER_POOL_ID,
+          Username: username,
+          UserAttributes: [
+            { Name: 'email', Value: email },
+            { Name: 'email_verified', Value: 'true' },
+            { Name: 'custom:shopId', Value: shopId },
+            { Name: 'custom:organizationId', Value: organizationId },
+            { Name: 'custom:shopName', Value: shopName },
+            { Name: 'custom:organizationName', Value: organization.Item.organizationName },
+            { Name: 'custom:role', Value: 'shop-admin' },
+          ],
+          TemporaryPassword: tempPassword,
+          MessageAction: 'SUPPRESS', // メール送信を抑制
+        }));
+
+        // ユーザーをshop-adminグループに追加
+        await cognitoClient.send(new AdminAddUserToGroupCommand({
+          UserPoolId: USER_POOL_ID,
+          Username: username,
+          GroupName: 'shop-admin',
+        }));
+
+        // パスワードを永続化（初回ログイン時に変更を強制しない）
+        await cognitoClient.send(new AdminSetUserPasswordCommand({
+          UserPoolId: USER_POOL_ID,
+          Username: username,
+          Password: tempPassword,
+          Permanent: true,
+        }));
+
+        logInfo('販売店ユーザーアカウント作成成功', { username, shopId, organizationId }, event);
+      }
 
     } catch (cognitoError: any) {
       logInfo('Cognitoユーザー作成エラー', { error: cognitoError.message }, event);
@@ -236,6 +299,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       };
     }
 
+    // 成功レスポンス
     return {
       statusCode: 201,
       headers: {
@@ -248,9 +312,12 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
           shopId,
           shopName,
           email,
-          tempPassword, // 新規ユーザーのみ（既存ユーザーは上でエラーを返す）
+          tempPassword: existingUser ? undefined : tempPassword, // 既存ユーザーの場合はパスワードを返さない
           loginUrl: process.env.LOGIN_URL || 'https://your-app.com/login',
-          isExistingUser: false, // ここに到達するのは新規ユーザーのみ
+          isExistingUser: !!existingUser, // 既存ユーザーかどうかのフラグ
+          message: existingUser
+            ? '既存の組織管理者に販売店管理者権限を追加しました'
+            : '販売店と新規ユーザーを作成しました',
         },
       }),
     };
