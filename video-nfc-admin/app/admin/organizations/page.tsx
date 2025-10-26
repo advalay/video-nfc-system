@@ -293,8 +293,9 @@ export default function OrganizationsPage() {
   const isOrganizationAdmin = user?.groups?.includes('organization-admin');
 
   // 権限に応じて適切なデータを取得
+  // システム管理者の場合のみuseSystemStatsを有効化、組織管理者の場合のみuseOrganizationStatsを有効化
   const { data: systemStats, isLoading: systemLoading, error: systemError, refetch: systemRefetch } = useSystemStats();
-  const { data: organizationStats, isLoading: orgLoading, error: orgError, refetch: orgRefetch } = useOrganizationStats(undefined, undefined, isOrganizationAdmin && !isSystemAdmin);
+  const { data: organizationStats, isLoading: orgLoading, error: orgError, refetch: orgRefetch } = useOrganizationStats(undefined, undefined, !isSystemAdmin && isOrganizationAdmin);
   
   // 権限に応じて使用するデータを選択
   const isLoading = isSystemAdmin ? systemLoading : orgLoading;
