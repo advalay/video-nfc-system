@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../hooks/useAuth';
+import { useUserShops } from '../../hooks/useUserShops';
 import { Layout } from '../../components/Layout';
 import { ProtectedRoute } from '../../components/ProtectedRoute';
 import { formatFileSize, formatUploadDateTime } from '../../lib/utils';
@@ -73,6 +74,8 @@ function getMockVideos() {
 export default function VideosPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const { shops, isLoading: isLoadingShops } = useUserShops();
+  
   const [videos, setVideos] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -80,9 +83,12 @@ export default function VideosPage() {
   const [qrVideo, setQrVideo] = useState<{ id: string; url: string } | null>(null);
   const [showIdModal, setShowIdModal] = useState(false);
   const [selectedVideoId, setSelectedVideoId] = useState('');
+  const [selectedShopFilter, setSelectedShopFilter] = useState<string>('all');
 
-  // 販売店管理者かどうかを判定
+  // ユーザーの権限を判定
   const isShopAdmin = user?.groups?.includes('shop-admin');
+  const isOrganizationAdmin = user?.groups?.includes('organization-admin');
+  const isSystemAdmin = user?.groups?.includes('system-admin');
 
          useEffect(() => {
            const fetchVideos = async () => {
@@ -93,8 +99,17 @@ export default function VideosPage() {
                // API呼び出し（開発環境でも実際のAPIを使用）
                const { apiGet } = await import('../../lib/api-client');
                
-               // 販売店管理者の場合は自分の販売店の動画のみを取得
-               const endpoint = isShopAdmin ? `/videos?shopId=${user?.shopId}` : '/videos';
+               // エンドポイントの構築（フィルター条件に応じて）
+               let endpoint = '/videos';
+               if (isShopAdmin && user?.shopId) {
+                 // 販売店管理者: 自分の販売店の動画のみ
+                 endpoint = `/videos?shopId=${user.shopId}`;
+               } else if (isOrganizationAdmin && selectedShopFilter !== 'all') {
+                 // 組織管理者: 選択した販売店の動画のみ
+                 endpoint = `/videos?shopId=${selectedShopFilter}`;
+               }
+               // system-adminまたはselectedShopFilter === 'all'の場合は全動画を取得
+               
                const response = await apiGet<{videos: any[], totalCount: number}>(endpoint);
                setVideos(response.videos || []);
              } catch (err: any) {
@@ -106,7 +121,7 @@ export default function VideosPage() {
            };
 
            fetchVideos();
-         }, [isShopAdmin, user?.shopId]);
+         }, [isShopAdmin, isOrganizationAdmin, user?.shopId, selectedShopFilter]);
 
   // 削除可能かどうかを判定する関数
   const canDelete = (uploadDate: string): boolean => {
@@ -228,6 +243,24 @@ export default function VideosPage() {
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-medium text-gray-900">動画一覧</h2>
               <div className="flex items-center space-x-4">
+                {/* 販売店フィルター（organization-adminのみ表示） */}
+                {isOrganizationAdmin && !isShopAdmin && (
+                  <select
+                    value={selectedShopFilter}
+                    onChange={(e) => setSelectedShopFilter(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-gray-900 bg-white"
+                    disabled={isLoadingShops}
+                  >
+                    <option value="all">全ての販売店</option>
+                    {shops.map((shop) => (
+                      <option key={shop.shopId} value={shop.shopId}>
+                        {shop.shopName}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                
+                {/* 検索バー */}
                 <div className="relative">
                   <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                   <input
