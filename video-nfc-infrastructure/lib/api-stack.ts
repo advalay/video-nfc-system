@@ -19,6 +19,7 @@ export interface ApiStackProps extends cdk.StackProps {
   organizationTableName: string;
   shopTableName: string;
   approvalRequestTableName: string;
+  userShopRelationTableName: string;
   cloudFrontDomain: string;
   snsTopicArn?: string;
 }
@@ -42,6 +43,7 @@ export class ApiStack extends cdk.Stack {
       organizationTableName,
       shopTableName,
       approvalRequestTableName,
+      userShopRelationTableName,
       cloudFrontDomain,
       snsTopicArn,
     } = props;
@@ -55,10 +57,12 @@ export class ApiStack extends cdk.Stack {
       DYNAMODB_TABLE_ORGANIZATION: organizationTableName,
       DYNAMODB_TABLE_SHOP: shopTableName,
       DYNAMODB_TABLE_APPROVAL_REQUEST: approvalRequestTableName,
+      DYNAMODB_TABLE_USER_SHOP_RELATION: userShopRelationTableName,
       CLOUDFRONT_DOMAIN: cloudFrontDomain,
       COGNITO_USER_POOL_ID: userPoolId,
       SNS_TOPIC_ARN: snsTopicArn || '',
       FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:3001',
+      LOGIN_URL: process.env.FRONTEND_URL || 'http://localhost:3001', // ログインURL（フロントエンドURLと同じ）
       ENVIRONMENT: environment,
     };
 
@@ -315,6 +319,17 @@ export class ApiStack extends cdk.Stack {
       description: 'Reject organization registration request',
     });
 
+    // Lambda関数: getUserShops
+    const getUserShopsFn = new lambda.Function(this, 'GetUserShopsFn', {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      handler: 'handlers/getUserShops.handler',
+      code: lambda.Code.fromAsset('lambda/dist'),
+      memorySize: 512,
+      timeout: cdk.Duration.seconds(29),
+      environment: commonEnvironment,
+      description: 'Get user shops (multi-shop support)',
+    });
+
     // Lambda関数: getShopStats
     const getShopStatsFn = new lambda.Function(this, 'GetShopStatsFn', {
       runtime: lambda.Runtime.NODEJS_20_X,
@@ -373,6 +388,7 @@ export class ApiStack extends cdk.Stack {
       getApprovalRequestFn,
       approveRequestFn,
       rejectRequestFn,
+      getUserShopsFn,
       getShopStatsFn,
       getSystemStatsFn,
       getOrganizationStatsFn
@@ -407,6 +423,8 @@ export class ApiStack extends cdk.Stack {
         `arn:aws:dynamodb:${this.region}:${accountId}:table/${shopTableName}/index/*`,
         `arn:aws:dynamodb:${this.region}:${accountId}:table/${approvalRequestTableName}`,
         `arn:aws:dynamodb:${this.region}:${accountId}:table/${approvalRequestTableName}/index/*`,
+        `arn:aws:dynamodb:${this.region}:${accountId}:table/${userShopRelationTableName}`,
+        `arn:aws:dynamodb:${this.region}:${accountId}:table/${userShopRelationTableName}/index/*`,
       ],
     });
 
@@ -433,6 +451,7 @@ export class ApiStack extends cdk.Stack {
     getApprovalRequestFn.addToRolePolicy(dynamoReadWritePolicy);
     approveRequestFn.addToRolePolicy(dynamoReadWritePolicy);
     rejectRequestFn.addToRolePolicy(dynamoReadWritePolicy);
+    getUserShopsFn.addToRolePolicy(dynamoReadWritePolicy);
     getShopStatsFn.addToRolePolicy(dynamoReadWritePolicy);
     getSystemStatsFn.addToRolePolicy(dynamoReadWritePolicy);
     getOrganizationStatsFn.addToRolePolicy(dynamoReadWritePolicy);
@@ -910,6 +929,18 @@ export class ApiStack extends cdk.Stack {
     organizationStatsResource.addMethod(
       'GET',
       new apigateway.LambdaIntegration(getOrganizationStatsFn, lambdaIntegrationOptions),
+      {
+        authorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+      }
+    );
+
+    // エンドポイント: GET /user/shops（ユーザーの管理販売店一覧取得）
+    const userResource = this.restApi.root.addResource('user');
+    const userShopsResource = userResource.addResource('shops');
+    userShopsResource.addMethod(
+      'GET',
+      new apigateway.LambdaIntegration(getUserShopsFn, lambdaIntegrationOptions),
       {
         authorizer,
         authorizationType: apigateway.AuthorizationType.COGNITO,

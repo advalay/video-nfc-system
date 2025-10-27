@@ -14,14 +14,12 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
     // REST APIの認証情報を取得
     const claims = event.requestContext.authorizer?.claims;
     const userGroups: string[] = claims?.['cognito:groups'] || [];
-    const organizationId = claims?.['custom:organizationId'];
-    const shopId = claims?.['custom:shopId'];
     const userRole = claims?.['custom:role'];
     const userEmail = claims?.['email'];
 
     // shop-admin, organization-admin, system-admin のみアップロード可能
     if (!userGroups.includes('shop-admin') &&
-        !userGroups.includes('organization-admin') && 
+        !userGroups.includes('organization-admin') &&
         !userGroups.includes('system-admin')) {
       return {
         statusCode: 403,
@@ -39,8 +37,17 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
       };
     }
 
-    // organizationId と shopId が必須
-    if (!organizationId || !shopId) {
+    const body = event.body ? JSON.parse(event.body) : {};
+    const fileName: string = body.fileName;
+    const fileSize: number = body.fileSize;
+    const contentType: string = body.contentType;
+    const title: string = body.title || fileName;
+    const description: string = body.description || '';
+    const shopId: string = body.shopId; // マルチショップ対応: リクエストボディから取得
+    const organizationId: string = body.organizationId; // リクエストボディから取得
+
+    // shopId と organizationId が必須
+    if (!shopId || !organizationId) {
       return {
         statusCode: 400,
         headers: {
@@ -50,19 +57,41 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
         body: JSON.stringify({
           success: false,
           error: {
-            code: 'INVALID_USER_ATTRIBUTES',
-            message: 'User organizationId and shopId are required',
+            code: 'MISSING_SHOP_INFO',
+            message: 'shopId and organizationId are required in request body',
           },
         }),
       };
     }
 
-    const body = event.body ? JSON.parse(event.body) : {};
-    const fileName: string = body.fileName;
-    const fileSize: number = body.fileSize;
-    const contentType: string = body.contentType;
-    const title: string = body.title || fileName;
-    const description: string = body.description || '';
+    // system-admin以外は、UserShopRelationテーブルで権限チェック
+    if (!userGroups.includes('system-admin')) {
+      const userShopRelationTable = process.env.DYNAMODB_TABLE_USER_SHOP_RELATION!;
+      const relationResult = await dynamodb.get({
+        TableName: userShopRelationTable,
+        Key: {
+          userId: userEmail,
+          shopId: shopId,
+        },
+      }).promise();
+
+      if (!relationResult.Item) {
+        return {
+          statusCode: 403,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+          },
+          body: JSON.stringify({
+            success: false,
+            error: {
+              code: 'SHOP_ACCESS_DENIED',
+              message: 'You do not have permission to upload videos to this shop',
+            },
+          }),
+        };
+      }
+    }
 
     if (!fileName || !contentType || !fileSize) {
       return {

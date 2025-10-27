@@ -143,7 +143,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       weeklyVideos: 0
     };
     
-    // DynamoDBトランザクション：Shop作成 + Organization更新（Cognito作成の前に実行）
+    // DynamoDBトランザクション：Shop作成 + Organization更新 + UserShopRelation作成（Cognito作成の前に実行）
     try {
       await dynamodb.send(new TransactWriteCommand({
         TransactItems: [
@@ -171,11 +171,26 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
               },
               ConditionExpression: 'attribute_exists(organizationId)' // 組織の存在を再確認
             }
+          },
+          {
+            Put: {
+              TableName: process.env.DYNAMODB_TABLE_USER_SHOP_RELATION,
+              Item: {
+                userId: email, // emailをuserIdとして使用
+                shopId: shopId,
+                shopName: shopName,
+                organizationId: organizationId,
+                organizationName: organization.Item.organizationName,
+                role: 'shop-admin',
+                createdAt: new Date().toISOString(),
+              },
+              ConditionExpression: 'attribute_not_exists(userId) AND attribute_not_exists(shopId)', // 重複チェック
+            }
           }
         ]
       }));
 
-      logInfo('販売店データ作成成功', { shopId, shopName, organizationId }, event);
+      logInfo('販売店データ作成成功（UserShopRelation含む）', { shopId, shopName, organizationId, userId: email }, event);
 
     } catch (dbError: any) {
       logInfo('DynamoDBトランザクションエラー', { error: dbError.message }, event);
@@ -260,13 +275,19 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       // Cognito作成失敗時は作成したShopデータを削除（ロールバック）
       try {
         const { DeleteCommand } = require('@aws-sdk/lib-dynamodb');
-        
+
         // Shopテーブルから削除
         await dynamodb.send(new DeleteCommand({
           TableName: process.env.DYNAMODB_TABLE_SHOP,
           Key: { shopId }
         }));
-        
+
+        // UserShopRelationテーブルから削除
+        await dynamodb.send(new DeleteCommand({
+          TableName: process.env.DYNAMODB_TABLE_USER_SHOP_RELATION,
+          Key: { userId: email, shopId: shopId }
+        }));
+
         // Organizationテーブルのshops配列から削除（複雑なため、UpdateExpressionで対応）
         // 注: list_append で追加したばかりなので、配列の最後の要素を削除
         await dynamodb.send(new TransactWriteCommand({
@@ -284,8 +305,8 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
             }
           ]
         }));
-        
-        logInfo('DynamoDBロールバック成功', { shopId, organizationId }, event);
+
+        logInfo('DynamoDBロールバック成功（UserShopRelation含む）', { shopId, organizationId, userId: email }, event);
       } catch (rollbackError: any) {
         logInfo('DynamoDBロールバック失敗', { error: rollbackError.message }, event);
       }

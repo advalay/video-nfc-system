@@ -98,6 +98,7 @@ const apiStack = new ApiStack(app, `VideoNfcApiStack-${environment}`, {
   organizationTableName: databaseStack.organizationTable.tableName,
   shopTableName: databaseStack.shopTable.tableName,
   approvalRequestTableName: databaseStack.approvalRequestTable.tableName,
+  userShopRelationTableName: databaseStack.userShopRelationTable.tableName,
   cloudFrontDomain: storageStack.distribution.distributionDomainName,
   snsTopicArn: monitoringStack.alertTopic.topicArn,
 });
