@@ -16,6 +16,8 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
     const userGroups: string[] = claims?.['cognito:groups'] || [];
     const userRole = claims?.['custom:role'];
     const userEmail = claims?.['email'];
+    const shopName = claims?.['custom:shopName'];
+    const organizationName = claims?.['custom:organizationName'];
 
     // shop-admin, organization-admin, system-admin のみアップロード可能
     if (!userGroups.includes('shop-admin') &&
@@ -145,6 +147,8 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
         // 組織情報
         organizationId,
         shopId,
+        shopName,
+        organizationName,
         
         // 動画情報
         fileName,

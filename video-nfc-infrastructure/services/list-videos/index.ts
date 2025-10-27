@@ -129,49 +129,17 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
       );
     }
 
-    // 組織名と店舗名を取得するための追加クエリ
-    const enrichedItems = await Promise.all(items.map(async (item: any) => {
-      try {
-        // 組織情報を取得
-        const orgResult = await docClient.send(new GetCommand({
-          TableName: process.env.DYNAMODB_TABLE_ORGANIZATION!,
-          Key: {
-            organizationId: item.organizationId,
-          },
-        }));
-        
-        // 店舗情報を取得
-        const shopResult = await docClient.send(new GetCommand({
-          TableName: process.env.DYNAMODB_TABLE_SHOP!,
-          Key: {
-            shopId: item.shopId,
-          },
-        }));
-        
-        const organization = orgResult.Item;
-        const shop = shopResult.Item;
-        
-        return {
-          ...item,
-          uploadedAt: item.uploadedAt || item.uploadDate,
-          status: item.status || 'completed',
-          organizationName: organization?.organizationName || '不明な組織',
-          shopName: shop?.shopName || '不明な店舗',
-        };
-      } catch (error: any) {
-        console.error('Error enriching video data:', error);
-        return {
-          ...item,
-          uploadedAt: item.uploadedAt || item.uploadDate,
-          status: item.status || 'completed',
-          organizationName: item.organizationId || '不明な組織',
-          shopName: item.shopId || '不明な店舗',
-        };
-      }
-    }));
-
     // 表示用に既存データを正規化
-    const normalized = enrichedItems;
+    // VideoMetadataテーブルに既にshopName/organizationNameが保存されているため、
+    // 追加のDynamoDBクエリは不要
+    const normalized = items.map((item: any) => ({
+      ...item,
+      uploadedAt: item.uploadedAt || item.uploadDate,
+      status: item.status || 'completed',
+      // shopNameとorganizationNameはVideoMetadataテーブルから取得済み
+      shopName: item.shopName || '不明な店舗',
+      organizationName: item.organizationName || '不明な組織',
+    }));
 
     return {
       statusCode: 200,
