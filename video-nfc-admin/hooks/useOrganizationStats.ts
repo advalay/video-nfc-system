@@ -27,14 +27,15 @@ export interface OrganizationStats {
   }>;
 }
 
-export function useOrganizationStats(startDate?: string, endDate?: string, enabled: boolean = true) {
+export function useOrganizationStats(startDate?: string, endDate?: string, enabled: boolean = false) {
   const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
   const { user } = useAuth();
   const isSystemAdmin = user?.groups?.includes('system-admin');
+  const isOrganizationAdmin = user?.groups?.includes('organization-admin');
 
   return useQuery<OrganizationStats>({
     queryKey: ['organizationStats', startDate, endDate],
-    enabled: enabled && !isSystemAdmin, // System adminは無効化
+    enabled: enabled && isOrganizationAdmin && !isSystemAdmin, // organization-adminのみ有効化
     queryFn: async () => {
       // 追加のチェック：system-adminが呼び出した場合はエラー
       if (isSystemAdmin) {
