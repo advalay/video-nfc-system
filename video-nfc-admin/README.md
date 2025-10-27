@@ -1,246 +1,211 @@
 # Video NFC Admin System 🎬
 
-非エンジニアでも簡単に運用・更新できる動画管理システム
+NFCタグ付きキーホルダー向け動画配信システムの管理画面
 
-## 📚 ドキュメント一覧
+## 📋 システム概要
 
-### 🚀 デプロイ・運用
+### 主要機能
+- **動画管理**: 動画のアップロード・一覧表示・削除
+- **組織管理**: パートナー企業と販売店の階層管理
+- **統計表示**: システム全体・組織別・販売店別の統計情報
+- **ユーザー管理**: 3つのロール（システム管理者・組織管理者・販売店管理者）
 
-1. **[NON_ENGINEER_GUIDE.md](./NON_ENGINEER_GUIDE.md)** ⭐️ **まずはここから！**
-   - あなたのタスク一覧
-   - AWS Amplifyでの公開手順
-   - 日常的な確認事項
-   - トラブルシューティング
+### ユーザーロール
+- **system-admin**: システム全体の管理（全組織・全販売店・全動画）
+- **organization-admin**: 自組織と配下販売店の管理
+- **shop-admin**: 自販売店の管理と動画アップロード
 
-2. **[QUICK_UPDATE_GUIDE.md](./QUICK_UPDATE_GUIDE.md)** ⭐️ **よく使う！**
-   - テキスト変更（5分）
-   - 画像変更（5分）
-   - 色の変更（5分）
-   - 実践例とチェックリスト
+### 現在の仕様
+- ✅ 1メールアドレス = 1ロール（シンプル設計）
+- ✅ 組織管理者と販売店管理者は別々のメールアドレス
+- 📝 マルチロール機能は現在無効（将来的に再実装可能）
 
-3. **[DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)**
-   - AWS Amplify詳細設定
-   - カスタムドメイン設定
-   - セキュリティ設定
-   - コスト見積もり
-
-4. **[ENV_VARIABLES.md](./ENV_VARIABLES.md)**
-   - 環境変数の設定方法
-   - 取得済みの認証情報
-   - トラブルシューティング
-
-5. **[UPDATE_ENVIRONMENT.md](./UPDATE_ENVIRONMENT.md)**
-   - 更新しやすい環境の説明
-   - 今後追加すべき機能
-   - 運用フロー
-   - 学習リソース
-
-## 🎯 クイックスタート（初回のみ・15分）
-
-### ステップ1: AWSにログイン
-```
-https://console.aws.amazon.com/amplify/
-```
-
-### ステップ2: 新しいアプリを作成
-1. 「新しいアプリ」→「Webアプリをホスト」
-2. GitHubを選択して認証
-3. リポジトリ: `company-search-system`
-4. ブランチ: `main`
-5. モノレポルート: `video-nfc-admin`
-
-### ステップ3: 環境変数を設定
-[ENV_VARIABLES.md](./ENV_VARIABLES.md)を参照して6つの環境変数を設定
-
-### ステップ4: デプロイ実行
-「保存してデプロイ」をクリック → 5-10分待つ
-
-### ステップ5: 動作確認
-発行されたURLでサイトを開く
-
-**詳細は [NON_ENGINEER_GUIDE.md](./NON_ENGINEER_GUIDE.md) を参照**
-
----
-
-## 🔄 日常的な更新（5分）
-
-### テキストを変更
-1. GitHubでファイルを開く
-2. 編集ボタン（✏️）をクリック
-3. テキストを変更
-4. 「Commit changes」をクリック
-5. 5-10分で本番反映
-
-### 画像を変更
-1. GitHubで画像フォルダを開く
-2. 新しい画像をアップロード
-3. 5-10分で本番反映
-
-**詳細は [QUICK_UPDATE_GUIDE.md](./QUICK_UPDATE_GUIDE.md) を参照**
-
----
-
-## 🛡️ 安全な更新方法
-
-### ロールバック（元に戻す）
-1. Amplifyコンソールを開く
-2. 「ビルド履歴」タブをクリック
-3. 成功した前のビルドを選択
-4. 「再デプロイ」をクリック
-5. 5分で元の状態に戻る
-
-### テスト環境で試す（推奨）
-1. GitHubで`test`ブランチを作成
-2. Amplifyで`test`ブランチを接続
-3. テスト用URLで確認
-4. OKなら本番に反映
-
----
-
-## 📊 システム構成
+## 🏗 技術スタック
 
 ### フロントエンド
 - **Next.js 15** - React フレームワーク
+- **TypeScript** - 型安全性
 - **Tailwind CSS** - スタイリング
-- **AWS Amplify Hosting** - ホスティング
+- **React Query** - データフェッチング
+- **AWS Amplify** - 認証・ホスティング
 
 ### バックエンド
 - **AWS API Gateway** - REST API
-- **AWS Lambda** - サーバーレス関数
-- **Amazon DynamoDB** - データベース
+- **AWS Lambda** - サーバーレス関数（20個）
+- **Amazon DynamoDB** - データベース（6テーブル）
 - **Amazon S3** - 動画ストレージ
-- **Amazon Cognito** - 認証
+- **Amazon Cognito** - 認証・ユーザー管理
+- **Amazon CloudFront** - CDN配信
 
-### CI/CD
-- **GitHub** - ソースコード管理
-- **AWS Amplify** - 自動デプロイ
+## 🚀 開発環境セットアップ
 
----
+### 1. 依存関係のインストール
 
-## 💰 月額コスト
+```bash
+npm install
+```
 
-### 10,000ユーザー想定
-- **約$90/月**（約13,000円）
-  - Amplify Hosting: $15
-  - CloudFront: $20
+### 2. 環境変数の設定
+
+`.env.local` ファイルを作成し、以下の環境変数を設定：
+
+```bash
+NEXT_PUBLIC_API_BASE_URL=https://your-api-gateway-url/dev
+NEXT_PUBLIC_COGNITO_USER_POOL_ID=ap-northeast-1_XXXXXXXXX
+NEXT_PUBLIC_COGNITO_USER_POOL_CLIENT_ID=xxxxxxxxxxxxxxxxxxxx
+NEXT_PUBLIC_COGNITO_REGION=ap-northeast-1
+NEXT_PUBLIC_APP_ENV=development
+```
+
+### 3. 開発サーバー起動
+
+```bash
+npm run dev
+```
+
+ブラウザで `http://localhost:3000` を開く
+
+## 📦 本番デプロイ
+
+### AWS Amplify Hosting
+
+1. **Amplify Console**にアクセス
+2. **GitHubリポジトリ**を接続
+3. **モノレポルート**: `video-nfc-admin` を指定
+4. **環境変数**を設定（上記の環境変数参照）
+5. **デプロイ実行**
+
+詳細は `docs/guides/DEPLOYMENT_GUIDE.md` を参照
+
+## 📚 ドキュメント
+
+### 運用ガイド
+- [NON_ENGINEER_GUIDE.md](./docs/guides/NON_ENGINEER_GUIDE.md) - 非エンジニア向けガイド
+- [QUICK_UPDATE_GUIDE.md](./docs/guides/QUICK_UPDATE_GUIDE.md) - クイック更新ガイド
+- [DEPLOYMENT_GUIDE.md](./docs/guides/DEPLOYMENT_GUIDE.md) - デプロイガイド
+
+### セットアップ
+- [ENV_VARIABLES.md](./docs/setup/ENV_VARIABLES.md) - 環境変数設定
+- [AMPLIFY_DEPLOY_GUIDE.md](./docs/setup/AMPLIFY_DEPLOY_GUIDE.md) - Amplifyデプロイ手順
+
+### リリース
+- [RELEASE_PLAN.md](./RELEASE_PLAN.md) - リリース計画
+- [RELEASE_CHECKLIST.md](./RELEASE_CHECKLIST.md) - リリースチェックリスト
+- [RELEASE_READINESS_CHECK.md](./RELEASE_READINESS_CHECK.md) - リリース準備状況
+
+### トラブルシューティング
+- [UPLOAD_URL_FIX_SUMMARY.md](./UPLOAD_URL_FIX_SUMMARY.md) - S3アップロード修正まとめ
+
+## 🔧 主要機能
+
+### 動画管理
+- アップロード（S3直接アップロード + 進捗表示）
+- 一覧表示（組織・販売店でフィルタリング）
+- 詳細表示（タイトル・ファイル名・ID・QRコード）
+- 削除（24時間以内の動画のみ）
+
+### 組織管理（システム管理者のみ）
+- パートナー企業の作成・編集・削除
+- 販売店の作成・編集・削除
+- 組織管理者情報の表示
+- パスワードリセット
+
+### 統計表示
+- **システム統計**: 全組織・全販売店・全動画の統計
+- **組織統計**: 自組織と配下販売店の統計
+- **販売店統計**: 自販売店の動画数・アクティビティ
+
+## 🗂 プロジェクト構造
+
+```
+video-nfc-admin/
+├── app/                      # Next.js App Router
+│   ├── admin/                # 管理画面
+│   │   ├── organizations/    # 組織管理
+│   │   └── system-stats/     # システム統計
+│   ├── shop/                 # 販売店画面
+│   │   └── stats/            # 販売店統計
+│   ├── videos/               # 動画一覧
+│   ├── upload/               # 動画アップロード
+│   └── watch/                # 動画視聴
+├── components/               # Reactコンポーネント
+│   ├── Layout.tsx            # レイアウト
+│   ├── ProtectedRoute.tsx    # 認証保護
+│   ├── CreateOrganizationModal.tsx
+│   ├── CreateShopModal.tsx
+│   └── ...
+├── hooks/                    # カスタムフック
+│   ├── useAuth.ts            # 認証
+│   ├── useVideos.ts          # 動画データ
+│   ├── useUpload.ts          # アップロード
+│   ├── useSystemStats.ts     # システム統計
+│   ├── useOrganizationStats.ts # 組織統計
+│   └── useShopStats.ts       # 販売店統計
+├── lib/                      # ユーティリティ
+│   ├── api-client.ts         # APIクライアント
+│   ├── amplify-config.ts     # Amplify設定
+│   └── utils.ts              # ヘルパー関数
+└── types/                    # TypeScript型定義
+    └── shared.ts             # 共通型
+```
+
+## 🔐 セキュリティ
+
+- **Cognito認証**: すべてのページで認証チェック
+- **ロールベースアクセス制御**: 各ページで権限チェック
+- **HTTPS**: 本番環境では強制HTTPS
+- **CORS**: API Gatewayで適切なCORS設定
+
+## 💰 月額コスト見積もり
+
+### 小規模（10組織・100販売店・1,000動画）
+- **約 $50-70/月**（約7,000-10,000円）
+  - Amplify Hosting: $10
   - Lambda: $10
-  - API Gateway: $15
-  - DynamoDB: $25
-  - CloudWatch: $5
+  - API Gateway: $10
+  - DynamoDB: $10
+  - S3: $10-30（動画サイズによる）
 
-### 100,000ユーザー想定
-- **約$300-400/月**（約45,000円）
+### 中規模（50組織・500販売店・10,000動画）
+- **約 $150-200/月**（約22,000-30,000円）
 
----
+## 🆘 トラブルシューティング
 
-## 🆘 困ったときは
+### デプロイエラー
+- Amplifyの環境変数が正しく設定されているか確認
+- ビルドログを確認してエラーを特定
 
-### よくある質問
+### 認証エラー
+- Cognitoの設定が正しいか確認
+- `.env.local`の環境変数が正しいか確認
+- ブラウザのキャッシュをクリア
 
-**Q: デプロイが失敗しました**
-→ [NON_ENGINEER_GUIDE.md](./NON_ENGINEER_GUIDE.md) の「トラブルシューティング」を参照
+### API エラー
+- API Gatewayのエンドポイントが正しいか確認
+- Lambda関数のログをCloudWatchで確認
+- CORS設定を確認
 
-**Q: サイトの表示がおかしいです**
-→ ブラウザのキャッシュをクリア（Cmd+Shift+R / Ctrl+Shift+R）
+## 📝 開発メモ
 
-**Q: 変更を元に戻したいです**
-→ Amplifyコンソールでロールバック
+### コーディング規約
+- TypeScriptの型定義を必ず使用
+- コンポーネントは機能ごとに分割
+- カスタムフックで状態管理ロジックを分離
+- `console.log`は開発用に残す（本番でも有用）
 
-**Q: テキストを変更したいです**
-→ [QUICK_UPDATE_GUIDE.md](./QUICK_UPDATE_GUIDE.md) を参照
+### 今後の改善案
+- [ ] マルチロール機能の再実装（必要に応じて）
+- [ ] 動画プレビュー機能の追加
+- [ ] 一括アップロード機能
+- [ ] より詳細な統計表示
+- [ ] エクスポート機能（CSV・PDF）
 
-### サポート
+## 📞 サポート
 
-**自分で対応できる**:
-- ✅ テキスト・画像変更
-- ✅ ロールバック
-- ✅ デプロイ確認
-
-**エンジニアに依頼**:
-- 🔧 新機能追加
-- 🔧 データベース変更
-- 🔧 API変更
-
-**すぐに連絡が必要**:
-- 🚨 サイトダウン（30分以上）
-- 🚨 セキュリティ警告
-- 🚨 データ消失
-
----
-
-## 📞 重要なリンク
-
-### AWS
-- [Amplifyコンソール](https://console.aws.amazon.com/amplify/)
-- [DynamoDBコンソール](https://console.aws.amazon.com/dynamodb/)
-- [Cognito コンソール](https://console.aws.amazon.com/cognito/)
-- [料金計算ツール](https://calculator.aws/)
-
-### GitHub
-- [リポジトリ](https://github.com/advalay/company-search-system)
-- [変更履歴](https://github.com/advalay/company-search-system/commits/main)
-
-### ドキュメント
-- [AWS Amplify公式](https://docs.amplify.aws/)
-- [Next.js公式](https://nextjs.org/docs)
+質問や問題がある場合は、開発チームにお問い合わせください。
 
 ---
 
-## ✅ チェックリスト
-
-### 初回セットアップ
-- [ ] AWSアカウント作成
-- [ ] GitHub連携
-- [ ] Amplifyアプリ作成
-- [ ] 環境変数設定（6つ）
-- [ ] 初回デプロイ成功
-- [ ] 動作確認完了
-- [ ] カスタムドメイン設定（オプション）
-
-### 日常運用
-- [ ] 毎日：サイト動作確認
-- [ ] 毎週：エラーログ確認
-- [ ] 毎週：コスト確認
-- [ ] 毎月：ユーザー数確認
-- [ ] 毎月：バックアップ確認
-
----
-
-## 🎓 このシステムの特徴
-
-### ✨ 非エンジニアに優しい
-- GitHubで直接編集できる
-- 自動デプロイで手間いらず
-- 1クリックでロールバック可能
-
-### 🔒 セキュア
-- AWS Cognito認証
-- HTTPS自動対応
-- セキュリティヘッダー設定済み
-
-### ⚡️ 高速
-- CloudFront CDN
-- Next.js最適化
-- 画像自動圧縮
-
-### 💰 コスト効率
-- サーバーレスアーキテクチャ
-- 使った分だけ課金
-- スケール自動調整
-
----
-
-## 📝 更新履歴
-
-### 2025-10-16
-- ✅ 本番デプロイ環境構築
-- ✅ 非エンジニア向けガイド作成
-- ✅ 自動デプロイ設定完了
-- ✅ セキュリティヘッダー設定
-
----
-
-**このREADMEを印刷して、デスクに置いておくことをおすすめします！** 📖✨
-
-何か困ったことがあれば、まず [NON_ENGINEER_GUIDE.md](./NON_ENGINEER_GUIDE.md) を読んでください。
-# Force Amplify to reload amplify.yml
+**最終更新**: 2025年10月27日  
+**バージョン**: 2.0.0  
+**ステータス**: 本番稼働準備中

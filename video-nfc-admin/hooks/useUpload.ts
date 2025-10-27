@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { fetchAuthSession } from 'aws-amplify/auth';
+import { UserShop } from './useUserShops';
 
 interface UploadProgress {
   loaded: number;
@@ -21,7 +22,7 @@ interface UseUploadResult {
   progress: UploadProgress;
   result: UploadResult | null;
   error: string | null;
-  upload: (file: File, title: string) => Promise<void>;
+  upload: (file: File, title: string, shop: UserShop) => Promise<void>;
   reset: () => void;
 }
 
@@ -31,7 +32,7 @@ export function useUpload(): UseUploadResult {
   const [result, setResult] = useState<UploadResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const upload = useCallback(async (file: File, title: string) => {
+  const upload = useCallback(async (file: File, title: string, shop: UserShop) => {
     setIsUploading(true);
     setProgress({ loaded: 0, total: 0, percentage: 0 });
     setResult(null);
@@ -39,7 +40,7 @@ export function useUpload(): UseUploadResult {
 
     try {
       const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-      
+
       if (!API_URL) {
         throw new Error('API URLが設定されていません');
       }
@@ -58,6 +59,8 @@ export function useUpload(): UseUploadResult {
         fileSize: file.size,
         contentType: file.type,
         title: title || file.name,
+        shopId: shop.shopId,
+        organizationId: shop.organizationId,
       };
 
       console.log('リクエスト内容:', requestBody);

@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUpload } from '../../hooks/useUpload';
+import { useUserShops, UserShop } from '../../hooks/useUserShops';
 import { formatFileSize, copyToClipboard } from '../../lib/utils';
 import { Upload, CheckCircle, ArrowLeft, X, Download, Copy, QrCode } from 'lucide-react';
 import { QRModal } from '../../components/QRModal';
@@ -14,12 +15,14 @@ import toast from 'react-hot-toast';
 export default function UploadPage() {
   const router = useRouter();
   const { upload, isUploading, progress, result, error, reset } = useUpload();
-  
+  const { shops, isLoading: isLoadingShops, error: shopsError } = useUserShops();
+
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedShop, setSelectedShop] = useState<UserShop | null>(null);
   const [title, setTitle] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
 
@@ -78,10 +81,10 @@ export default function UploadPage() {
   };
 
   const handleUpload = async () => {
-    if (!selectedFile) return;
-    
+    if (!selectedFile || !selectedShop) return;
+
     configureAmplify();
-    await upload(selectedFile, title || '');
+    await upload(selectedFile, title || '', selectedShop);
   };
 
   const handleCopyUrl = async () => {
@@ -100,6 +103,7 @@ export default function UploadPage() {
 
   const handleReset = () => {
     setSelectedFile(null);
+    setSelectedShop(null);
     setTitle('');
     reset();
   };
@@ -209,6 +213,43 @@ export default function UploadPage() {
                   動画情報
                 </h3>
                 <div className="space-y-4">
+                  {/* 販売店選択 */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      販売店 *
+                    </label>
+                    {isLoadingShops ? (
+                      <div className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500">
+                        読み込み中...
+                      </div>
+                    ) : shopsError ? (
+                      <div className="w-full px-3 py-2 border border-red-300 rounded-lg bg-red-50 text-red-600">
+                        {shopsError}
+                      </div>
+                    ) : shops.length === 0 ? (
+                      <div className="w-full px-3 py-2 border border-yellow-300 rounded-lg bg-yellow-50 text-yellow-700">
+                        管理している販売店がありません
+                      </div>
+                    ) : (
+                      <select
+                        value={selectedShop?.shopId || ''}
+                        onChange={(e) => {
+                          const shop = shops.find(s => s.shopId === e.target.value);
+                          setSelectedShop(shop || null);
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-gray-900"
+                      >
+                        <option value="">販売店を選択してください</option>
+                        {shops.map((shop) => (
+                          <option key={shop.shopId} value={shop.shopId}>
+                            {shop.shopName} ({shop.organizationName})
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+
+                  {/* タイトル入力 */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       タイトル *
@@ -266,7 +307,7 @@ export default function UploadPage() {
               <div className="flex space-x-4">
                 <button
                   onClick={handleUpload}
-                  disabled={!title.trim()}
+                  disabled={!selectedShop || !title.trim()}
                   className="flex-1 flex items-center justify-center space-x-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <Upload className="w-5 h-5" />
