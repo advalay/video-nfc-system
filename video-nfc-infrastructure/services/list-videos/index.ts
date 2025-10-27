@@ -137,8 +137,9 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
       uploadedAt: item.uploadedAt || item.uploadDate,
       status: item.status || 'completed',
       // shopNameとorganizationNameはVideoMetadataテーブルから取得済み
-      shopName: item.shopName || '不明な店舗',
-      organizationName: item.organizationName || '不明な組織',
+      // 既存データで空の場合はフォールバック
+      shopName: item.shopName || item.shopId || '不明な店舗',
+      organizationName: item.organizationName || item.organizationId || '不明な組織',
     }));
 
     return {
