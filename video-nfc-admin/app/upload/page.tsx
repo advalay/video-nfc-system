@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '../../hooks/useAuth';
 import { useUpload } from '../../hooks/useUpload';
 import { useUserShops, UserShop } from '../../hooks/useUserShops';
 import { formatFileSize, copyToClipboard } from '../../lib/utils';
@@ -14,7 +15,14 @@ import toast from 'react-hot-toast';
 
 export default function UploadPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const { upload, isUploading, progress, result, error, reset } = useUpload();
+  
+  // ユーザーの権限を確認
+  const isShopAdmin = user?.groups?.includes('shop-admin');
+  const isOrganizationAdmin = user?.groups?.includes('organization-admin');
+  const isSystemAdmin = user?.groups?.includes('system-admin');
+  
   const { shops, isLoading: isLoadingShops, error: shopsError } = useUserShops();
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -25,6 +33,19 @@ export default function UploadPage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // shop-adminの場合は自動的に自分の店舗を設定
+  useEffect(() => {
+    if (isShopAdmin && user?.shopId && user?.shopName) {
+      setSelectedShop({
+        shopId: user.shopId,
+        shopName: user.shopName,
+        organizationId: user.organizationId || '',
+        organizationName: user.organizationName || '',
+        role: 'shop-admin',
+        createdAt: new Date().toISOString(),
+      });
+    }
+  }, [isShopAdmin, user]);
 
   const validateFile = (file: File): boolean => {
     // MP4チェック
@@ -213,41 +234,55 @@ export default function UploadPage() {
                   動画情報
                 </h3>
                 <div className="space-y-4">
-                  {/* 販売店選択 */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      販売店 *
-                    </label>
-                    {isLoadingShops ? (
-                      <div className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500">
-                        読み込み中...
+                  {/* 販売店選択（shop-adminの場合は非表示） */}
+                  {!isShopAdmin && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        販売店 *
+                      </label>
+                      {isLoadingShops ? (
+                        <div className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500">
+                          読み込み中...
+                        </div>
+                      ) : shopsError ? (
+                        <div className="w-full px-3 py-2 border border-red-300 rounded-lg bg-red-50 text-red-600">
+                          {shopsError}
+                        </div>
+                      ) : shops.length === 0 ? (
+                        <div className="w-full px-3 py-2 border border-yellow-300 rounded-lg bg-yellow-50 text-yellow-700">
+                          管理している販売店がありません
+                        </div>
+                      ) : (
+                        <select
+                          value={selectedShop?.shopId || ''}
+                          onChange={(e) => {
+                            const shop = shops.find(s => s.shopId === e.target.value);
+                            setSelectedShop(shop || null);
+                          }}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-gray-900"
+                        >
+                          <option value="">販売店を選択してください</option>
+                          {shops.map((shop) => (
+                            <option key={shop.shopId} value={shop.shopId}>
+                              {shop.shopName} ({shop.organizationName})
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* shop-adminの場合は店舗名を表示（読み取り専用） */}
+                  {isShopAdmin && selectedShop && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        販売店
+                      </label>
+                      <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-700">
+                        {selectedShop.shopName} ({selectedShop.organizationName})
                       </div>
-                    ) : shopsError ? (
-                      <div className="w-full px-3 py-2 border border-red-300 rounded-lg bg-red-50 text-red-600">
-                        {shopsError}
-                      </div>
-                    ) : shops.length === 0 ? (
-                      <div className="w-full px-3 py-2 border border-yellow-300 rounded-lg bg-yellow-50 text-yellow-700">
-                        管理している販売店がありません
-                      </div>
-                    ) : (
-                      <select
-                        value={selectedShop?.shopId || ''}
-                        onChange={(e) => {
-                          const shop = shops.find(s => s.shopId === e.target.value);
-                          setSelectedShop(shop || null);
-                        }}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-gray-900"
-                      >
-                        <option value="">販売店を選択してください</option>
-                        {shops.map((shop) => (
-                          <option key={shop.shopId} value={shop.shopId}>
-                            {shop.shopName} ({shop.organizationName})
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                  </div>
+                    </div>
+                  )}
 
                   {/* タイトル入力 */}
                   <div>
