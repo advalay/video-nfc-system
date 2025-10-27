@@ -8,12 +8,9 @@
 - [前提条件](#前提条件)
 - [プロジェクト構成](#プロジェクト構成)
 - [構築されるAWSリソース](#構築されるawsリソース)
-- [承認ワークフロー](#承認ワークフロー)
-- [Claude MCP統合](#claude-mcp統合)
 - [セットアップ手順](#セットアップ手順)
 - [デプロイ](#デプロイ)
 - [初回セットアップ](#初回セットアップ)
-- [運用ガイド](#運用ガイド)
 - [API エンドポイント](#api-エンドポイント)
 
 ## 🏗 アーキテクチャ概要
@@ -49,7 +46,7 @@
 
 ```bash
 ENV=dev
-AWS_ACCOUNT_ID=271633506783
+AWS_ACCOUNT_ID=your-account-id
 AWS_REGION=ap-northeast-1
 ALERT_EMAIL=your-email@example.com  # エラーアラート送信先メールアドレス
 ```
@@ -74,25 +71,32 @@ video-nfc-infrastructure/
 │   ├── delete-video/                # DELETE /videos/{videoId}
 │   └── get-video-detail-public/     # GET /videos/{videoId}/detail (公開)
 ├── lambda/
-│   └── src/handlers/                # 承認ワークフローLambda関数
-│       ├── createApprovalRequest.js    # 承認申請作成
-│       ├── submitApprovalForm.js       # フォーム送信
-│       ├── getPendingApprovals.js      # 承認待ち一覧取得
-│       ├── getApprovalRequest.js       # 承認申請詳細取得
-│       ├── approveRequest.js           # 承認処理
-│       ├── rejectRequest.js            # 却下処理
-│       ├── deleteOrganization.js       # 組織削除
-│       └── updateOrganizationWithCors.js # 組織更新
+│   └── src/handlers/                # 組織・販売店・統計管理Lambda関数（17個）
+│       ├── createOrganization.ts       # 組織作成
+│       ├── createOrganizationWithUser.ts # 組織+ユーザー作成
+│       ├── updateOrganization.ts       # 組織更新
+│       ├── deleteOrganization.ts       # 組織削除
+│       ├── getOrganizations.ts         # 組織一覧取得
+│       ├── listOrganizations.ts        # 組織リスト取得
+│       ├── getOrganizationAdmin.ts     # 組織管理者情報取得
+│       ├── getOrganizationStats.ts     # 組織統計取得
+│       ├── resetOrganizationPassword.ts # 組織パスワードリセット
+│       ├── createShop.ts               # 販売店作成
+│       ├── updateShop.ts               # 販売店更新
+│       ├── deleteShop.ts               # 販売店削除
+│       ├── getShopStats.ts             # 販売店統計取得
+│       ├── resetShopPassword.ts        # 販売店パスワードリセット
+│       ├── getUserShops.ts             # ユーザー販売店一覧（マルチロール用・現在未使用）
+│       ├── getSystemStats.ts           # システム統計取得
+│       ├── getAdminStats.ts            # 管理統計取得
+│       └── listAllVideos.ts            # 全動画一覧取得
+├── scripts/
+│   ├── setup-test-accounts.sh       # テストアカウント作成
+│   └── migrate-user-shop-relations.ts # マルチロール用マイグレーション（現在未使用）
 ├── cdk.json                         # CDK設定ファイル
 ├── package.json                     # npm依存関係
 ├── tsconfig.json                    # TypeScript設定
-├── .env.example                     # 環境変数のサンプル
-├── .gitignore                       # Git除外設定
-├── README.md                        # このファイル
-├── API_GATEWAY_SETUP.md             # API Gateway設定ガイド
-├── APPROVAL_WORKFLOW_DESIGN.md      # 承認ワークフロー設計書
-├── MANUAL_TEST_DATA_GUIDE.md        # テストデータ作成ガイド
-└── TEST_ACCOUNTS.md                 # テストアカウント情報
+└── README.md                        # このファイル
 ```
 
 ## 🔧 構築されるAWSリソース
@@ -103,30 +107,50 @@ video-nfc-infrastructure/
 - **パーティションキー**: videoId (String)
 - **GSI1**: agencyId-uploadDate-index (代理店別動画検索)
 - **GSI2**: billingMonth-agencyId-index (請求月別検索)
+- **属性**: title, fileName, organizationId, shopId, uploadDate, fileSize, status
 
 #### Organization テーブル
 - **パーティションキー**: organizationId (String)
-- **属性**: organizationType, organizationName, email, phone, address, status, unitPrice, totalVideos, totalStorage
+- **属性**: organizationType, organizationName, email, phone, address, status, shops[]
 - **GSI1**: organizationType-status-index (タイプ別検索)
-- **GSI2**: parentId-createdAt-index (階層構造検索)
+
+#### Shop テーブル
+- **パーティションキー**: shopId (String)
+- **属性**: shopName, organizationId, contactPerson, email, phone, status
+
+#### UserShopRelation テーブル（マルチロール用・現在未使用）
+- **パーティションキー**: userId (String)
+- **ソートキー**: shopId (String)
+- **属性**: role, organizationId, createdAt
+
+#### Billing テーブル
+- **パーティションキー**: billingId (String)
+- **属性**: organizationId, billingMonth, videoCount, totalStorage, amount
 
 #### ApprovalRequest テーブル
 - **パーティションキー**: requestId (String)
-- **属性**: requestType, recipientEmail, status, submissionData, formUrl, createdAt, expiresAt
+- **属性**: requestType, recipientEmail, status, submissionData, formUrl
 - **GSI1**: approverEmail-status-index (承認者別検索)
 - **GSI2**: status-createdAt-index (ステータス別検索)
 
 ### 2. Cognito (Auth Stack)
 
 #### User Pool Groups
-- **system-admin**: システム管理者
-- **organization-admin**: 組織管理者（代理店）
-- **shop-user**: 販売店ユーザー
+- **system-admin**: システム管理者（全機能アクセス可能）
+- **organization-admin**: 組織管理者（自組織と配下販売店を管理）
+- **shop-admin**: 販売店管理者（自販売店のみ管理）
 
 #### カスタム属性
-- custom:organizationId
-- custom:shopId
-- custom:role
+- custom:organizationId - 所属組織ID
+- custom:shopId - 所属販売店ID
+- custom:organizationName - 組織名
+- custom:shopName - 販売店名
+- custom:role - ユーザーロール
+
+#### 現在の仕様
+- ✅ 1メールアドレス = 1ロール（シンプル設計）
+- ✅ 組織管理者と販売店管理者は別々のメールアドレス
+- 📝 マルチロール機能は現在無効（将来的に再実装可能）
 
 ### 3. API Gateway REST API (API Stack)
 
@@ -136,7 +160,7 @@ video-nfc-infrastructure/
 | POST | `/videos/upload-url` | 必須 | 署名付きURL生成 |
 | GET | `/videos` | 必須 | 動画一覧取得 |
 | GET | `/videos/{videoId}` | 必須 | 動画詳細取得 |
-| DELETE | `/videos/{videoId}` | 必須 | 動画削除 |
+| DELETE | `/videos/{videoId}` | 必須 | 動画削除（24時間以内のみ） |
 | GET | `/videos/{videoId}/detail` | 不要 | 公開動画詳細 |
 
 #### 組織管理エンドポイント
@@ -146,89 +170,64 @@ video-nfc-infrastructure/
 | POST | `/organizations` | 必須 | 組織作成 |
 | PUT | `/organizations/{organizationId}` | 必須 | 組織更新 |
 | DELETE | `/organizations/{organizationId}` | 必須 | 組織削除 |
+| GET | `/organizations/{organizationId}/admin` | 必須 | 組織管理者情報取得 |
+| POST | `/organizations/{organizationId}/reset-password` | 必須 | 組織パスワードリセット |
+| GET | `/organization/stats` | 必須 | 組織統計取得 |
 
-#### 承認ワークフローエンドポイント
+#### 販売店管理エンドポイント
 | メソッド | パス | 認証 | 説明 |
 |---------|------|------|------|
-| GET | `/approvals` | 必須 | 承認待ち一覧取得 |
-| POST | `/approvals` | 必須 | 承認申請作成 |
-| GET | `/approvals/{requestId}` | 不要 | 承認申請詳細取得 |
-| POST | `/approvals/{requestId}/submit` | 不要 | フォーム送信 |
-| POST | `/approvals/{requestId}/approve` | 必須 | 承認処理 |
-| POST | `/approvals/{requestId}/reject` | 必須 | 却下処理 |
+| POST | `/shops` | 必須 | 販売店作成 |
+| PUT | `/shops/{shopId}` | 必須 | 販売店更新 |
+| DELETE | `/shops/{shopId}` | 必須 | 販売店削除 |
+| GET | `/shop/stats` | 必須 | 販売店統計取得 |
+| POST | `/shops/{shopId}/reset-password` | 必須 | 販売店パスワードリセット |
 
-## 🔄 承認ワークフロー
+#### 統計エンドポイント
+| メソッド | パス | 認証 | 説明 |
+|---------|------|------|------|
+| GET | `/system/stats` | 必須 | システム統計取得（system-adminのみ） |
+| GET | `/admin/stats` | 必須 | 管理統計取得 |
 
-### 1. 申請フロー
-1. **システム管理者**が承認申請を作成
-2. **申請者**にメールでフォームURLを送信
-3. **申請者**がフォームに組織情報を入力・送信
-4. **システム管理者**に承認通知メールが送信
+### 4. Lambda関数（22個）
 
-### 2. 承認フロー
-1. **システム管理者**が申請内容を確認
-2. **承認**: 自動的にCognitoユーザー作成・組織登録・メール通知
-3. **却下**: 申請者に却下理由とともにメール通知
+#### 動画管理（5個）
+- generateUploadUrl
+- listVideos
+- getVideoDetail
+- deleteVideo
+- getVideoDetailPublic
 
-### 3. 組織階層
-- **パートナー企業** (organizationType: 'agency')
-  - **販売店** (organizationType: 'store', parentId: パートナー企業のID)
+#### 組織・販売店管理（17個）
+- createOrganization
+- createOrganizationWithUser
+- updateOrganization
+- deleteOrganization
+- getOrganizations
+- listOrganizations
+- getOrganizationAdmin
+- getOrganizationStats
+- resetOrganizationPassword
+- createShop
+- updateShop
+- deleteShop
+- getShopStats
+- resetShopPassword
+- getUserShops（マルチロール用・現在未使用）
+- getSystemStats
+- getAdminStats
+- listAllVideos
 
-## 🤖 Claude MCP統合
+### 5. S3バケット（Storage Stack）
 
-このプロジェクトは Claude の Model Context Protocol (MCP) と統合されており、AI支援による開発のクオリティ向上を実現しています。
+- **VideoBucket**: 動画ファイル保存
+- **AssetBucket**: 静的アセット保存
+- **CloudFront**: CDN配信
 
-### 実装されたMCPサーバー
+### 6. SNS・CloudWatch（Monitoring Stack）
 
-#### 1. **AWS統合サーバー** (`aws-integration`)
-- DynamoDBクエリ実行
-- Lambda関数の直接呼び出し
-- S3オブジェクト一覧取得
-- CloudWatch Logsの取得
-
-#### 2. **DynamoDB管理サーバー** (`dynamodb-manager`)
-- 組織情報の取得・一覧表示
-- 承認申請の管理
-- 動画メタデータの検索
-- データ整合性チェック
-
-#### 3. **開発ツールサーバー** (`dev-tools`)
-- コードリンティング
-- プロジェクトビルド
-- 依存パッケージチェック
-- バンドルサイズ分析
-- インフラ定義の検証
-
-#### 4. **監視サーバー** (`monitoring`)
-- Lambda/API Gateway/DynamoDBメトリクス取得
-- ログ検索とエラーログ取得
-- CloudWatchアラーム状態確認
-- パフォーマンス分析
-
-### MCPのセットアップ
-
-```bash
-# 自動セットアップスクリプトを実行
-./scripts/setup-mcp.sh
-
-# または手動でインストール
-npm run mcp:install
-```
-
-詳細は [`MCP_INTEGRATION_GUIDE.md`](./MCP_INTEGRATION_GUIDE.md) をご覧ください。
-
-### Claude との対話例
-
-```
-ユーザー: 「dev環境の組織一覧を表示して」
-Claude: MCPサーバーを使用して組織データを取得します...
-
-ユーザー: 「コードをリントして」
-Claude: リンティングを実行します...
-
-ユーザー: 「過去24時間のエラーログを確認して」
-Claude: CloudWatch Logsからエラーを検索します...
-```
+- **SNSトピック**: エラーアラート通知
+- **CloudWatchアラーム**: Lambda/API Gateway/DynamoDBの監視
 
 ## 🚀 セットアップ手順
 
@@ -259,7 +258,7 @@ cp .env.example .env
 ENV=dev
 
 # AWSアカウント情報
-AWS_ACCOUNT_ID=271633506783
+AWS_ACCOUNT_ID=your-account-id
 AWS_REGION=ap-northeast-1
 
 # アラート設定
@@ -284,6 +283,12 @@ npm run cdk bootstrap
 
 ```bash
 npm run deploy:dev
+```
+
+### 本番環境へのデプロイ
+
+```bash
+npm run deploy:prod
 ```
 
 ### 個別スタックのデプロイ
@@ -322,12 +327,19 @@ aws cognito-idp admin-add-user-to-group \
 ### 2. SNSトピックのサブスクリプション
 
 ```bash
-export SNS_TOPIC_ARN="arn:aws:sns:ap-northeast-1:271633506783:video-nfc-alerts-dev"
+export SNS_TOPIC_ARN="arn:aws:sns:ap-northeast-1:your-account-id:video-nfc-alerts-dev"
 
 aws sns subscribe \
   --topic-arn $SNS_TOPIC_ARN \
   --protocol email \
   --notification-endpoint admin@example.com
+```
+
+### 3. テストアカウントの作成
+
+```bash
+cd scripts
+./setup-test-accounts.sh
 ```
 
 ## 📚 運用ガイド
@@ -336,8 +348,7 @@ aws sns subscribe \
 
 ```bash
 # Lambda関数のログ
-aws logs tail /aws/lambda/createApprovalRequest --follow
-aws logs tail /aws/lambda/approveRequest --follow
+aws logs tail /aws/lambda/createOrganization --follow
 
 # API Gatewayのログ
 aws logs tail /aws/apigateway/video-nfc-dev --follow
@@ -346,18 +357,12 @@ aws logs tail /aws/apigateway/video-nfc-dev --follow
 ### DynamoDBテーブルの確認
 
 ```bash
-# 承認申請の確認
-aws dynamodb scan --table-name video-nfc-ApprovalRequest-dev --max-items 10
-
 # 組織一覧の確認
 aws dynamodb scan --table-name video-nfc-Organization-dev --max-items 10
+
+# 販売店一覧の確認
+aws dynamodb scan --table-name video-nfc-Shop-dev --max-items 10
 ```
-
-### 承認ワークフローのテスト
-
-1. **申請作成**: 管理画面から承認申請を作成
-2. **フォーム入力**: 申請者に送信されたURLでフォーム入力
-3. **承認処理**: 管理画面で申請を承認・却下
 
 ## 🔐 API エンドポイント
 
@@ -367,53 +372,8 @@ aws dynamodb scan --table-name video-nfc-Organization-dev --max-items 10
 
 ```bash
 curl -H "Authorization: Bearer $ID_TOKEN" \
-  https://your-api-gateway-url/dev/approvals
+  https://your-api-gateway-url/dev/organizations
 ```
-
-### 承認ワークフロー API
-
-#### 承認申請作成
-
-```bash
-curl -X POST https://your-api-gateway-url/dev/approvals \
-  -H "Authorization: Bearer $ID_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "requestType": "agency",
-    "recipientEmail": "applicant@example.com"
-  }'
-```
-
-#### フォーム送信（認証不要）
-
-```bash
-curl -X POST https://your-api-gateway-url/dev/approvals/request-id/submit \
-  -H "Content-Type: application/json" \
-  -d '{
-    "organizationName": "株式会社サンプル",
-    "email": "applicant@example.com",
-    "phone": "03-1234-5678",
-    "address": "東京都渋谷区...",
-    "unitPrice": 1200
-  }'
-```
-
-#### 承認処理
-
-```bash
-curl -X POST https://your-api-gateway-url/dev/approvals/request-id/approve \
-  -H "Authorization: Bearer $ID_TOKEN"
-```
-
-## 🧪 テスト
-
-### テストアカウント
-
-詳細は `TEST_ACCOUNTS.md` を参照してください。
-
-### テストデータ
-
-詳細は `MANUAL_TEST_DATA_GUIDE.md` を参照してください。
 
 ## 🔐 セキュリティベストプラクティス
 
@@ -437,6 +397,10 @@ API GatewayのCORS設定を確認し、必要に応じて再デプロイして�
 
 CloudWatch Logsでエラー詳細を確認し、必要に応じてコードを修正・再デプロイしてください。
 
+## 📊 主要ドキュメント
+
+- **[S3_UPLOAD_FIX_REPORT.md](./S3_UPLOAD_FIX_REPORT.md)** - S3アップロード修正の重要な記録
+
 ## 📄 ライセンス
 
 このプロジェクトは社内利用目的で作成されています。
@@ -447,6 +411,6 @@ CloudWatch Logsでエラー詳細を確認し、必要に応じてコードを�
 
 ---
 
-**作成日**: 2025年10月  
-**バージョン**: 2.0.0 (承認ワークフロー実装完了)  
+**最終更新**: 2025年10月27日  
+**バージョン**: 2.1.0（マルチロール機能無効化・ファイル整理完了）  
 **管理者**: AWSアーキテクトチーム
