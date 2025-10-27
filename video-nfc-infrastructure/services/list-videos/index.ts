@@ -20,6 +20,7 @@ interface ListVideosQueryParams {
   limit?: string;
   lastEvaluatedKey?: string;
   search?: string;
+  shopId?: string;
 }
 
 export const handler: APIGatewayProxyHandler = async (event): Promise<APIGatewayProxyResult> => {
@@ -78,18 +79,38 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
       result = await docClient.send(command);
     } else if ((userGroups.includes('organization-admin') || customRole === 'organization-admin') && organizationId) {
       // organization-admin: 自分の代理店配下の全動画を閲覧可能（全販売店含む）
-      const command = new QueryCommand({
-        TableName: TABLE_NAME,
-        IndexName: 'organizationId-uploadDate-index',
-        KeyConditionExpression: 'organizationId = :organizationId',
-        ExpressionAttributeValues: {
-          ':organizationId': organizationId,
-        },
-        Limit: limit,
-        ExclusiveStartKey: lastEvaluatedKey,
-        ScanIndexForward: false, // 新しい順
-      });
-      result = await docClient.send(command);
+      // クエリパラメータでshopIdが指定されている場合は、その販売店の動画のみ取得
+      const filterShopId = queryParams.shopId;
+      
+      if (filterShopId) {
+        // 特定の販売店の動画のみ取得（フィルター機能）
+        const command = new QueryCommand({
+          TableName: TABLE_NAME,
+          IndexName: 'shopId-uploadDate-index',
+          KeyConditionExpression: 'shopId = :shopId',
+          ExpressionAttributeValues: {
+            ':shopId': filterShopId,
+          },
+          Limit: limit,
+          ExclusiveStartKey: lastEvaluatedKey,
+          ScanIndexForward: false, // 新しい順
+        });
+        result = await docClient.send(command);
+      } else {
+        // 全ての配下販売店の動画を取得
+        const command = new QueryCommand({
+          TableName: TABLE_NAME,
+          IndexName: 'organizationId-uploadDate-index',
+          KeyConditionExpression: 'organizationId = :organizationId',
+          ExpressionAttributeValues: {
+            ':organizationId': organizationId,
+          },
+          Limit: limit,
+          ExclusiveStartKey: lastEvaluatedKey,
+          ScanIndexForward: false, // 新しい順
+        });
+        result = await docClient.send(command);
+      }
     } else if (shopId) {
       // shop-admin: 自分の販売店の動画のみ閲覧可能
       const command = new QueryCommand({
