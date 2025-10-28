@@ -133,11 +133,13 @@ export default function VideosPage() {
                
                // クライアント側フィルタリング（フォールバック）
                if (isOrganizationAdmin && selectedShopFilter !== 'all') {
+                 console.log('🔍 フィルタリング前の動画データ:', videos.map(v => ({ videoId: v.videoId, shopId: v.shopId, shopName: v.shopName })));
                  videos = videos.filter(video => video.shopId === selectedShopFilter);
                  console.log('🔍 クライアント側フィルタリング適用:', {
                    originalCount: response.videos?.length || 0,
                    filteredCount: videos.length,
-                   selectedShopFilter
+                   selectedShopFilter,
+                   filteredVideos: videos.map(v => ({ videoId: v.videoId, shopId: v.shopId, shopName: v.shopName }))
                  });
                }
                
