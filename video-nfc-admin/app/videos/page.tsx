@@ -129,7 +129,19 @@ export default function VideosPage() {
                console.log('🔍 最終エンドポイント:', endpoint);
                
                const response = await apiGet<{videos: any[], totalCount: number}>(endpoint);
-               setVideos(response.videos || []);
+               let videos = response.videos || [];
+               
+               // クライアント側フィルタリング（フォールバック）
+               if (isOrganizationAdmin && selectedShopFilter !== 'all') {
+                 videos = videos.filter(video => video.shopId === selectedShopFilter);
+                 console.log('🔍 クライアント側フィルタリング適用:', {
+                   originalCount: response.videos?.length || 0,
+                   filteredCount: videos.length,
+                   selectedShopFilter
+                 });
+               }
+               
+               setVideos(videos);
              } catch (err: any) {
                console.error('Error fetching videos:', err);
                setError(err.message || '動画一覧の取得に失敗しました。しばらく時間をおいて再度お試しください。');
