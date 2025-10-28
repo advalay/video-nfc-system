@@ -74,7 +74,15 @@ function getMockVideos() {
 export default function VideosPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const { shops, isLoading: isLoadingShops } = useUserShops();
+  const { shops, isLoading: isLoadingShops, error: shopsError } = useUserShops();
+  
+  // デバッグログ
+  console.log('🔍 useUserShops結果:', {
+    shops,
+    isLoadingShops,
+    shopsError,
+    shopsCount: shops?.length || 0
+  });
   
   const [videos, setVideos] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -101,6 +109,14 @@ export default function VideosPage() {
                
                // エンドポイントの構築（フィルター条件に応じて）
                let endpoint = '/videos';
+               console.log('🔍 フィルターデバッグ:', {
+                 isShopAdmin,
+                 isOrganizationAdmin,
+                 isSystemAdmin,
+                 selectedShopFilter,
+                 userShopId: user?.shopId
+               });
+               
                if (isShopAdmin && user?.shopId) {
                  // 販売店管理者: 自分の販売店の動画のみ
                  endpoint = `/videos?shopId=${user.shopId}`;
@@ -109,6 +125,8 @@ export default function VideosPage() {
                  endpoint = `/videos?shopId=${selectedShopFilter}`;
                }
                // system-adminまたはselectedShopFilter === 'all'の場合は全動画を取得
+               
+               console.log('🔍 最終エンドポイント:', endpoint);
                
                const response = await apiGet<{videos: any[], totalCount: number}>(endpoint);
                setVideos(response.videos || []);
