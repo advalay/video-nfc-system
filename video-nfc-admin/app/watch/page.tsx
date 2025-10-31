@@ -196,14 +196,22 @@ function WatchContent() {
       <div className="w-full h-screen flex items-center justify-center">
         <video
           ref={videoRef}
-          src={videoData?.videoUrl}
           poster={videoData?.thumbnailUrl || undefined}
           controls
           controlsList="nodownload"
           playsInline
           preload="auto"
+          crossOrigin="anonymous"
           className="w-full h-full object-cover"
+          onError={(e) => {
+            // 端末依存の再生失敗を可視化
+            const mediaError = (e as any)?.currentTarget?.error;
+            console.error('[VideoPlaybackError]', mediaError);
+          }}
         >
+          {videoData?.videoUrl && (
+            <source src={videoData.videoUrl} type="video/mp4" />
+          )}
           <track kind="captions" />
           お使いのブラウザは動画の再生に対応していません。
         </video>
