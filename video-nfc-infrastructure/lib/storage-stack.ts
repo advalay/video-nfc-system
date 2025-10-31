@@ -139,15 +139,16 @@ export class StorageStack extends cdk.Stack {
     const responseHeadersPolicy = new cloudfront.ResponseHeadersPolicy(this, 'ResponseHeadersPolicy', {
       responseHeadersPolicyName: `video-nfc-${environment}-response-headers`,
       comment: `Response headers policy for video-nfc-${environment} (CORS + Security)`,
-      corsConfiguration: {
+      corsBehavior: {
         accessControlAllowOrigins: ['*'],
         accessControlAllowHeaders: ['*'],
         accessControlAllowMethods: ['GET', 'HEAD', 'OPTIONS'],
         accessControlExposeHeaders: ['ETag', 'Content-Length', 'Content-Range', 'Accept-Ranges'],
-        accessControlMaxAgeSec: 600,
+        accessControlAllowCredentials: false,
+        accessControlMaxAge: cdk.Duration.seconds(600),
         originOverride: true,
       },
-      securityHeadersConfiguration: {
+      securityHeadersBehavior: {
         contentTypeOptions: { override: true },
         frameOptions: { frameOption: cloudfront.HeadersFrameOption.SAMEORIGIN, override: true },
         referrerPolicy: {
@@ -155,7 +156,7 @@ export class StorageStack extends cdk.Stack {
           override: true,
         },
         strictTransportSecurity: {
-          accessControlMaxAgeSec: 31536000,
+          accessControlMaxAge: cdk.Duration.seconds(31536000),
           includeSubdomains: true,
           override: true,
         },
