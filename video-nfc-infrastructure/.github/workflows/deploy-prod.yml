@@ -1,0 +1,88 @@
+name: Deploy to Production Environment
+
+on:
+  push:
+    branches:
+      - production
+    tags:
+      - 'v*'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
+          aws-region: ap-northeast-1
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Lambda functions
+        run: |
+          cd lambda
+          npm ci
+          npm run build
+          cd ..
+
+      - name: Build services
+        run: |
+          for service in generate-upload-url list-videos get-video-detail get-video-detail-public delete-video; do
+            if [ -d "services/$service" ]; then
+              echo "Building $service..."
+              cd "services/$service"
+              npm ci
+              cd ../..
+            fi
+          done
+
+      - name: CDK Deploy (Production)
+        env:
+          ENV: prod
+        run: |
+          npx cdk deploy video-nfc-storage-prod --require-approval never
+          npx cdk deploy video-nfc-database-prod --require-approval never
+          npx cdk deploy video-nfc-auth-prod --require-approval never
+          npx cdk deploy video-nfc-api-prod --require-approval never
+          npx cdk deploy video-nfc-monitoring-prod --require-approval never
+
+      - name: Invalidate CloudFront cache
+        run: |
+          DISTRIBUTION_ID=$(aws cloudformation describe-stacks \
+            --stack-name video-nfc-storage-prod \
+            --region ap-northeast-1 \
+            --query 'Stacks[0].Outputs[?OutputKey==`CloudFrontDistributionId`].OutputValue' \
+            --output text)
+
+          if [ -n "$DISTRIBUTION_ID" ]; then
+            echo "Invalidating CloudFront distribution: $DISTRIBUTION_ID"
+            aws cloudfront create-invalidation \
+              --distribution-id $DISTRIBUTION_ID \
+              --paths "/*"
+          fi
+
+      - name: Deployment summary
+        run: |
+          echo "✅ Production環境へのデプロイが完了しました"
+          echo "Environment: production"
+          echo "Region: ap-northeast-1"
+          echo "Timestamp: $(date)"
+
+      - name: Create deployment tag
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          echo "Deployed tag: ${{ github.ref_name }}"

@@ -1,0 +1,66 @@
+name: Pull Request Check
+
+on:
+  pull_request:
+    branches:
+      - main
+      - production
+    paths:
+      - 'lib/**'
+      - 'bin/**'
+      - 'lambda/**'
+      - 'services/**'
+      - 'package.json'
+      - 'cdk.json'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Lambda functions
+        run: |
+          cd lambda
+          npm ci
+          npm run build
+          cd ..
+
+      - name: Build services
+        run: |
+          for service in generate-upload-url list-videos get-video-detail get-video-detail-public delete-video; do
+            if [ -d "services/$service" ]; then
+              echo "Building $service..."
+              cd "services/$service"
+              npm ci
+              cd ../..
+            fi
+          done
+
+      - name: CDK Synth (Validation)
+        env:
+          ENV: dev
+        run: npx cdk synth
+
+      - name: TypeScript check
+        run: |
+          if [ -f "tsconfig.json" ]; then
+            npx tsc --noEmit
+          fi
+
+      - name: Check summary
+        run: |
+          echo "✅ ビルドとバリデーションが成功しました"
+          echo "PR: #${{ github.event.pull_request.number }}"
+          echo "Branch: ${{ github.head_ref }}"
