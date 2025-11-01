@@ -211,10 +211,13 @@ function WatchContent() {
   // 動画プレイヤー表示（全画面）
   return (
     <div 
-      className="fixed inset-0 w-full h-full p-0"
+      className="fixed inset-0 p-0"
       style={{ 
         backgroundColor: branding.colors.background,
         color: branding.colors.text,
+        width: '100vw',
+        height: '100vh',
+        overflow: 'hidden',
       }}
     >
       {/* ロゴ（設定されている場合） */}
@@ -284,10 +287,12 @@ function WatchContent() {
           left: 0,
           right: 0,
           bottom: 0,
-          width: '100vw',
-          height: '100vh',
+          width: '100%',
+          height: '100%',
           objectFit: 'cover',
           display: 'block',
+          margin: 0,
+          padding: 0,
         }}
         onError={(e) => {
           // 端末依存の再生失敗を可視化
@@ -364,17 +369,31 @@ function WatchContent() {
         <style dangerouslySetInnerHTML={{ __html: branding.customStyles }} />
       )}
 
-      {/* ネイティブ再生ボタンを非表示にするCSS（カスタム再生ボタン表示時） */}
-      {!isPlaying && (
-        <style>{`
+      {/* 動画要素のデフォルトスタイルをリセット */}
+      <style>{`
+        video {
+          margin: 0 !important;
+          padding: 0 !important;
+          border: none !important;
+          outline: none !important;
+          box-shadow: none !important;
+          background: transparent !important;
+        }
+        video::-webkit-media-controls {
+          background: transparent !important;
+        }
+        video::-webkit-media-controls-enclosure {
+          background: transparent !important;
+        }
+        ${!isPlaying ? `
           video::-webkit-media-controls-overlay-play-button {
             display: none !important;
           }
           video::-webkit-media-controls-play-button {
             display: none !important;
           }
-        `}</style>
-      )}
+        ` : ''}
+      `}</style>
     </div>
   );
 }
