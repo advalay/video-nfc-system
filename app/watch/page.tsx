@@ -356,9 +356,30 @@ function WatchContent() {
         }
         video::-webkit-media-controls {
           background: transparent !important;
+          background-image: none !important;
+          -webkit-background-clip: unset !important;
         }
         video::-webkit-media-controls-enclosure {
           background: transparent !important;
+          background-image: none !important;
+          -webkit-background-clip: unset !important;
+        }
+        video::-webkit-media-controls-panel {
+          background: transparent !important;
+          background-image: none !important;
+          -webkit-background-clip: unset !important;
+        }
+        video::-webkit-media-controls-timeline {
+          background: transparent !important;
+          background-image: none !important;
+        }
+        video::-webkit-media-controls-current-time-display,
+        video::-webkit-media-controls-time-remaining-display {
+          background: transparent !important;
+        }
+        video::-webkit-media-controls-play-button {
+          background: transparent !important;
+          background-image: none !important;
         }
         ${!isPlaying ? `
           video::-webkit-media-controls-overlay-play-button {
