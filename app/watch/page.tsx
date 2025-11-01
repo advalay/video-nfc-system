@@ -270,7 +270,7 @@ function WatchContent() {
       )}
 
       {/* 動画プレイヤー（画面幅100%表示） */}
-      <div className="absolute inset-0 w-full h-full overflow-hidden">
+      <div className="absolute inset-0 overflow-hidden">
         <video
           ref={videoRef}
           poster={videoData?.thumbnailUrl || undefined}
@@ -284,6 +284,11 @@ function WatchContent() {
               ? 'object-contain'
               : 'object-cover'
           }`}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: videoDimensions && videoDimensions.width > videoDimensions.height ? 'contain' : 'cover',
+          }}
           onError={(e) => {
             // 端末依存の再生失敗を可視化
             const mediaError = (e as any)?.currentTarget?.error;
