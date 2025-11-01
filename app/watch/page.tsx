@@ -329,14 +329,27 @@ function WatchContent() {
         <style dangerouslySetInnerHTML={{ __html: branding.customStyles }} />
       )}
 
-      {/* ネイティブ再生ボタンを非表示にするCSS（カスタム再生ボタン表示時） */}
-      {!isPlaying && (
-        <style>{`
-          video::-webkit-media-controls-overlay-play-button {
-            display: none !important;
-          }
-        `}</style>
-      )}
+      {/* ネイティブコントロールバーの背景とグラデーションを完全に削除 */}
+      <style>{`
+        video::-webkit-media-controls-overlay-play-button {
+          display: none !important;
+        }
+        video::-webkit-media-controls-enclosure {
+          background: transparent !important;
+          background-image: none !important;
+        }
+        video::-webkit-media-controls-panel {
+          background: transparent !important;
+          background-image: none !important;
+        }
+        video::-webkit-media-controls {
+          background: transparent !important;
+          background-image: none !important;
+        }
+        video::-webkit-media-controls-timeline {
+          background: transparent !important;
+        }
+      `}</style>
     </div>
   );
 }
