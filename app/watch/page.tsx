@@ -279,6 +279,12 @@ function WatchContent() {
         preload="auto"
         crossOrigin="anonymous"
         className="absolute inset-0 object-cover"
+        style={{
+          width: '100vw',
+          height: '100vh',
+          maxWidth: '100vw',
+          maxHeight: '100vh',
+        }}
         onError={(e) => {
           // 端末依存の再生失敗を可視化
           const mediaError = (e as any)?.currentTarget?.error;
@@ -337,17 +343,45 @@ function WatchContent() {
         video::-webkit-media-controls-enclosure {
           background: transparent !important;
           background-image: none !important;
+          -webkit-background-clip: unset !important;
+          background-clip: unset !important;
         }
         video::-webkit-media-controls-panel {
           background: transparent !important;
           background-image: none !important;
+          -webkit-background-clip: unset !important;
+          background-clip: unset !important;
         }
         video::-webkit-media-controls {
           background: transparent !important;
           background-image: none !important;
+          -webkit-background-clip: unset !important;
+          background-clip: unset !important;
         }
         video::-webkit-media-controls-timeline {
           background: transparent !important;
+          background-image: none !important;
+        }
+        video::-webkit-media-controls-play-button {
+          background: transparent !important;
+          background-image: none !important;
+        }
+        video::-webkit-media-controls-current-time-display,
+        video::-webkit-media-controls-time-remaining-display {
+          background: transparent !important;
+          background-image: none !important;
+        }
+        video::-webkit-media-controls-volume-slider {
+          background: transparent !important;
+          background-image: none !important;
+        }
+        video::-webkit-media-controls-mute-button {
+          background: transparent !important;
+          background-image: none !important;
+        }
+        video::-webkit-media-controls-fullscreen-button {
+          background: transparent !important;
+          background-image: none !important;
         }
       `}</style>
     </div>
