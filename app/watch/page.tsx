@@ -336,33 +336,8 @@ function WatchContent() {
         )}
       </div>
 
-      {/* 下部: 追加情報またはフッター */}
-      <div className="w-full py-6 px-8 absolute bottom-0 z-10">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          {branding.footer.enabled ? (
-            <div className="text-center w-full">
-              <p className="text-lg md:text-xl mb-2" style={{ color: branding.colors.text }}>
-                {branding.footer.text}
-              </p>
-              {branding.footer.link && (
-                <a
-                  href={branding.footer.link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-base md:text-lg hover:underline"
-                  style={{ color: branding.colors.primary }}
-                >
-                  {branding.footer.link.text}
-                </a>
-              )}
-            </div>
-          ) : (
-            <p className="text-white/80 text-xl md:text-2xl">
-              {videoData?.fileName}
-            </p>
-          )}
-        </div>
-      </div>
+      {/* 下部: 追加情報またはフッター（非表示） */}
+      {/* 動画の二重線問題を回避するため、フッターは非表示にしました */}
 
       {/* カスタムCSS（設定されている場合） */}
       {branding.customStyles && (
