@@ -22,8 +22,16 @@ function WatchContent() {
   const [error, setError] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [branding, setBranding] = useState<BrandingConfig>(getBrandingConfig());
   const [isMobile, setIsMobile] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(1);
+  const [isMuted, setIsMuted] = useState(false);
+  const [showControls, setShowControls] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const hideControlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (!videoId) {
@@ -119,7 +127,10 @@ function WatchContent() {
 
 
   // 全画面表示を開始するヘルパー関数
-  const requestFullscreen = async (element: HTMLElement) => {
+  const requestFullscreen = async () => {
+    const element = containerRef.current;
+    if (!element) return;
+
     try {
       // ブラウザ互換性のため、複数のメソッドを試行
       if (element.requestFullscreen) {
@@ -131,46 +142,177 @@ function WatchContent() {
       } else if ((element as any).msRequestFullscreen) {
         await (element as any).msRequestFullscreen();
       }
+      setIsFullscreen(true);
     } catch (err) {
       // 全画面表示が失敗しても再生は続行
       console.log('全画面表示に失敗しました（非対応ブラウザの可能性）:', err);
     }
   };
 
-  // 動画の再生状態を監視（モバイルの場合、再生時に全画面表示）
+  // 全画面解除のヘルパー関数
+  const exitFullscreen = async () => {
+    try {
+      if (document.exitFullscreen) {
+        await document.exitFullscreen();
+      } else if ((document as any).webkitExitFullscreen) {
+        await (document as any).webkitExitFullscreen();
+      } else if ((document as any).mozCancelFullScreen) {
+        await (document as any).mozCancelFullScreen();
+      } else if ((document as any).msExitFullscreen) {
+        await (document as any).msExitFullscreen();
+      }
+      setIsFullscreen(false);
+    } catch (err) {
+      console.log('全画面解除に失敗しました:', err);
+    }
+  };
+
+  // 再生/一時停止のトグル
+  const togglePlayPause = async () => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (isPlaying) {
+      video.pause();
+    } else {
+      // 再生時に全画面表示を開始
+      await requestFullscreen();
+      await video.play();
+    }
+  };
+
+  // コントロールを自動的に非表示にする
+  const resetHideControlsTimeout = () => {
+    if (hideControlsTimeoutRef.current) {
+      clearTimeout(hideControlsTimeoutRef.current);
+    }
+    setShowControls(true);
+
+    if (isPlaying) {
+      hideControlsTimeoutRef.current = setTimeout(() => {
+        setShowControls(false);
+      }, 3000); // 3秒後に非表示
+    }
+  };
+
+  // シークバーの変更
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const time = parseFloat(e.target.value);
+    video.currentTime = time;
+    setCurrentTime(time);
+  };
+
+  // 音量の変更
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const newVolume = parseFloat(e.target.value);
+    video.volume = newVolume;
+    setVolume(newVolume);
+    setIsMuted(newVolume === 0);
+  };
+
+  // ミュート切り替え
+  const toggleMute = () => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (isMuted) {
+      video.volume = volume > 0 ? volume : 1;
+      setIsMuted(false);
+    } else {
+      video.volume = 0;
+      setIsMuted(true);
+    }
+  };
+
+  // 時間フォーマット
+  const formatTime = (seconds: number) => {
+    if (isNaN(seconds)) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // 動画イベントリスナーの設定
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
-    const handlePlay = async () => {
+    const handlePlay = () => {
       setIsPlaying(true);
-      
-      // モバイルデバイスの場合、再生時に全画面表示を開始
-      // ただし、既に全画面表示になっている場合はスキップ
-      if (isMobile) {
-        const isFullscreen = !!(
-          document.fullscreenElement ||
-          (document as any).webkitFullscreenElement ||
-          (document as any).mozFullScreenElement ||
-          (document as any).msFullscreenElement
-        );
-        
-        if (!isFullscreen) {
-          await requestFullscreen(video);
-        }
+      resetHideControlsTimeout();
+    };
+
+    const handlePause = () => {
+      setIsPlaying(false);
+      setShowControls(true);
+      if (hideControlsTimeoutRef.current) {
+        clearTimeout(hideControlsTimeoutRef.current);
       }
     };
 
-    const handlePause = () => setIsPlaying(false);
+    const handleTimeUpdate = () => {
+      setCurrentTime(video.currentTime);
+    };
+
+    const handleLoadedMetadata = () => {
+      setDuration(video.duration);
+    };
+
+    const handleVolumeUpdate = () => {
+      setVolume(video.volume);
+      setIsMuted(video.muted || video.volume === 0);
+    };
 
     video.addEventListener('play', handlePlay);
     video.addEventListener('pause', handlePause);
+    video.addEventListener('timeupdate', handleTimeUpdate);
+    video.addEventListener('loadedmetadata', handleLoadedMetadata);
+    video.addEventListener('volumechange', handleVolumeUpdate);
 
     return () => {
       video.removeEventListener('play', handlePlay);
       video.removeEventListener('pause', handlePause);
+      video.removeEventListener('timeupdate', handleTimeUpdate);
+      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      video.removeEventListener('volumechange', handleVolumeUpdate);
     };
-  }, [videoData, isMobile]);
+  }, []);
+
+  // 全画面状態の監視
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isCurrentlyFullscreen = !!(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement
+      );
+      setIsFullscreen(isCurrentlyFullscreen);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+    };
+  }, []);
+
+  // マウス移動でコントロールを表示
+  const handleMouseMove = () => {
+    resetHideControlsTimeout();
+  };
 
   // ローディング表示
   if (loading) {
@@ -210,12 +352,15 @@ function WatchContent() {
 
   // 動画プレイヤー表示（全画面）
   return (
-    <div 
+    <div
+      ref={containerRef}
       className="fixed inset-0 bg-black overflow-hidden"
-      style={{ 
+      style={{
         backgroundColor: branding.colors.background,
         color: branding.colors.text,
       }}
+      onMouseMove={handleMouseMove}
+      onTouchStart={handleMouseMove}
     >
       {/* ロゴ（設定されている場合） */}
       {branding.logo.enabled && branding.logo.imageUrl && (
@@ -269,22 +414,15 @@ function WatchContent() {
         </div>
       )}
 
-      {/* 動画プレイヤー（画面幅100%表示） */}
+      {/* 動画プレイヤー（画面幅100%表示） - ネイティブコントロールなし */}
       <video
         ref={videoRef}
         poster={videoData?.thumbnailUrl || undefined}
-        controls
-        controlsList="nodownload"
         playsInline
         preload="auto"
         crossOrigin="anonymous"
-        className="absolute inset-0 object-cover"
-        style={{
-          width: '100vw',
-          height: '100vh',
-          maxWidth: '100vw',
-          maxHeight: '100vh',
-        }}
+        className="absolute inset-0 object-cover w-full h-full"
+        onClick={togglePlayPause}
         onError={(e) => {
           // 端末依存の再生失敗を可視化
           const mediaError = (e as any)?.currentTarget?.error;
@@ -298,21 +436,11 @@ function WatchContent() {
         お使いのブラウザは動画の再生に対応していません。
       </video>
 
-      {/* 大きな再生/一時停止ボタン（ビデオ上にオーバーレイ） */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        {!isPlaying && videoData && (
+      {/* 中央の大きな再生ボタン（一時停止時のみ表示） */}
+      {!isPlaying && videoData && (
+        <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none">
           <button
-            onClick={async () => {
-              const video = videoRef.current;
-              if (!video) return;
-
-              // 動画を再生（playイベントで全画面表示が自動的に処理される）
-              try {
-                await video.play();
-              } catch (err) {
-                console.error('動画の再生に失敗しました:', err);
-              }
-            }}
+            onClick={togglePlayPause}
             className="pointer-events-auto bg-blue-600/90 hover:bg-blue-700 text-white rounded-full p-12 transition-all transform hover:scale-110 shadow-2xl"
             aria-label="再生"
           >
@@ -324,89 +452,139 @@ function WatchContent() {
               <path d="M8 5v14l11-7z" />
             </svg>
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* 下部: 追加情報またはフッター（非表示） */}
-      {/* 動画の二重線問題を回避するため、フッターは非表示にしました */}
+      {/* カスタムコントロールバー */}
+      <div
+        className={`absolute bottom-0 left-0 right-0 z-40 transition-opacity duration-300 ${
+          showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+        style={{
+          background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)',
+        }}
+      >
+        {/* シークバー */}
+        <div className="px-4 pt-8 pb-2">
+          <input
+            type="range"
+            min="0"
+            max={duration || 0}
+            value={currentTime}
+            onChange={handleSeek}
+            className="w-full h-1 bg-white/30 rounded-lg appearance-none cursor-pointer"
+            style={{
+              background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${(currentTime / duration) * 100}%, rgba(255,255,255,0.3) ${(currentTime / duration) * 100}%, rgba(255,255,255,0.3) 100%)`,
+            }}
+          />
+        </div>
+
+        {/* コントロールボタン */}
+        <div className="flex items-center justify-between px-4 pb-4">
+          <div className="flex items-center gap-4">
+            {/* 再生/一時停止ボタン */}
+            <button
+              onClick={togglePlayPause}
+              className="text-white hover:text-blue-400 transition-colors"
+              aria-label={isPlaying ? '一時停止' : '再生'}
+            >
+              {isPlaying ? (
+                <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+                </svg>
+              ) : (
+                <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              )}
+            </button>
+
+            {/* 時間表示 */}
+            <div className="text-white text-sm">
+              {formatTime(currentTime)} / {formatTime(duration)}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            {/* 音量コントロール */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={toggleMute}
+                className="text-white hover:text-blue-400 transition-colors"
+                aria-label={isMuted ? 'ミュート解除' : 'ミュート'}
+              >
+                {isMuted || volume === 0 ? (
+                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
+                  </svg>
+                ) : (
+                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                  </svg>
+                )}
+              </button>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.1"
+                value={isMuted ? 0 : volume}
+                onChange={handleVolumeChange}
+                className="w-20 h-1 bg-white/30 rounded-lg appearance-none cursor-pointer"
+                style={{
+                  background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${(isMuted ? 0 : volume) * 100}%, rgba(255,255,255,0.3) ${(isMuted ? 0 : volume) * 100}%, rgba(255,255,255,0.3) 100%)`,
+                }}
+              />
+            </div>
+
+            {/* 全画面切り替えボタン */}
+            <button
+              onClick={isFullscreen ? exitFullscreen : requestFullscreen}
+              className="text-white hover:text-blue-400 transition-colors"
+              aria-label={isFullscreen ? '全画面解除' : '全画面表示'}
+            >
+              {isFullscreen ? (
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/>
+                </svg>
+              ) : (
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+                </svg>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* カスタムCSS（設定されている場合） */}
       {branding.customStyles && (
         <style dangerouslySetInnerHTML={{ __html: branding.customStyles }} />
       )}
 
-      {/* 動画要素とネイティブコントロールバーの背景を完全に削除 */}
+      {/* カスタムコントロール用スタイル */}
       <style>{`
-        video {
-          border: none !important;
-          outline: none !important;
-          box-shadow: none !important;
-          background: transparent !important;
-          background-image: none !important;
+        /* レンジスライダーのスタイリング */
+        input[type="range"] {
+          -webkit-appearance: none;
+          appearance: none;
         }
-        video::-webkit-media-controls-overlay-play-button {
-          display: none !important;
+        input[type="range"]::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 12px;
+          height: 12px;
+          background: #3b82f6;
+          cursor: pointer;
+          border-radius: 50%;
         }
-        video::-webkit-media-controls-enclosure {
-          background: transparent !important;
-          background-image: none !important;
-          -webkit-background-clip: unset !important;
-          background-clip: unset !important;
-          box-shadow: none !important;
-          border: none !important;
-        }
-        video::-webkit-media-controls-panel {
-          background: transparent !important;
-          background-image: none !important;
-          -webkit-background-clip: unset !important;
-          background-clip: unset !important;
-          box-shadow: none !important;
-          border: none !important;
-        }
-        video::-webkit-media-controls {
-          background: transparent !important;
-          background-image: none !important;
-          -webkit-background-clip: unset !important;
-          background-clip: unset !important;
-          box-shadow: none !important;
-          border: none !important;
-        }
-        video::-webkit-media-controls-timeline {
-          background: transparent !important;
-          background-image: none !important;
-          box-shadow: none !important;
-        }
-        video::-webkit-media-controls-play-button {
-          background: transparent !important;
-          background-image: none !important;
-          box-shadow: none !important;
-        }
-        video::-webkit-media-controls-current-time-display,
-        video::-webkit-media-controls-time-remaining-display {
-          background: transparent !important;
-          background-image: none !important;
-          box-shadow: none !important;
-        }
-        video::-webkit-media-controls-volume-slider {
-          background: transparent !important;
-          background-image: none !important;
-          box-shadow: none !important;
-        }
-        video::-webkit-media-controls-mute-button {
-          background: transparent !important;
-          background-image: none !important;
-          box-shadow: none !important;
-        }
-        video::-webkit-media-controls-fullscreen-button {
-          background: transparent !important;
-          background-image: none !important;
-          box-shadow: none !important;
-        }
-        /* 全てのネイティブコントロールバーの子要素も透明化 */
-        video::-webkit-media-controls-enclosure > * {
-          background: transparent !important;
-          background-image: none !important;
-          box-shadow: none !important;
+        input[type="range"]::-moz-range-thumb {
+          width: 12px;
+          height: 12px;
+          background: #3b82f6;
+          cursor: pointer;
+          border-radius: 50%;
+          border: none;
         }
       `}</style>
     </div>
