@@ -279,11 +279,6 @@ function WatchContent() {
           playsInline
           preload="auto"
           crossOrigin="anonymous"
-          className={`w-full h-full ${
-            videoDimensions && videoDimensions.width > videoDimensions.height
-              ? 'object-contain'
-              : 'object-cover'
-          }`}
           style={{
             width: '100%',
             height: '100%',
@@ -333,7 +328,7 @@ function WatchContent() {
       </div>
 
       {/* 下部: 追加情報またはフッター */}
-      <div className="w-full bg-gradient-to-t from-black/80 to-transparent py-6 px-8 absolute bottom-0 z-10">
+      <div className="w-full py-6 px-8 absolute bottom-0 z-10">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           {branding.footer.enabled ? (
             <div className="text-center w-full">
