@@ -335,8 +335,15 @@ function WatchContent() {
         <style dangerouslySetInnerHTML={{ __html: branding.customStyles }} />
       )}
 
-      {/* ネイティブコントロールバーの背景とグラデーションを完全に削除 */}
+      {/* 動画要素とネイティブコントロールバーの背景を完全に削除 */}
       <style>{`
+        video {
+          border: none !important;
+          outline: none !important;
+          box-shadow: none !important;
+          background: transparent !important;
+          background-image: none !important;
+        }
         video::-webkit-media-controls-overlay-play-button {
           display: none !important;
         }
@@ -345,43 +352,61 @@ function WatchContent() {
           background-image: none !important;
           -webkit-background-clip: unset !important;
           background-clip: unset !important;
+          box-shadow: none !important;
+          border: none !important;
         }
         video::-webkit-media-controls-panel {
           background: transparent !important;
           background-image: none !important;
           -webkit-background-clip: unset !important;
           background-clip: unset !important;
+          box-shadow: none !important;
+          border: none !important;
         }
         video::-webkit-media-controls {
           background: transparent !important;
           background-image: none !important;
           -webkit-background-clip: unset !important;
           background-clip: unset !important;
+          box-shadow: none !important;
+          border: none !important;
         }
         video::-webkit-media-controls-timeline {
           background: transparent !important;
           background-image: none !important;
+          box-shadow: none !important;
         }
         video::-webkit-media-controls-play-button {
           background: transparent !important;
           background-image: none !important;
+          box-shadow: none !important;
         }
         video::-webkit-media-controls-current-time-display,
         video::-webkit-media-controls-time-remaining-display {
           background: transparent !important;
           background-image: none !important;
+          box-shadow: none !important;
         }
         video::-webkit-media-controls-volume-slider {
           background: transparent !important;
           background-image: none !important;
+          box-shadow: none !important;
         }
         video::-webkit-media-controls-mute-button {
           background: transparent !important;
           background-image: none !important;
+          box-shadow: none !important;
         }
         video::-webkit-media-controls-fullscreen-button {
           background: transparent !important;
           background-image: none !important;
+          box-shadow: none !important;
+        }
+        /* 全てのネイティブコントロールバーの子要素も透明化 */
+        video::-webkit-media-controls-enclosure > * {
+          background: transparent !important;
+          background-image: none !important;
+          box-shadow: none !important;
         }
       `}</style>
     </div>
