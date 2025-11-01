@@ -23,7 +23,6 @@ function WatchContent() {
   const [isPlaying, setIsPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [branding, setBranding] = useState<BrandingConfig>(getBrandingConfig());
-  const [videoDimensions, setVideoDimensions] = useState<{ width: number; height: number } | null>(null);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -93,30 +92,31 @@ function WatchContent() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // 動画の寸法を検出
+  // スクロールを無効化し、画面サイズを固定
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    const handleLoadedMetadata = () => {
-      const width = video.videoWidth;
-      const height = video.videoHeight;
-      if (width > 0 && height > 0) {
-        setVideoDimensions({ width, height });
-      }
-    };
-
-    video.addEventListener('loadedmetadata', handleLoadedMetadata);
-
-    // すでにメタデータが読み込まれている場合
-    if (video.readyState >= HTMLMediaElement.HAVE_METADATA) {
-      handleLoadedMetadata();
-    }
+    // bodyとhtmlのスクロールを無効化
+    document.body.style.overflow = 'hidden';
+    document.body.style.margin = '0';
+    document.body.style.padding = '0';
+    document.documentElement.style.overflow = 'hidden';
+    document.documentElement.style.margin = '0';
+    document.documentElement.style.padding = '0';
+    document.documentElement.style.height = '100%';
+    document.documentElement.style.width = '100%';
 
     return () => {
-      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      // クリーンアップ
+      document.body.style.overflow = '';
+      document.body.style.margin = '';
+      document.body.style.padding = '';
+      document.documentElement.style.overflow = '';
+      document.documentElement.style.margin = '';
+      document.documentElement.style.padding = '';
+      document.documentElement.style.height = '';
+      document.documentElement.style.width = '';
     };
-  }, [videoData]);
+  }, []);
+
 
   // 全画面表示を開始するヘルパー関数
   const requestFullscreen = async (element: HTMLElement) => {
@@ -211,13 +211,10 @@ function WatchContent() {
   // 動画プレイヤー表示（全画面）
   return (
     <div 
-      className="fixed inset-0 p-0"
+      className="fixed inset-0 bg-black overflow-hidden"
       style={{ 
         backgroundColor: branding.colors.background,
         color: branding.colors.text,
-        width: '100vw',
-        height: '100vh',
-        overflow: 'hidden',
       }}
     >
       {/* ロゴ（設定されている場合） */}
@@ -281,19 +278,7 @@ function WatchContent() {
         playsInline
         preload="auto"
         crossOrigin="anonymous"
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-          display: 'block',
-          margin: 0,
-          padding: 0,
-        }}
+        className="absolute inset-0 object-cover"
         onError={(e) => {
           // 端末依存の再生失敗を可視化
           const mediaError = (e as any)?.currentTarget?.error;
@@ -344,52 +329,14 @@ function WatchContent() {
         <style dangerouslySetInnerHTML={{ __html: branding.customStyles }} />
       )}
 
-      {/* 動画要素のデフォルトスタイルをリセット */}
-      <style>{`
-        video {
-          margin: 0 !important;
-          padding: 0 !important;
-          border: none !important;
-          outline: none !important;
-          box-shadow: none !important;
-          background: transparent !important;
-        }
-        video::-webkit-media-controls {
-          background: transparent !important;
-          background-image: none !important;
-          -webkit-background-clip: unset !important;
-        }
-        video::-webkit-media-controls-enclosure {
-          background: transparent !important;
-          background-image: none !important;
-          -webkit-background-clip: unset !important;
-        }
-        video::-webkit-media-controls-panel {
-          background: transparent !important;
-          background-image: none !important;
-          -webkit-background-clip: unset !important;
-        }
-        video::-webkit-media-controls-timeline {
-          background: transparent !important;
-          background-image: none !important;
-        }
-        video::-webkit-media-controls-current-time-display,
-        video::-webkit-media-controls-time-remaining-display {
-          background: transparent !important;
-        }
-        video::-webkit-media-controls-play-button {
-          background: transparent !important;
-          background-image: none !important;
-        }
-        ${!isPlaying ? `
+      {/* ネイティブ再生ボタンを非表示にするCSS（カスタム再生ボタン表示時） */}
+      {!isPlaying && (
+        <style>{`
           video::-webkit-media-controls-overlay-play-button {
             display: none !important;
           }
-          video::-webkit-media-controls-play-button {
-            display: none !important;
-          }
-        ` : ''}
-      `}</style>
+        `}</style>
+      )}
     </div>
   );
 }
