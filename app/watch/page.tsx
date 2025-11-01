@@ -211,7 +211,7 @@ function WatchContent() {
   // 動画プレイヤー表示（全画面）
   return (
     <div 
-      className="relative min-h-screen w-full p-0"
+      className="fixed inset-0 w-full h-full p-0"
       style={{ 
         backgroundColor: branding.colors.background,
         color: branding.colors.text,
@@ -270,33 +270,37 @@ function WatchContent() {
       )}
 
       {/* 動画プレイヤー（画面幅100%表示） */}
-      <div className="absolute inset-0 overflow-hidden">
-        <video
-          ref={videoRef}
-          poster={videoData?.thumbnailUrl || undefined}
-          controls
-          controlsList="nodownload"
-          playsInline
-          preload="auto"
-          crossOrigin="anonymous"
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: videoDimensions && videoDimensions.width > videoDimensions.height ? 'contain' : 'cover',
-          }}
-          onError={(e) => {
-            // 端末依存の再生失敗を可視化
-            const mediaError = (e as any)?.currentTarget?.error;
-            console.error('[VideoPlaybackError]', mediaError);
-          }}
-        >
-          {videoData?.videoUrl && (
-            <source src={videoData.videoUrl} type="video/mp4" />
-          )}
-          <track kind="captions" />
-          お使いのブラウザは動画の再生に対応していません。
-        </video>
-      </div>
+      <video
+        ref={videoRef}
+        poster={videoData?.thumbnailUrl || undefined}
+        controls
+        controlsList="nodownload"
+        playsInline
+        preload="auto"
+        crossOrigin="anonymous"
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          width: '100vw',
+          height: '100vh',
+          objectFit: 'cover',
+          display: 'block',
+        }}
+        onError={(e) => {
+          // 端末依存の再生失敗を可視化
+          const mediaError = (e as any)?.currentTarget?.error;
+          console.error('[VideoPlaybackError]', mediaError);
+        }}
+      >
+        {videoData?.videoUrl && (
+          <source src={videoData.videoUrl} type="video/mp4" />
+        )}
+        <track kind="captions" />
+        お使いのブラウザは動画の再生に対応していません。
+      </video>
 
       {/* 大きな再生/一時停止ボタン（ビデオ上にオーバーレイ） */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
