@@ -102,21 +102,32 @@ function WatchContent() {
 
   // スクロールを無効化し、画面サイズを固定
   useEffect(() => {
-    // bodyとhtmlのスクロールを無効化
+    // bodyとhtmlのスクロールを無効化し、サイズを固定
     document.body.style.overflow = 'hidden';
     document.body.style.margin = '0';
     document.body.style.padding = '0';
+    document.body.style.height = '100vh';
+    document.body.style.width = '100vw';
+    document.body.style.position = 'fixed';
+    document.body.style.top = '0';
+    document.body.style.left = '0';
+
     document.documentElement.style.overflow = 'hidden';
     document.documentElement.style.margin = '0';
     document.documentElement.style.padding = '0';
-    document.documentElement.style.height = '100%';
-    document.documentElement.style.width = '100%';
+    document.documentElement.style.height = '100vh';
+    document.documentElement.style.width = '100vw';
 
     return () => {
       // クリーンアップ
       document.body.style.overflow = '';
       document.body.style.margin = '';
       document.body.style.padding = '';
+      document.body.style.height = '';
+      document.body.style.width = '';
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
       document.documentElement.style.overflow = '';
       document.documentElement.style.margin = '';
       document.documentElement.style.padding = '';
@@ -358,6 +369,13 @@ function WatchContent() {
       style={{
         backgroundColor: branding.colors.background,
         color: branding.colors.text,
+        height: '100vh',
+        width: '100vw',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        margin: 0,
+        padding: 0,
       }}
       onMouseMove={handleMouseMove}
       onTouchStart={handleMouseMove}
@@ -422,6 +440,14 @@ function WatchContent() {
         preload="auto"
         crossOrigin="anonymous"
         className="absolute inset-0 object-cover w-full h-full"
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+        }}
         onClick={togglePlayPause}
         onError={(e) => {
           // 端末依存の再生失敗を可視化
