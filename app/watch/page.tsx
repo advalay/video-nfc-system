@@ -20,6 +20,8 @@ function WatchContent() {
   const [videoData, setVideoData] = useState<VideoDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [branding, setBranding] = useState<BrandingConfig>(getBrandingConfig());
 
@@ -70,6 +72,19 @@ function WatchContent() {
     fetchVideo();
   }, [videoId]);
 
+  // モバイルデバイスの判定
+  useEffect(() => {
+    const checkMobile = () => {
+      const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      const isSmallScreen = window.innerWidth <= 768;
+      setIsMobile(hasTouch && isSmallScreen);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   // スクロールを無効化し、画面サイズを固定
   useEffect(() => {
     // bodyとhtmlのスクロールを無効化
@@ -99,6 +114,57 @@ function WatchContent() {
       document.documentElement.style.width = '';
     };
   }, []);
+
+  // 全画面表示を開始するヘルパー関数
+  const requestFullscreen = async (element: HTMLElement) => {
+    try {
+      if (element.requestFullscreen) {
+        await element.requestFullscreen();
+      } else if ((element as any).webkitRequestFullscreen) {
+        await (element as any).webkitRequestFullscreen();
+      } else if ((element as any).mozRequestFullScreen) {
+        await (element as any).mozRequestFullScreen();
+      } else if ((element as any).msRequestFullscreen) {
+        await (element as any).msRequestFullscreen();
+      }
+    } catch (err) {
+      console.log('全画面表示に失敗しました:', err);
+    }
+  };
+
+  // 動画の再生状態を監視（再生時に全画面表示）
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handlePlay = async () => {
+      setIsPlaying(true);
+      
+      // モバイルデバイスまたは全画面表示が有効な場合、全画面表示を開始
+      if (isMobile) {
+        const isFullscreen = !!(
+          document.fullscreenElement ||
+          (document as any).webkitFullscreenElement ||
+          (document as any).mozFullScreenElement ||
+          (document as any).msFullscreenElement
+        );
+        
+        if (!isFullscreen) {
+          await requestFullscreen(video);
+        }
+      }
+    };
+
+    const handlePause = () => setIsPlaying(false);
+
+    video.addEventListener('play', handlePlay);
+    video.addEventListener('pause', handlePause);
+
+    return () => {
+      video.removeEventListener('play', handlePlay);
+      video.removeEventListener('pause', handlePause);
+    };
+  }, [videoData, isMobile]);
 
   // ローディング表示
   if (loading) {
@@ -191,9 +257,9 @@ function WatchContent() {
         </div>
       )}
 
-      {/* 動画タイトル（左上） */}
+      {/* 動画タイトル（右上）- ネイティブコントロールとの重なりを避けるため */}
       {videoData?.title && (
-        <div className="absolute top-4 left-4 z-20 backdrop-blur-md bg-gradient-to-r from-black/60 to-black/40 rounded-lg px-4 py-2 shadow-lg">
+        <div className="absolute top-4 right-4 z-20 backdrop-blur-md bg-gradient-to-r from-black/60 to-black/40 rounded-lg px-4 py-2 shadow-lg">
           <h1 className="text-lg md:text-xl font-medium text-white">
             {videoData.title}
           </h1>
@@ -233,6 +299,38 @@ function WatchContent() {
         お使いのブラウザは動画の再生に対応していません。
       </video>
 
+      {/* カスタム再生ボタン（停止時のみ表示、クリックで全画面再生） */}
+      {!isPlaying && videoData && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30">
+          <button
+            onClick={async () => {
+              const video = videoRef.current;
+              if (!video) return;
+
+              try {
+                await video.play();
+                // モバイルの場合、全画面表示を開始
+                if (isMobile) {
+                  await requestFullscreen(video);
+                }
+              } catch (err) {
+                console.error('動画の再生に失敗しました:', err);
+              }
+            }}
+            className="pointer-events-auto bg-blue-600/90 hover:bg-blue-700 text-white rounded-full p-12 transition-all transform hover:scale-110 shadow-2xl"
+            aria-label="再生"
+          >
+            <svg
+              className="w-24 h-24"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       {/* カスタムCSS（設定されている場合） */}
       {branding.customStyles && (
         <style dangerouslySetInnerHTML={{ __html: branding.customStyles }} />
@@ -252,6 +350,14 @@ function WatchContent() {
           background: transparent !important;
           background-image: none !important;
         }
+        ${!isPlaying ? `
+          video::-webkit-media-controls-overlay-play-button {
+            display: none !important;
+          }
+          video::-webkit-media-controls-play-button {
+            display: none !important;
+          }
+        ` : ''}
       `}</style>
     </div>
   );
