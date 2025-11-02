@@ -191,11 +191,11 @@ function WatchContent() {
         </div>
       )}
 
-      {/* 動画タイトル（左上） - デプロイ確認用に大きく目立つ変更 */}
+      {/* 動画タイトル（左上） */}
       {videoData?.title && (
-        <div className="absolute top-4 left-4 z-20 bg-yellow-400 border-4 border-red-600 rounded-lg px-6 py-4 shadow-2xl">
-          <h1 className="text-2xl md:text-3xl font-bold text-red-600">
-            🚀 デプロイテスト成功 {videoData.title}
+        <div className="absolute top-4 left-4 z-20 backdrop-blur-md bg-gradient-to-r from-black/60 to-black/40 rounded-lg px-4 py-2 shadow-lg">
+          <h1 className="text-lg md:text-xl font-medium text-white">
+            {videoData.title}
           </h1>
         </div>
       )}
