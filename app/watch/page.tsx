@@ -139,12 +139,17 @@ function WatchContent() {
   // 動画プレイヤー表示（全画面）
   return (
     <div
-      className="fixed inset-0 bg-black overflow-hidden flex items-center justify-center"
+      className="fixed inset-0 bg-black overflow-hidden"
       style={{
         backgroundColor: branding.colors.background,
         color: branding.colors.text,
         height: '100vh',
         width: '100vw',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
       }}
     >
       {/* ロゴ（設定されている場合） */}
@@ -205,11 +210,16 @@ function WatchContent() {
         preload="auto"
         crossOrigin="anonymous"
         style={{
-          maxWidth: '100%',
-          maxHeight: '100%',
-          width: '100%',
-          height: '100%',
-          objectFit: 'contain',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          width: '100vw',
+          height: '100vh',
+          maxWidth: '100vw',
+          maxHeight: '100vh',
+          objectFit: 'cover',
         }}
         onError={(e) => {
           const mediaError = (e as any)?.currentTarget?.error;
@@ -227,6 +237,22 @@ function WatchContent() {
       {branding.customStyles && (
         <style dangerouslySetInnerHTML={{ __html: branding.customStyles }} />
       )}
+
+      {/* ネイティブコントロールバーのグラデーションを削除 */}
+      <style>{`
+        video::-webkit-media-controls-enclosure {
+          background: transparent !important;
+          background-image: none !important;
+        }
+        video::-webkit-media-controls-panel {
+          background: transparent !important;
+          background-image: none !important;
+        }
+        video::-webkit-media-controls {
+          background: transparent !important;
+          background-image: none !important;
+        }
+      `}</style>
     </div>
   );
 }
