@@ -285,7 +285,7 @@ function WatchContent() {
           height: '100vh',
           maxWidth: '100vw',
           maxHeight: '100vh',
-          objectFit: 'cover',
+          objectFit: 'contain',
         }}
         onError={(e) => {
           const mediaError = (e as any)?.currentTarget?.error;
