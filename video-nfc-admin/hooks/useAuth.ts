@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getCurrentUser, fetchAuthSession, signIn, signOut, confirmSignIn } from 'aws-amplify/auth';
+import { getCurrentUser, fetchAuthSession, signIn, signOut, confirmSignIn, resetPassword, confirmResetPassword } from 'aws-amplify/auth';
 import { configureAmplify } from '../lib/amplify-config';
 
 interface User {
@@ -20,6 +20,8 @@ interface UseAuthResult {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<any>;
   confirmNewPassword: (newPassword: string) => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
+  confirmForgotPassword: (email: string, code: string, newPassword: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -126,6 +128,24 @@ export function useAuth(): UseAuthResult {
     }
   };
 
+  const forgotPassword = async (email: string) => {
+    try {
+      configureAmplify();
+      await resetPassword({ username: email });
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const confirmForgotPassword = async (email: string, code: string, newPassword: string) => {
+    try {
+      configureAmplify();
+      await confirmResetPassword({ username: email, confirmationCode: code, newPassword });
+    } catch (error) {
+      throw error;
+    }
+  };
+
   const logout = async () => {
     try {
       configureAmplify();
@@ -143,6 +163,8 @@ export function useAuth(): UseAuthResult {
     isAuthenticated: !!user,
     login,
     confirmNewPassword,
+    forgotPassword,
+    confirmForgotPassword,
     logout
   };
 }

@@ -3,6 +3,7 @@
 import { useState, FormEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
+import Link from 'next/link';
 import { useAuth } from '../../hooks/useAuth';
 
 export default function LoginPage() {
@@ -287,13 +288,12 @@ export default function LoginPage() {
             {!showNewPasswordInput && (
               <p className="text-sm text-gray-500">
                 パスワードをお忘れですか？
-                <button
-                  type="button"
+                <Link
+                  href="/forgot-password"
                   className="ml-2 text-blue-600 hover:text-blue-800 font-medium transition-colors"
-                  onClick={() => toast('管理者にお問い合わせください')}
                 >
-                  サポートに連絡
-                </button>
+                  パスワードをリセット
+                </Link>
               </p>
             )}
           </div>
