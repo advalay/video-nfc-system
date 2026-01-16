@@ -16,7 +16,7 @@ interface VideoDetail {
 function WatchContent() {
   const searchParams = useSearchParams();
   const videoId = searchParams.get('id');
-  
+
   const [videoData, setVideoData] = useState<VideoDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,12 +50,12 @@ function WatchContent() {
 
         if (data.success) {
           setVideoData(data.data);
-          
+
           // 組織IDがあればブランディング設定を更新
           if (data.data.organizationId) {
             setBranding(getBrandingConfig(data.data.organizationId));
           }
-          
+
           setLoading(false);
 
           // 自動再生試行（1秒後）
@@ -133,24 +133,23 @@ function WatchContent() {
 
   // 動画プレイヤー表示（全画面）
   return (
-    <div 
+    <div
       className="min-h-screen w-full flex flex-col items-center justify-center p-0"
-      style={{ 
+      style={{
         backgroundColor: branding.colors.background,
         color: branding.colors.text,
       }}
     >
       {/* ロゴ（設定されている場合） */}
       {branding.logo.enabled && branding.logo.imageUrl && (
-        <div 
-          className={`absolute z-20 p-4 ${
-            branding.logo.position === 'top-left' ? 'top-0 left-0' :
-            branding.logo.position === 'top-center' ? 'top-0 left-1/2 -translate-x-1/2' :
-            branding.logo.position === 'top-right' ? 'top-0 right-0' :
-            branding.logo.position === 'bottom-left' ? 'bottom-0 left-0' :
-            branding.logo.position === 'bottom-center' ? 'bottom-0 left-1/2 -translate-x-1/2' :
-            'bottom-0 right-0'
-          }`}
+        <div
+          className={`absolute z-20 p-4 ${branding.logo.position === 'top-left' ? 'top-0 left-0' :
+              branding.logo.position === 'top-center' ? 'top-0 left-1/2 -translate-x-1/2' :
+                branding.logo.position === 'top-right' ? 'top-0 right-0' :
+                  branding.logo.position === 'bottom-left' ? 'bottom-0 left-0' :
+                    branding.logo.position === 'bottom-center' ? 'bottom-0 left-1/2 -translate-x-1/2' :
+                      'bottom-0 right-0'
+            }`}
         >
           <Image
             src={branding.logo.imageUrl}
@@ -166,13 +165,12 @@ function WatchContent() {
 
       {/* ウォーターマーク（設定されている場合） */}
       {branding.watermark.enabled && (
-        <div 
-          className={`absolute z-20 p-4 pointer-events-none ${
-            branding.watermark.position === 'top-left' ? 'top-0 left-0' :
-            branding.watermark.position === 'top-right' ? 'top-0 right-0' :
-            branding.watermark.position === 'bottom-left' ? 'bottom-0 left-0' :
-            'bottom-0 right-0'
-          }`}
+        <div
+          className={`absolute z-20 p-4 pointer-events-none ${branding.watermark.position === 'top-left' ? 'top-0 left-0' :
+              branding.watermark.position === 'top-right' ? 'top-0 right-0' :
+                branding.watermark.position === 'bottom-left' ? 'bottom-0 left-0' :
+                  'bottom-0 right-0'
+            }`}
           style={{ opacity: branding.watermark.opacity }}
         >
           <p className="text-sm" style={{ color: branding.colors.text }}>
@@ -184,7 +182,7 @@ function WatchContent() {
       {/* 動画タイトル（左上） - モダン＆ミニマル */}
       {videoData?.title && (
         <div className="absolute top-4 left-4 z-20 backdrop-blur-md bg-gradient-to-r from-black/60 to-black/40 rounded-lg px-4 py-2 shadow-lg">
-          <h1 
+          <h1
             className="text-lg md:text-xl font-medium text-white"
           >
             {videoData.title}
@@ -192,29 +190,57 @@ function WatchContent() {
         </div>
       )}
 
-      {/* 動画プレイヤー（画面幅100%表示） */}
+      {/* メディアプレイヤー（画面幅100%表示） */}
       <div className="w-full h-screen flex items-center justify-center">
-        <video
-          ref={videoRef}
-          poster={videoData?.thumbnailUrl || undefined}
-          controls
-          controlsList="nodownload"
-          playsInline
-          preload="auto"
-          crossOrigin="anonymous"
-          className="w-full h-full object-cover"
-          onError={(e) => {
-            // 端末依存の再生失敗を可視化
-            const mediaError = (e as any)?.currentTarget?.error;
-            console.error('[VideoPlaybackError]', mediaError);
-          }}
-        >
-          {videoData?.videoUrl && (
-            <source src={videoData.videoUrl} type="video/mp4" />
-          )}
-          <track kind="captions" />
-          お使いのブラウザは動画の再生に対応していません。
-        </video>
+        {/* MP3の場合はaudio要素、それ以外はvideo要素 */}
+        {videoData?.fileName?.toLowerCase().endsWith('.mp3') || videoData?.videoUrl?.toLowerCase().includes('.mp3') ? (
+          /* Audio Player for MP3 */
+          <div className="w-full max-w-2xl px-8 flex flex-col items-center justify-center space-y-8">
+            <div className="w-48 h-48 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center shadow-2xl">
+              <svg className="w-24 h-24 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
+              </svg>
+            </div>
+            <audio
+              ref={videoRef as any}
+              controls
+              controlsList="nodownload"
+              preload="auto"
+              className="w-full"
+              onError={(e) => {
+                const mediaError = (e as any)?.currentTarget?.error;
+                console.error('[AudioPlaybackError]', mediaError);
+              }}
+            >
+              {videoData?.videoUrl && (
+                <source src={videoData.videoUrl} type="audio/mpeg" />
+              )}
+              お使いのブラウザは音声の再生に対応していません。
+            </audio>
+          </div>
+        ) : (
+          /* Video Player for MP4 */
+          <video
+            ref={videoRef}
+            poster={videoData?.thumbnailUrl || undefined}
+            controls
+            controlsList="nodownload"
+            playsInline
+            preload="auto"
+            crossOrigin="anonymous"
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              const mediaError = (e as any)?.currentTarget?.error;
+              console.error('[VideoPlaybackError]', mediaError);
+            }}
+          >
+            {videoData?.videoUrl && (
+              <source src={videoData.videoUrl} type="video/mp4" />
+            )}
+            <track kind="captions" />
+            お使いのブラウザは動画の再生に対応していません。
+          </video>
+        )}
       </div>
 
       {/* 大きな再生/一時停止ボタン（ビデオ上にオーバーレイ） */}
