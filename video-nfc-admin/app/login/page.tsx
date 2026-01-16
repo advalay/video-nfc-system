@@ -7,9 +7,11 @@ import { useAuth } from '../../hooks/useAuth';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { user, login, isLoading: authLoading } = useAuth();
+  const { user, login, confirmNewPassword, isLoading: authLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [showNewPasswordInput, setShowNewPasswordInput] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -25,23 +27,52 @@ export default function LoginPage() {
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    // バリデーション
-    if (!email || !password) {
-      toast.error('メールアドレスとパスワードを入力してください');
-      return;
-    }
-
-    if (!email.includes('@')) {
-      toast.error('有効なメールアドレスを入力してください');
-      return;
-    }
-
     setIsLoading(true);
 
     try {
-      await login(email, password);
-      toast.success('ログインに成功しました！');
-      
+      if (showNewPasswordInput) {
+        // 新しいパスワードの設定
+        if (!newPassword) {
+          toast.error('新しいパスワードを入力してください');
+          setIsLoading(false);
+          return;
+        }
+        if (newPassword.length < 8) {
+          toast.error('パスワードは8文字以上である必要があります');
+          setIsLoading(false);
+          return;
+        }
+
+        await confirmNewPassword(newPassword);
+        toast.success('パスワードを変更しました！');
+      } else {
+        // 通常のログイン
+        // バリデーション
+        if (!email || !password) {
+          toast.error('メールアドレスとパスワードを入力してください');
+          setIsLoading(false);
+          return;
+        }
+
+        if (!email.includes('@')) {
+          toast.error('有効なメールアドレスを入力してください');
+          setIsLoading(false);
+          return;
+        }
+
+        const result = await login(email, password);
+
+        // 初回ログイン（パスワード変更要求）のチェック
+        if (result.nextStep?.signInStep === 'CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED') {
+          setShowNewPasswordInput(true);
+          toast.success('初回ログインのため、新しいパスワードを設定してください');
+          setIsLoading(false);
+          return;
+        }
+
+        toast.success('ログインに成功しました！');
+      }
+
       // ログイン成功後は動画一覧ページにリダイレクト
       setTimeout(() => {
         router.push('/videos');
@@ -116,74 +147,122 @@ export default function LoginPage() {
         {/* ログインカード */}
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
           <h2 className="text-2xl font-semibold text-gray-900 mb-6">
-            ログイン
+            {showNewPasswordInput ? '新しいパスワードの設定' : 'ログイン'}
           </h2>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* メールアドレス入力 */}
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                メールアドレス
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={isLoading}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all disabled:bg-gray-50 disabled:cursor-not-allowed text-gray-900 placeholder:text-gray-400"
-                placeholder="your@email.com"
-              />
-            </div>
+            {!showNewPasswordInput ? (
+              <>
+                {/* メールアドレス入力 */}
+                <div>
+                  <label
+                    htmlFor="email"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
+                    メールアドレス
+                  </label>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={isLoading}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all disabled:bg-gray-50 disabled:cursor-not-allowed text-gray-900 placeholder:text-gray-400"
+                    placeholder="your@email.com"
+                  />
+                </div>
 
-            {/* パスワード入力 */}
-            <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                パスワード
-              </label>
-              <div className="relative">
-                <input
-                  id="password"
-                  name="password"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={isLoading}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all disabled:bg-gray-50 disabled:cursor-not-allowed pr-12 text-gray-900 placeholder:text-gray-400"
-                  placeholder="••••••••"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  disabled={isLoading}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
+                {/* パスワード入力 */}
+                <div>
+                  <label
+                    htmlFor="password"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
+                    パスワード
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="password"
+                      name="password"
+                      type={showPassword ? 'text' : 'password'}
+                      autoComplete="current-password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      disabled={isLoading}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all disabled:bg-gray-50 disabled:cursor-not-allowed pr-12 text-gray-900 placeholder:text-gray-400"
+                      placeholder="••••••••"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      disabled={isLoading}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
+                    >
+                      {showPassword ? (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              /* 新しいパスワード入力 */
+              <div>
+                <label
+                  htmlFor="newPassword"
+                  className="block text-sm font-medium text-gray-700 mb-2"
                 >
-                  {showPassword ? (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                  )}
-                </button>
+                  新しいパスワード
+                </label>
+                <div className="relative">
+                  <input
+                    id="newPassword"
+                    name="newPassword"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    required
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    disabled={isLoading}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all disabled:bg-gray-50 disabled:cursor-not-allowed pr-12 text-gray-900 placeholder:text-gray-400"
+                    placeholder="新しいパスワード（8文字以上）"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    disabled={isLoading}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
+                  >
+                    {showPassword ? (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                      </svg>
+                    ) : (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+                <p className="mt-2 text-sm text-gray-500">
+                  英大文字、小文字、数字、記号を含む8文字以上のパスワードを設定してください。
+                </p>
               </div>
-            </div>
+            )}
 
-            {/* ログインボタン */}
+            {/* ログイン/変更ボタン */}
             <button
               type="submit"
               disabled={isLoading}
@@ -195,26 +274,28 @@ export default function LoginPage() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  ログイン中...
+                  {showNewPasswordInput ? 'パスワード変更中...' : 'ログイン中...'}
                 </span>
               ) : (
-                'ログイン'
+                showNewPasswordInput ? 'パスワードを変更してログイン' : 'ログイン'
               )}
             </button>
           </form>
 
           {/* フッター */}
           <div className="mt-6 text-center">
-            <p className="text-sm text-gray-500">
-              パスワードをお忘れですか？
-              <button
-                type="button"
-                className="ml-2 text-blue-600 hover:text-blue-800 font-medium transition-colors"
-                onClick={() => toast('管理者にお問い合わせください')}
-              >
-                サポートに連絡
-              </button>
-            </p>
+            {!showNewPasswordInput && (
+              <p className="text-sm text-gray-500">
+                パスワードをお忘れですか？
+                <button
+                  type="button"
+                  className="ml-2 text-blue-600 hover:text-blue-800 font-medium transition-colors"
+                  onClick={() => toast('管理者にお問い合わせください')}
+                >
+                  サポートに連絡
+                </button>
+              </p>
+            )}
           </div>
         </div>
 

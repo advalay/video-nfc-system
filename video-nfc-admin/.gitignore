@@ -81,4 +81,4 @@ jspm_packages/
 .aws/
 
 # CDK
-cdk.out/
+cdk.out/*.tsbuildinfo
