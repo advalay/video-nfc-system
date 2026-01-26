@@ -22,13 +22,13 @@ export function Layout({ children }: LayoutProps) {
   const navItems = [
     {
       href: '/videos',
-      label: '動画一覧',
+      label: 'コンテンツ一覧',
       icon: Video,
       show: true,
     },
     {
       href: '/upload',
-      label: '動画アップロード',
+      label: 'コンテンツアップロード',
       icon: Upload,
       show: true,
     },
@@ -95,9 +95,9 @@ export function Layout({ children }: LayoutProps) {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 truncate">
-                {isSystemAdmin 
-                  ? 'システム管理' 
-                  : isShopAdmin 
+                {isSystemAdmin
+                  ? 'システム管理'
+                  : isShopAdmin
                     ? user.shopName || user.organizationName || '販売店'
                     : user.organizationName || '組織'}
               </p>
@@ -110,17 +110,16 @@ export function Layout({ children }: LayoutProps) {
         <nav className="mt-6">
           {navItems.map((item) => {
             if (!item.show) return null;
-            
+
             const Icon = item.icon;
             const isActive = pathname === item.href;
-            
+
             return (
               <button
                 key={item.href}
                 onClick={() => router.push(item.href)}
-                className={`w-full flex items-center space-x-3 px-6 py-3 text-left transition-colors ${
-                  isActive ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700' : 'text-gray-700'
-                } hover:bg-gray-50`}
+                className={`w-full flex items-center space-x-3 px-6 py-3 text-left transition-colors ${isActive ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700' : 'text-gray-700'
+                  } hover:bg-gray-50`}
               >
                 <Icon className="w-5 h-5" />
                 <span className="font-medium">{item.label}</span>
