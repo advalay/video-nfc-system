@@ -1,11 +1,12 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { parseAuthUser } from '../lib/permissions';
-import { handleError, logInfo } from '../lib/errorHandler';
+import { handleError, logInfo, getCorsHeaders } from '../lib/errorHandler';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
-import { CognitoIdentityProviderClient, AdminCreateUserCommand, AdminAddUserToGroupCommand, AdminSetUserPasswordCommand } from '@aws-sdk/client-cognito-identity-provider';
+import { CognitoIdentityProviderClient, AdminCreateUserCommand, AdminAddUserToGroupCommand } from '@aws-sdk/client-cognito-identity-provider';
 import { v4 as uuidv4 } from 'uuid';
 import { generateTempPassword } from '../lib/password';
+import { parseBody, createOrganizationSchema } from '../lib/validation';
 
 const client = new DynamoDBClient({});
 const dynamodb = DynamoDBDocumentClient.from(client);
@@ -24,21 +25,10 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       throw new Error('組織の作成はシステム管理者のみ実行できます');
     }
     
-    const body = JSON.parse(event.body || '{}');
-    
-    // バリデーション
-    if (!body.organizationType || !['agency', 'store'].includes(body.organizationType)) {
-      throw new Error('組織タイプが不正です（"agency" または "store" を指定してください）');
-    }
-    
-    if (!body.organizationName || !body.email) {
-      throw new Error('必須項目が不足しています（organizationName, email は必須です）');
-    }
-    
-    // 販売店の場合、parentIdは必須
-    if (body.organizationType === 'store' && !body.parentId) {
-      throw new Error('販売店にはparentId（親組織ID）が必須です');
-    }
+    const result = parseBody(createOrganizationSchema, event);
+    if (!result.success) return result.response;
+    const body = result.data;
+
     const organizationId = `org-${body.organizationType}-${uuidv4().slice(0, 8)}`;
     const now = new Date().toISOString();
     
@@ -65,15 +55,14 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     
     // 組織管理者ユーザーを作成
     let email = '';
-    let tempPassword = '';
-    
+
     if (body.email) {
       email = body.email;
-      tempPassword = generateTempPassword();
+      const tempPassword = generateTempPassword();
       const username = email;
-      
+
       try {
-        // Cognitoユーザー作成
+        // Cognitoユーザー作成（招待メールをCognitoが自動送信）
         await cognitoClient.send(new AdminCreateUserCommand({
           UserPoolId: USER_POOL_ID,
           Username: username,
@@ -85,7 +74,6 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
             { Name: 'custom:role', Value: 'organization-admin' },
           ],
           TemporaryPassword: tempPassword,
-          MessageAction: 'SUPPRESS', // メール送信を抑制
         }));
 
         // ユーザーをorganization-adminグループに追加
@@ -93,14 +81,6 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
           UserPoolId: USER_POOL_ID,
           Username: username,
           GroupName: 'organization-admin',
-        }));
-
-        // パスワードを永続化（初回ログイン時に変更を強制しない）
-        await cognitoClient.send(new AdminSetUserPasswordCommand({
-          UserPoolId: USER_POOL_ID,
-          Username: username,
-          Password: tempPassword,
-          Permanent: true,
         }));
 
         logInfo('組織管理者ユーザー作成成功', { email, organizationId }, event);
@@ -114,16 +94,13 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     
     return {
       statusCode: 201,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
+      headers: getCorsHeaders(event),
       body: JSON.stringify({
         success: true,
         data: {
           ...organization,
           email,
-          tempPassword,
+          message: email ? '招待メールが送信されました。メールに記載された仮パスワードでログインしてください。' : undefined,
         },
       }),
     };

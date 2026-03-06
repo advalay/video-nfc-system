@@ -24,6 +24,21 @@ export const logError = (message: string, error: any, event?: APIGatewayProxyEve
     }));
 };
 
+/**
+ * リクエストのOriginヘッダーを許可リストと照合し、CORSヘッダーを返す
+ */
+export const getCorsHeaders = (event: APIGatewayProxyEvent): Record<string, string> => {
+    const origin = event.headers?.Origin || event.headers?.origin || '';
+    const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').filter(Boolean);
+    const allowedOrigin = allowedOrigins.includes(origin) ? origin : (allowedOrigins[0] || '');
+
+    return {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': allowedOrigin,
+        'Access-Control-Allow-Credentials': 'true',
+    };
+};
+
 export const handleError = (error: any, event: APIGatewayProxyEvent, context: string): APIGatewayProxyResult => {
     logError(`Error in ${context}`, error, event);
 
@@ -32,11 +47,7 @@ export const handleError = (error: any, event: APIGatewayProxyEvent, context: st
 
     return {
         statusCode,
-        headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Credentials': 'true',
-        },
+        headers: getCorsHeaders(event),
         body: JSON.stringify({
             success: false,
             error: {

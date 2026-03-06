@@ -2,7 +2,7 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { parseAuthUser } from '../lib/permissions';
-import { handleError } from '../lib/errorHandler';
+import { handleError, getCorsHeaders } from '../lib/errorHandler';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -46,12 +46,7 @@ export const handler = async (
     if (!user.groups?.includes('system-admin')) {
       return {
         statusCode: 403,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
-          'Access-Control-Allow-Methods': 'GET,OPTIONS',
-        },
+        headers: getCorsHeaders(event),
         body: JSON.stringify({
           success: false,
           error: {
@@ -79,12 +74,7 @@ export const handler = async (
     if (!result.Items) {
       return {
         statusCode: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
-          'Access-Control-Allow-Methods': 'GET,OPTIONS',
-        },
+        headers: getCorsHeaders(event),
         body: JSON.stringify({
           success: true,
           data: {
@@ -159,12 +149,7 @@ export const handler = async (
 
     return {
       statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
-        'Access-Control-Allow-Methods': 'GET,OPTIONS',
-      },
+      headers: getCorsHeaders(event),
       body: JSON.stringify({
         success: true,
         data: {

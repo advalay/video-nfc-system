@@ -14,17 +14,7 @@ export const parseAuthUser = (event: APIGatewayProxyEvent): AuthUser => {
     const claims = event.requestContext.authorizer?.claims;
 
     if (!claims) {
-        // Development mode fallback or public access
-        const devMode = event.headers['X-Development-Mode'] === 'true' || event.headers['x-development-mode'] === 'true';
-        if (devMode || process.env.ENVIRONMENT === 'dev') {
-            // Return a mock system admin for dev/testing if no auth
-            return {
-                sub: 'dev-user',
-                email: 'dev@example.com',
-                groups: ['system-admin'],
-            };
-        }
-        throw new Error('Unauthorized: No claims found');
+        throw new Error('Unauthorized: No authentication claims found');
     }
 
     const groups = claims['cognito:groups'] ?

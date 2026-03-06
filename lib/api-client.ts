@@ -2,7 +2,10 @@ import { fetchAuthSession } from 'aws-amplify/auth';
 import { configureAmplify } from './amplify-config';
 import { UpdateShopInput, OrganizationAdmin } from '../types/shared';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://rwwiyktk7e.execute-api.ap-northeast-1.amazonaws.com/dev';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+if (!API_BASE_URL) {
+  throw new Error('NEXT_PUBLIC_API_BASE_URL環境変数が設定されていません');
+}
 
 export class ApiError extends Error {
   constructor(
@@ -23,25 +26,10 @@ async function getAuthToken(): Promise<string | null> {
     configureAmplify();
     
     const session = await fetchAuthSession();
-    const userGroups = session.tokens?.idToken?.payload['cognito:groups'] || [];
-    const organizationId = session.tokens?.idToken?.payload['custom:organizationId'];
-    const shopId = session.tokens?.idToken?.payload['custom:shopId'];
-    
-    console.log('🔐 Auth session:', {
-      hasSession: !!session,
-      hasTokens: !!session.tokens,
-      hasIdToken: !!session.tokens?.idToken,
-      tokenLength: session.tokens?.idToken?.toString().length || 0,
-      userGroups,
-      organizationId,
-      shopId
-    });
-    
     const token = session.tokens?.idToken?.toString() || null;
-    console.log('🎫 Token obtained:', token ? `${token.substring(0, 20)}...` : 'null');
     return token;
   } catch (error) {
-    console.error('❌ Failed to get auth token:', error);
+    console.error('Failed to get auth token');
     return null;
   }
 }
@@ -60,10 +48,6 @@ export async function apiClient<T>(
     ...(options.headers || {}),
   };
 
-  // 開発用の強制ヘッダーは削除（本番と同等の動作にする）
-  // (headers as any)['x-development-mode'] = 'true';
-  // console.log('Development mode: Adding x-development-mode header');
-
   // 認証トークンがあれば追加
   if (token) {
     (headers as any)['Authorization'] = `Bearer ${token}`;
@@ -72,11 +56,6 @@ export async function apiClient<T>(
   const url = `${API_BASE_URL}${endpoint}`;
 
   try {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Making API request to:', url);
-      console.log('Headers:', headers);
-    }
-    
     const response = await fetch(url, {
       ...options,
       headers,
@@ -269,8 +248,8 @@ export async function createOrganization(data: {
   organizationId: string;
   organizationName: string;
   email: string;
-  tempPassword: string;
   loginUrl: string;
+  message?: string;
 }> {
   return apiPost<any>('/organizations', data);
 }
@@ -289,11 +268,9 @@ export async function createShop(data: {
   shopId: string;
   shopName: string;
   email: string;
-  tempPassword?: string;
   loginUrl: string;
-  isExistingUser?: boolean;
+  message?: string;
 }> {
   return apiPost<any>('/shops', data);
 }
 
-// Force rebuild Sat Oct 18 00:17:19 JST 2025

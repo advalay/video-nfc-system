@@ -37,8 +37,10 @@ export class StorageStack extends cdk.Stack {
             s3.HttpMethods.PUT,
             s3.HttpMethods.POST,
           ],
-          allowedOrigins: ['*'], // 本番環境では適切なオリジンに制限してください
-          allowedHeaders: ['*'],
+          allowedOrigins: environment === 'dev'
+            ? ['http://localhost:3000', 'http://localhost:3001', 'https://main.d3vnoskfyyh2d2.amplifyapp.com']
+            : ['https://main.d3vnoskfyyh2d2.amplifyapp.com'],
+          allowedHeaders: ['Content-Type', 'Authorization', 'X-Amz-Date', 'X-Api-Key', 'X-Amz-Security-Token', 'X-Amz-Content-Sha256'],
           exposedHeaders: ['ETag'],
           maxAge: 3000,
         },
@@ -140,8 +142,10 @@ export class StorageStack extends cdk.Stack {
       responseHeadersPolicyName: `video-nfc-${environment}-response-headers`,
       comment: `Response headers policy for video-nfc-${environment} (CORS + Security)`,
       corsBehavior: {
-        accessControlAllowOrigins: ['*'],
-        accessControlAllowHeaders: ['*'],
+        accessControlAllowOrigins: environment === 'dev'
+          ? ['http://localhost:3000', 'http://localhost:3001', 'https://main.d3vnoskfyyh2d2.amplifyapp.com']
+          : ['https://main.d3vnoskfyyh2d2.amplifyapp.com'],
+        accessControlAllowHeaders: ['Content-Type', 'Authorization', 'Range'],
         accessControlAllowMethods: ['GET', 'HEAD', 'OPTIONS'],
         accessControlExposeHeaders: ['ETag', 'Content-Length', 'Content-Range', 'Accept-Ranges'],
         accessControlAllowCredentials: false,

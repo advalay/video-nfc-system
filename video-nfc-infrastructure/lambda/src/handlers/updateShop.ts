@@ -1,8 +1,9 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { parseAuthUser } from '../lib/permissions';
-import { handleError, logInfo } from '../lib/errorHandler';
+import { handleError, logInfo, getCorsHeaders } from '../lib/errorHandler';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, UpdateCommand, GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
+import { parseBody, updateShopSchema } from '../lib/validation';
 
 const client = new DynamoDBClient({});
 const dynamodb = DynamoDBDocumentClient.from(client);
@@ -13,7 +14,10 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     
     const user = parseAuthUser(event);
     const { shopId } = event.pathParameters || {};
-    const body = JSON.parse(event.body || '{}');
+
+    const parsed = parseBody(updateShopSchema, event);
+    if (!parsed.success) return parsed.response;
+    const body = parsed.data;
     
     if (!shopId) {
       throw new Error('shopId（パスパラメータ）が必須です');
@@ -123,10 +127,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     
     return {
       statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
+      headers: getCorsHeaders(event),
       body: JSON.stringify({
         success: true,
         data: result.Attributes,

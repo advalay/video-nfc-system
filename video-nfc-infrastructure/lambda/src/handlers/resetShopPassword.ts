@@ -1,4 +1,5 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
+import { getCorsHeaders } from '../lib/errorHandler';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand } from '@aws-sdk/lib-dynamodb';
 import { CognitoIdentityProviderClient, AdminResetUserPasswordCommand } from '@aws-sdk/client-cognito-identity-provider';
@@ -27,18 +28,13 @@ function parseUser(event: APIGatewayProxyEvent): User {
 }
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-  console.log('Event:', JSON.stringify(event, null, 2));
-
   try {
     // パスパラメータからshopIdを取得
     const shopId = event.pathParameters?.shopId;
     if (!shopId) {
       return {
         statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
+        headers: getCorsHeaders(event),
         body: JSON.stringify({
           success: false,
           error: 'shopIdが指定されていません',
@@ -48,7 +44,6 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
     // ユーザー情報を取得
     const user = parseUser(event);
-    console.log('User:', user);
 
     // 権限チェック: system-admin または organization-admin
     const isSystemAdmin = user.groups.includes('system-admin');
@@ -57,10 +52,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     if (!isSystemAdmin && !isOrganizationAdmin) {
       return {
         statusCode: 403,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
+        headers: getCorsHeaders(event),
         body: JSON.stringify({
           success: false,
           error: 'パスワードリセットは管理者のみ実行できます',
@@ -77,10 +69,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     if (!shopResult.Item) {
       return {
         statusCode: 404,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
+        headers: getCorsHeaders(event),
         body: JSON.stringify({
           success: false,
           error: '販売店が見つかりません',
@@ -94,10 +83,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     if (isOrganizationAdmin && shop.organizationId !== user.organizationId) {
       return {
         statusCode: 403,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
+        headers: getCorsHeaders(event),
         body: JSON.stringify({
           success: false,
           error: '他組織の販売店のパスワードリセットは実行できません',
@@ -109,10 +95,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     if (!shop.email) {
       return {
         statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
+        headers: getCorsHeaders(event),
         body: JSON.stringify({
           success: false,
           error: '販売店のメールアドレスが登録されていません',
@@ -120,22 +103,15 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       };
     }
 
-    console.log('Resetting password for user:', shop.email);
-
     // Cognitoでパスワードリセットを実行
     await cognitoClient.send(new AdminResetUserPasswordCommand({
       UserPoolId: process.env.COGNITO_USER_POOL_ID,
       Username: shop.email,
     }));
 
-    console.log('Password reset email sent successfully to:', shop.email);
-
     return {
       statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
+      headers: getCorsHeaders(event),
       body: JSON.stringify({
         success: true,
         message: `パスワードリセットメールを ${shop.email} に送信しました`,
@@ -147,16 +123,13 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       }),
     };
   } catch (error: any) {
-    console.error('Error resetting password:', error);
+    console.error('Error resetting password');
 
     // Cognitoエラーの場合
     if (error.name === 'UserNotFoundException') {
       return {
         statusCode: 404,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
+        headers: getCorsHeaders(event),
         body: JSON.stringify({
           success: false,
           error: 'ユーザーが見つかりません',
@@ -167,10 +140,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     if (error.name === 'InvalidParameterException') {
       return {
         statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
+        headers: getCorsHeaders(event),
         body: JSON.stringify({
           success: false,
           error: '無効なパラメータです',
@@ -180,13 +150,10 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
     return {
       statusCode: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
+      headers: getCorsHeaders(event),
       body: JSON.stringify({
         success: false,
-        error: error.message || 'パスワードリセットに失敗しました',
+        error: 'パスワードリセットに失敗しました',
       }),
     };
   }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { X, CheckCircle, Copy, Eye, EyeOff, ExternalLink } from 'lucide-react';
+import { X, CheckCircle, Copy, ExternalLink } from 'lucide-react';
 
 interface OrganizationCreatedModalProps {
   isOpen: boolean;
@@ -10,17 +10,16 @@ interface OrganizationCreatedModalProps {
     organizationId: string;
     organizationName: string;
     email: string;
-    tempPassword: string;
     loginUrl: string;
+    message?: string;
   } | null;
 }
 
-export default function OrganizationCreatedModal({ 
-  isOpen, 
-  onClose, 
-  organizationInfo 
+export default function OrganizationCreatedModal({
+  isOpen,
+  onClose,
+  organizationInfo
 }: OrganizationCreatedModalProps) {
-  const [showPassword, setShowPassword] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const handleCopyCredentials = async () => {
@@ -30,8 +29,8 @@ export default function OrganizationCreatedModal({
 組織名: ${organizationInfo.organizationName}
 ログインURL: ${organizationInfo.loginUrl}
 メールアドレス: ${organizationInfo.email}
-パスワード: ${organizationInfo.tempPassword}
 
+仮パスワードは招待メールに記載されています。
 初回ログイン後、パスワードを変更してください。
     `.trim();
 
@@ -41,18 +40,6 @@ export default function OrganizationCreatedModal({
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
       console.error('コピーに失敗しました:', error);
-    }
-  };
-
-  const handleCopyPassword = async () => {
-    if (!organizationInfo) return;
-    
-    try {
-      await navigator.clipboard.writeText(organizationInfo.tempPassword);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
-      console.error('パスワードのコピーに失敗しました:', error);
     }
   };
 
@@ -90,7 +77,7 @@ export default function OrganizationCreatedModal({
           {/* ログイン情報 */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium text-gray-900">ログイン情報</h3>
-            
+
             <div className="bg-gray-50 rounded-lg p-4 space-y-3">
               {/* 組織名 */}
               <div>
@@ -133,29 +120,14 @@ export default function OrganizationCreatedModal({
                 </div>
               </div>
 
-              {/* パスワード */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  初期パスワード
-                </label>
-                <div className="flex items-center space-x-2">
-                  <div className="flex-1 text-sm text-gray-900 font-mono bg-white px-2 py-1 rounded border">
-                    {showPassword ? organizationInfo.tempPassword : '••••••••'}
-                  </div>
-                  <button
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
-                    title={showPassword ? 'パスワードを隠す' : 'パスワードを表示'}
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                  <button
-                    onClick={handleCopyPassword}
-                    className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
-                    title="パスワードをコピー"
-                  >
-                    <Copy className="w-4 h-4" />
-                  </button>
+              {/* 招待メール通知 */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <div className="text-blue-800 text-sm">
+                  <p className="font-medium">招待メールが送信されました</p>
+                  <p className="text-xs mt-1">
+                    仮パスワードが記載された招待メールが {organizationInfo.email} に送信されました。
+                    初回ログイン時にパスワードの変更が求められます。
+                  </p>
                 </div>
               </div>
             </div>
@@ -168,8 +140,7 @@ export default function OrganizationCreatedModal({
               <div className="text-yellow-800 text-sm">
                 <p className="font-medium mb-1">重要な注意事項</p>
                 <ul className="space-y-1 text-xs">
-                  <li>• このログイン情報は再表示できません</li>
-                  <li>• 組織管理者に安全に送信してください</li>
+                  <li>• 招待メールが届かない場合は迷惑メールフォルダを確認してください</li>
                   <li>• 初回ログイン後、パスワードを変更してください</li>
                 </ul>
               </div>
@@ -181,8 +152,8 @@ export default function OrganizationCreatedModal({
             <button
               onClick={handleCopyCredentials}
               className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-                copied 
-                  ? 'bg-green-100 text-green-800 border border-green-200' 
+                copied
+                  ? 'bg-green-100 text-green-800 border border-green-200'
                   : 'bg-blue-600 text-white hover:bg-blue-700'
               }`}
             >

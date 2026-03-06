@@ -49,6 +49,11 @@ export class ApiStack extends cdk.Stack {
     } = props;
 
     // 共通の環境変数
+    // CORS許可オリジン
+    const allowedOrigins = environment === 'dev'
+      ? 'http://localhost:3000,http://localhost:3001,https://main.d3vnoskfyyh2d2.amplifyapp.com'
+      : 'https://main.d3vnoskfyyh2d2.amplifyapp.com';
+
     const commonEnvironment = {
       S3_BUCKET_NAME: videoBucket.bucketName,
       ASSETS_BUCKET_NAME: assetBucket.bucketName,
@@ -62,8 +67,9 @@ export class ApiStack extends cdk.Stack {
       COGNITO_USER_POOL_ID: userPoolId,
       SNS_TOPIC_ARN: snsTopicArn || '',
       FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:3001',
-      LOGIN_URL: process.env.FRONTEND_URL || 'http://localhost:3001', // ログインURL（フロントエンドURLと同じ）
+      LOGIN_URL: process.env.FRONTEND_URL || 'http://localhost:3001',
       ENVIRONMENT: environment,
+      ALLOWED_ORIGINS: allowedOrigins,
     };
 
     // Lambda関数: generateUploadUrl
@@ -401,7 +407,33 @@ export class ApiStack extends cdk.Stack {
     videoBucket.grantReadWrite(deleteVideoFn);
     assetBucket.grantReadWrite(deleteVideoFn);
 
-    // DynamoDB権限の付与
+    // DynamoDB権限の付与（読み取り専用）
+    const dynamoTableResources = [
+      `arn:aws:dynamodb:${this.region}:${accountId}:table/${videoMetadataTableName}`,
+      `arn:aws:dynamodb:${this.region}:${accountId}:table/${videoMetadataTableName}/index/*`,
+      `arn:aws:dynamodb:${this.region}:${accountId}:table/${billingTableName}`,
+      `arn:aws:dynamodb:${this.region}:${accountId}:table/${billingTableName}/index/*`,
+      `arn:aws:dynamodb:${this.region}:${accountId}:table/${organizationTableName}`,
+      `arn:aws:dynamodb:${this.region}:${accountId}:table/${organizationTableName}/index/*`,
+      `arn:aws:dynamodb:${this.region}:${accountId}:table/${shopTableName}`,
+      `arn:aws:dynamodb:${this.region}:${accountId}:table/${shopTableName}/index/*`,
+      `arn:aws:dynamodb:${this.region}:${accountId}:table/${approvalRequestTableName}`,
+      `arn:aws:dynamodb:${this.region}:${accountId}:table/${approvalRequestTableName}/index/*`,
+      `arn:aws:dynamodb:${this.region}:${accountId}:table/${userShopRelationTableName}`,
+      `arn:aws:dynamodb:${this.region}:${accountId}:table/${userShopRelationTableName}/index/*`,
+    ];
+
+    const dynamoReadOnlyPolicy = new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        'dynamodb:GetItem',
+        'dynamodb:Query',
+        'dynamodb:Scan',
+      ],
+      resources: dynamoTableResources,
+    });
+
+    // DynamoDB権限の付与（読み書き）
     const dynamoReadWritePolicy = new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
       actions: [
@@ -412,71 +444,84 @@ export class ApiStack extends cdk.Stack {
         'dynamodb:Query',
         'dynamodb:Scan',
       ],
-      resources: [
-        `arn:aws:dynamodb:${this.region}:${accountId}:table/${videoMetadataTableName}`,
-        `arn:aws:dynamodb:${this.region}:${accountId}:table/${videoMetadataTableName}/index/*`,
-        `arn:aws:dynamodb:${this.region}:${accountId}:table/${billingTableName}`,
-        `arn:aws:dynamodb:${this.region}:${accountId}:table/${billingTableName}/index/*`,
-        `arn:aws:dynamodb:${this.region}:${accountId}:table/${organizationTableName}`,
-        `arn:aws:dynamodb:${this.region}:${accountId}:table/${organizationTableName}/index/*`,
-        `arn:aws:dynamodb:${this.region}:${accountId}:table/${shopTableName}`,
-        `arn:aws:dynamodb:${this.region}:${accountId}:table/${shopTableName}/index/*`,
-        `arn:aws:dynamodb:${this.region}:${accountId}:table/${approvalRequestTableName}`,
-        `arn:aws:dynamodb:${this.region}:${accountId}:table/${approvalRequestTableName}/index/*`,
-        `arn:aws:dynamodb:${this.region}:${accountId}:table/${userShopRelationTableName}`,
-        `arn:aws:dynamodb:${this.region}:${accountId}:table/${userShopRelationTableName}/index/*`,
-      ],
+      resources: dynamoTableResources,
     });
 
+    // 読み取り専用Lambda関数
+    listVideosFn.addToRolePolicy(dynamoReadOnlyPolicy);
+    getVideoDetailFn.addToRolePolicy(dynamoReadOnlyPolicy);
+    getVideoDetailPublicFn.addToRolePolicy(dynamoReadOnlyPolicy);
+    getAdminStatsFn.addToRolePolicy(dynamoReadOnlyPolicy);
+    listAllVideosFn.addToRolePolicy(dynamoReadOnlyPolicy);
+    listOrganizationsFn.addToRolePolicy(dynamoReadOnlyPolicy);
+    getUserShopsFn.addToRolePolicy(dynamoReadOnlyPolicy);
+    getShopStatsFn.addToRolePolicy(dynamoReadOnlyPolicy);
+    getSystemStatsFn.addToRolePolicy(dynamoReadOnlyPolicy);
+    getOrganizationStatsFn.addToRolePolicy(dynamoReadOnlyPolicy);
+    getPendingApprovalsFn.addToRolePolicy(dynamoReadOnlyPolicy);
+    getApprovalRequestFn.addToRolePolicy(dynamoReadOnlyPolicy);
+    getOrganizationAdminFn.addToRolePolicy(dynamoReadOnlyPolicy);
+    resetShopPasswordFn.addToRolePolicy(dynamoReadOnlyPolicy);
+    resetOrganizationPasswordFn.addToRolePolicy(dynamoReadOnlyPolicy);
+
+    // 読み書きLambda関数
     generateUploadUrlFn.addToRolePolicy(dynamoReadWritePolicy);
-    listVideosFn.addToRolePolicy(dynamoReadWritePolicy);
-    getVideoDetailFn.addToRolePolicy(dynamoReadWritePolicy);
     deleteVideoFn.addToRolePolicy(dynamoReadWritePolicy);
-    getVideoDetailPublicFn.addToRolePolicy(dynamoReadWritePolicy);
-    getAdminStatsFn.addToRolePolicy(dynamoReadWritePolicy);
-    listAllVideosFn.addToRolePolicy(dynamoReadWritePolicy);
-    listOrganizationsFn.addToRolePolicy(dynamoReadWritePolicy);
     createOrganizationFn.addToRolePolicy(dynamoReadWritePolicy);
     updateOrganizationFn.addToRolePolicy(dynamoReadWritePolicy);
     deleteOrganizationFn.addToRolePolicy(dynamoReadWritePolicy);
     createShopFn.addToRolePolicy(dynamoReadWritePolicy);
     updateShopFn.addToRolePolicy(dynamoReadWritePolicy);
-    resetShopPasswordFn.addToRolePolicy(dynamoReadWritePolicy);
-    getOrganizationAdminFn.addToRolePolicy(dynamoReadWritePolicy);
-    resetOrganizationPasswordFn.addToRolePolicy(dynamoReadWritePolicy);
     deleteShopFn.addToRolePolicy(dynamoReadWritePolicy);
     createApprovalRequestFn.addToRolePolicy(dynamoReadWritePolicy);
     submitApprovalFormFn.addToRolePolicy(dynamoReadWritePolicy);
-    getPendingApprovalsFn.addToRolePolicy(dynamoReadWritePolicy);
-    getApprovalRequestFn.addToRolePolicy(dynamoReadWritePolicy);
     approveRequestFn.addToRolePolicy(dynamoReadWritePolicy);
     rejectRequestFn.addToRolePolicy(dynamoReadWritePolicy);
-    getUserShopsFn.addToRolePolicy(dynamoReadWritePolicy);
-    getShopStatsFn.addToRolePolicy(dynamoReadWritePolicy);
-    getSystemStatsFn.addToRolePolicy(dynamoReadWritePolicy);
-    getOrganizationStatsFn.addToRolePolicy(dynamoReadWritePolicy);
 
-    // Cognito権限（承認Lambda用）
-    const cognitoAdminPolicy = new iam.PolicyStatement({
+    // Cognito権限（ユーザー作成用: createOrganization, createShop, approveRequest）
+    const cognitoUserPoolArn = `arn:aws:cognito-idp:${this.region}:${accountId}:userpool/${userPoolId}`;
+
+    const cognitoCreateUserPolicy = new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
       actions: [
         'cognito-idp:AdminCreateUser',
         'cognito-idp:AdminAddUserToGroup',
-        'cognito-idp:AdminSetUserPassword',
         'cognito-idp:AdminGetUser',
         'cognito-idp:AdminUpdateUserAttributes',
-        'cognito-idp:AdminResetUserPassword',
-        'cognito-idp:AdminListGroupsForUser', // マルチロール対応: グループ確認に必要
+        'cognito-idp:AdminListGroupsForUser',
       ],
-      resources: [`arn:aws:cognito-idp:${this.region}:${accountId}:userpool/${userPoolId}`],
+      resources: [cognitoUserPoolArn],
     });
-    
-    approveRequestFn.addToRolePolicy(cognitoAdminPolicy);
-    createOrganizationFn.addToRolePolicy(cognitoAdminPolicy);
-    createShopFn.addToRolePolicy(cognitoAdminPolicy);
-    resetShopPasswordFn.addToRolePolicy(cognitoAdminPolicy);
-    getOrganizationAdminFn.addToRolePolicy(cognitoAdminPolicy);
-    resetOrganizationPasswordFn.addToRolePolicy(cognitoAdminPolicy);
+
+    createOrganizationFn.addToRolePolicy(cognitoCreateUserPolicy);
+    createShopFn.addToRolePolicy(cognitoCreateUserPolicy);
+    approveRequestFn.addToRolePolicy(cognitoCreateUserPolicy);
+
+    // Cognito権限（パスワードリセット用）
+    const cognitoResetPasswordPolicy = new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        'cognito-idp:AdminResetUserPassword',
+        'cognito-idp:AdminGetUser',
+      ],
+      resources: [cognitoUserPoolArn],
+    });
+
+    resetShopPasswordFn.addToRolePolicy(cognitoResetPasswordPolicy);
+    resetOrganizationPasswordFn.addToRolePolicy(cognitoResetPasswordPolicy);
+
+    // Cognito権限（ユーザー検索用: getOrganizationAdmin, resetOrganizationPassword）
+    const cognitoListUsersPolicy = new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        'cognito-idp:ListUsers',
+        'cognito-idp:AdminGetUser',
+      ],
+      resources: [cognitoUserPoolArn],
+    });
+
+    getOrganizationAdminFn.addToRolePolicy(cognitoListUsersPolicy);
+    resetOrganizationPasswordFn.addToRolePolicy(cognitoListUsersPolicy);
 
     // SNS権限（メール送信用）
     if (snsTopicArn) {
@@ -524,16 +569,15 @@ export class ApiStack extends cdk.Stack {
         throttlingRateLimit: 1000,
       },
       defaultCorsPreflightOptions: {
-        allowOrigins: [
-          'http://localhost:3000',
-          'http://localhost:3001',
-          'https://localhost:3000',
-          'https://localhost:3001',
-          'https://main.d3vnoskfyyh2d2.amplifyapp.com',
-          'https://*.amazonaws.com',
-          'https://*.cloudfront.net',
-          'https://*.amplifyapp.com',
-        ],
+        allowOrigins: environment === 'dev'
+          ? [
+              'http://localhost:3000',
+              'http://localhost:3001',
+              'https://main.d3vnoskfyyh2d2.amplifyapp.com',
+            ]
+          : [
+              'https://main.d3vnoskfyyh2d2.amplifyapp.com',
+            ],
         allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
         allowHeaders: [
           'Content-Type',
@@ -541,7 +585,6 @@ export class ApiStack extends cdk.Stack {
           'X-Amz-Date',
           'X-Api-Key',
           'X-Amz-Security-Token',
-          'X-Development-Mode',
         ],
         allowCredentials: true,
         maxAge: cdk.Duration.days(10),

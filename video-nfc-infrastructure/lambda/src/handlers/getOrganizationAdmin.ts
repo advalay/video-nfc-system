@@ -1,9 +1,10 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { parseAuthUser } from '../lib/permissions';
-import { handleError, logInfo } from '../lib/errorHandler';
+import { handleError, logInfo, getCorsHeaders } from '../lib/errorHandler';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand } from '@aws-sdk/lib-dynamodb';
 import { CognitoIdentityProviderClient, ListUsersCommand, AdminGetUserCommand } from '@aws-sdk/client-cognito-identity-provider';
+import { validateOrganizationId } from '../lib/validation';
 
 const dynamoClient = new DynamoDBClient({});
 const dynamodb = DynamoDBDocumentClient.from(dynamoClient);
@@ -25,6 +26,14 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     const organizationId = event.pathParameters?.organizationId;
     if (!organizationId) {
       throw new Error('組織IDが指定されていません');
+    }
+
+    if (!validateOrganizationId(organizationId)) {
+      return {
+        statusCode: 400,
+        headers: getCorsHeaders(event),
+        body: JSON.stringify({ success: false, error: '組織IDの形式が不正です' }),
+      };
     }
 
     // DynamoDBから組織情報を取得
@@ -54,8 +63,8 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       }));
 
       // グループをチェック
-      const groups = getUserResult.UserAttributes?.find(attr => attr.Name === 'cognito:groups')?.Value || '';
-      const role = getUserResult.UserAttributes?.find(attr => attr.Name === 'custom:role')?.Value;
+      const groups = getUserResult.UserAttributes?.find((attr: any) => attr.Name === 'cognito:groups')?.Value || '';
+      const role = getUserResult.UserAttributes?.find((attr: any) => attr.Name === 'custom:role')?.Value;
 
       if (role === 'organization-admin' || groups.includes('organization-admin')) {
         adminUser = cognitoUser;
@@ -66,10 +75,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     if (!adminUser) {
       return {
         statusCode: 404,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
+        headers: getCorsHeaders(event),
         body: JSON.stringify({
           success: false,
           error: '組織管理者が見つかりません',
@@ -77,17 +83,14 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       };
     }
 
-    const email = adminUser.Attributes?.find(attr => attr.Name === 'email')?.Value || '';
+    const email = adminUser.Attributes?.find((attr: any) => attr.Name === 'email')?.Value || '';
     const createdAt = adminUser.UserCreateDate?.toISOString() || '';
 
     logInfo('組織管理者情報取得成功', { organizationId, email }, event);
 
     return {
       statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
+      headers: getCorsHeaders(event),
       body: JSON.stringify({
         success: true,
         data: {

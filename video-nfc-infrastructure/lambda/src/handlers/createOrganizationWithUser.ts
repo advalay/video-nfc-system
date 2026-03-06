@@ -1,11 +1,12 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { parseAuthUser } from '../lib/permissions';
-import { handleError, logInfo } from '../lib/errorHandler';
+import { handleError, logInfo, getCorsHeaders } from '../lib/errorHandler';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
-import { CognitoIdentityProviderClient, AdminCreateUserCommand, AdminAddUserToGroupCommand, AdminSetUserPasswordCommand } from '@aws-sdk/client-cognito-identity-provider';
+import { CognitoIdentityProviderClient, AdminCreateUserCommand, AdminAddUserToGroupCommand } from '@aws-sdk/client-cognito-identity-provider';
 import { v4 as uuidv4 } from 'uuid';
 import { generateTempPassword } from '../lib/password';
+import { parseBody, createOrganizationWithUserSchema } from '../lib/validation';
 
 const client = new DynamoDBClient({});
 const dynamodb = DynamoDBDocumentClient.from(client);
@@ -24,21 +25,9 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       throw new Error('組織の作成はシステム管理者のみ実行できます');
     }
     
-    const body = JSON.parse(event.body || '{}');
-    
-    // バリデーション
-    if (!body.organizationType || !['agency', 'store'].includes(body.organizationType)) {
-      throw new Error('組織タイプが不正です（"agency" または "store" を指定してください）');
-    }
-    
-    if (!body.organizationName || !body.email) {
-      throw new Error('必須項目が不足しています（organizationName, email は必須です）');
-    }
-    
-    // 販売店の場合、parentIdは必須
-    if (body.organizationType === 'store' && !body.parentId) {
-      throw new Error('販売店にはparentId（親組織ID）が必須です');
-    }
+    const result = parseBody(createOrganizationWithUserSchema, event);
+    if (!result.success) return result.response;
+    const body = result.data;
 
     const organizationId = `org-${body.organizationType}-${uuidv4().slice(0, 8)}`;
     const now = new Date().toISOString();
@@ -48,7 +37,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     const username = body.email; // メールアドレスをユーザー名として使用
     
     try {
-      // ユーザー作成
+      // ユーザー作成（招待メールをCognitoが自動送信）
       await cognitoClient.send(new AdminCreateUserCommand({
         UserPoolId: USER_POOL_ID,
         Username: username,
@@ -60,7 +49,6 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
           { Name: 'custom:role', Value: body.organizationType === 'agency' ? 'organization-admin' : 'shop-admin' },
         ],
         TemporaryPassword: tempPassword,
-        MessageAction: 'SUPPRESS', // メール送信を抑制
       }));
 
       // ユーザーをグループに追加
@@ -71,28 +59,16 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         GroupName: groupName,
       }));
 
-      // パスワードを永続化（初回ログイン時に変更を強制しない）
-      await cognitoClient.send(new AdminSetUserPasswordCommand({
-        UserPoolId: USER_POOL_ID,
-        Username: username,
-        Password: tempPassword,
-        Permanent: true,
-      }));
-
       logInfo('ユーザーアカウント作成成功', { username, organizationId, groupName }, event);
 
     } catch (cognitoError: any) {
       logInfo('Cognitoユーザー作成エラー', { error: cognitoError.message }, event);
       return {
         statusCode: 500,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
+        headers: getCorsHeaders(event),
         body: JSON.stringify({
           success: false,
-          error: 'ユーザーアカウントの作成に失敗しました',
-          details: cognitoError.message
+          error: 'ユーザーアカウントの作成に失敗しました'
         }),
       };
     }
@@ -129,15 +105,10 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       logInfo('DynamoDB組織作成エラー', { error: dbError.message }, event);
       return {
         statusCode: 500,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
+        headers: getCorsHeaders(event),
         body: JSON.stringify({
           success: false,
-          error: '組織データの保存に失敗しました',
-          details: dbError.message,
-          note: 'ユーザーアカウントは作成されています'
+          error: '組織データの保存に失敗しました'
         }),
       };
     }
@@ -146,19 +117,15 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     
     return {
       statusCode: 201,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
+      headers: getCorsHeaders(event),
       body: JSON.stringify({
         success: true,
         data: {
           organization,
           userAccount: {
             email: body.email,
-            temporaryPassword: tempPassword,
             role: body.organizationType === 'agency' ? 'organization-admin' : 'shop-admin',
-            note: '初回ログイン時にパスワードの変更が必要です',
+            message: '招待メールが送信されました。メールに記載された仮パスワードでログインしてください。',
           },
         },
       }),

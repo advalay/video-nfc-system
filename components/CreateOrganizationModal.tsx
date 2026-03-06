@@ -11,8 +11,8 @@ interface CreateOrganizationModalProps {
     organizationId: string;
     organizationName: string;
     email: string;
-    tempPassword: string;
     loginUrl: string;
+    message?: string;
   }) => void;
 }
 
@@ -92,8 +92,8 @@ export default function CreateOrganizationModal({
         organizationId: response.organizationId,
         organizationName: response.organizationName,
         email: response.email,
-        tempPassword: response.tempPassword,
-        loginUrl: response.loginUrl || window.location.origin + '/login'
+        loginUrl: response.loginUrl || window.location.origin + '/login',
+        message: response.message
       });
       
       onClose();

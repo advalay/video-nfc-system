@@ -13,8 +13,8 @@ interface CreateShopModalProps {
     shopId: string;
     shopName: string;
     email: string;
-    tempPassword: string;
     loginUrl: string;
+    message?: string;
   }) => void;
 }
 
@@ -98,8 +98,8 @@ export default function CreateShopModal({
         shopId: response.shopId,
         shopName: response.shopName,
         email: response.email,
-        tempPassword: response.tempPassword || '', // undefinedの場合は空文字列
-        loginUrl: response.loginUrl || window.location.origin + '/login'
+        loginUrl: response.loginUrl || window.location.origin + '/login',
+        message: response.message,
       });
       
       onClose();

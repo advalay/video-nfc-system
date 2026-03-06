@@ -57,23 +57,6 @@ export function useAuth(): UseAuthResult {
       // フォールバック: currentUserのattributesも試す
       const attributes = (currentUser as any).attributes || {};
       
-      // デバッグログ: 本番環境での値を確認
-      console.log('🔍 [useAuth] IDトークンから取得した値:', {
-        organizationId,
-        shopId,
-        organizationName,
-        shopName,
-        groups,
-        email: idToken?.payload?.email
-      });
-      
-      console.log('🔍 [useAuth] Attributesから取得した値:', {
-        organizationId: attributes['custom:organizationId'],
-        shopId: attributes['custom:shopId'],
-        organizationName: attributes['custom:organizationName'],
-        shopName: attributes['custom:shopName']
-      });
-      
       const userData = {
         id: currentUser.username,
         email: (idToken?.payload?.email as string) || attributes.email || currentUser.username,
@@ -84,16 +67,13 @@ export function useAuth(): UseAuthResult {
         shopName: shopName || attributes['custom:shopName'],
       };
       
-      console.log('🔍 [useAuth] 最終的なuserData:', userData);
-      
       setUser(userData);
       setIsLoading(false);
     } catch (error) {
-      console.log('認証状態確認エラー:', error);
+      console.error('Auth check failed');
       // 未認証の場合
       setUser(null);
       setIsLoading(false);
-      console.log('checkAuthStatus: エラーで完了');
     }
   };
 

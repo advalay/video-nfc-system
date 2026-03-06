@@ -1,17 +1,11 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
+import { parseAuthUser } from '../lib/permissions';
+import { getCorsHeaders } from '../lib/errorHandler';
 
 const client = new DynamoDBClient({});
 const dynamodb = DynamoDBDocumentClient.from(client);
-
-const CORS_HEADERS = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Development-Mode',
-    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
-    'Access-Control-Allow-Credentials': 'false',
-    'Access-Control-Max-Age': '86400'
-};
 
 interface Video {
     videoId: string;
@@ -48,39 +42,24 @@ interface OrganizationStat {
 }
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-    console.log('Event:', JSON.stringify(event, null, 2));
-
     try {
         // OPTIONS リクエストの処理
         if (event.httpMethod === 'OPTIONS') {
             return {
                 statusCode: 200,
-                headers: CORS_HEADERS,
+                headers: getCorsHeaders(event),
                 body: JSON.stringify({ message: 'CORS preflight' })
             };
         }
 
-        // 開発環境では認証をスキップ
-        let userGroups: string[] = [];
-        console.log('Environment:', process.env.ENVIRONMENT);
-        console.log('Development mode header:', event.headers?.['x-development-mode']);
-        
-        if (process.env.ENVIRONMENT === 'dev' && event.headers?.['x-development-mode'] === 'true') {
-            console.log('Development mode: Skipping authentication');
-            userGroups = ['system-admin'];
-        } else {
-            // 認証情報からユーザー情報を取得
-            const claims = event.requestContext?.authorizer?.claims || {};
-            userGroups = claims['cognito:groups'] ? (Array.isArray(claims['cognito:groups']) ? claims['cognito:groups'] : [claims['cognito:groups']]) : [];
-        }
-        
-        console.log('User groups:', userGroups);
+        // 認証情報からユーザー情報を取得
+        const user = parseAuthUser(event);
 
         // システム管理者のみアクセス可能
-        if (!userGroups.includes('system-admin')) {
+        if (!user.groups.includes('system-admin')) {
             return {
                 statusCode: 403,
-                headers: CORS_HEADERS,
+                headers: getCorsHeaders(event),
                 body: JSON.stringify({
                     success: false,
                     error: {
@@ -100,14 +79,8 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
             TableName: process.env.DYNAMODB_TABLE_ORGANIZATION!,
         };
 
-        console.log('DynamoDB scan parameters:', JSON.stringify(organizationsParams, null, 2));
         const organizationsResult = await dynamodb.send(new ScanCommand(organizationsParams));
-        
-        // DynamoDBの生データをログ出力
-        console.log('Raw DynamoDB Organizations:');
-        console.log('Items count:', organizationsResult.Items?.length || 0);
-        console.log(JSON.stringify(organizationsResult.Items, null, 2));
-        
+
         const organizations = (organizationsResult.Items || []).map(item => {
             // shopsフィールドを取得
             const shops = Array.isArray(item.shops) ? item.shops : [];
@@ -118,7 +91,6 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
                 status: shop.status
             }));
             
-            console.log(`Raw DynamoDB item:`, JSON.stringify(item, null, 2));
             const org = {
                 organizationId: item.organizationId as string,
                 organizationName: item.organizationName as string,
@@ -126,23 +98,16 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
                 createdAt: item.createdAt as string,
                 shops: orgShops
             };
-            console.log(`Organization ${org.organizationId}: organizationName=${org.organizationName}, shops=${orgShops.length}`);
             return org;
         });
         
-        console.log('Organizations after conversion:');
-        console.log(JSON.stringify(organizations, null, 2));
-
         // 販売店データも取得
         const shopsParams = {
             TableName: process.env.DYNAMODB_TABLE_SHOP!,
         };
 
-        console.log('Shop scan parameters:', JSON.stringify(shopsParams, null, 2));
         const shopsResult = await dynamodb.send(new ScanCommand(shopsParams));
-        console.log('Shop scan result count:', shopsResult.Items?.length || 0);
         const shops = (shopsResult.Items || []).map(item => {
-            console.log('Raw Shop DynamoDB item:', JSON.stringify(item, null, 2));
             const shop = {
                 shopId: item.shopId as string,
                 shopName: item.shopName as string,
@@ -153,24 +118,9 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
                 contactEmail: item.contactEmail as string,
                 contactPhone: item.contactPhone as string
             };
-            console.log('Processing shop item:', JSON.stringify(shop, null, 2));
             return shop;
         });
         
-        console.log('Raw shop items from DynamoDB:', JSON.stringify(shopsResult.Items?.slice(0, 2), null, 2));
-        console.log('Converted shops:', JSON.stringify(shops.slice(0, 2), null, 2));
-        
-        console.log('Shops data after conversion:');
-        console.log(JSON.stringify(shops, null, 2));
-        
-        console.log('Organizations data after conversion:');
-        console.log(JSON.stringify(organizations, null, 2));
-        
-        // 販売店データの確認
-        console.log('All shops:', JSON.stringify(shops, null, 2));
-        console.log('ORG_A shops:', shops.filter(s => s.organizationId === 'ORG_A'));
-        console.log('ORG_B shops:', shops.filter(s => s.organizationId === 'ORG_B'));
-
         // 全動画を取得
         const videosParams = {
             TableName: process.env.DYNAMODB_TABLE_VIDEO!,
@@ -220,13 +170,6 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
                 index === self.findIndex(s => s.shopId === shop.shopId)
             );
             
-            console.log(`Organization ${org.organizationId}:`);
-            console.log(`  - organizationName: ${org.organizationName}`);
-            console.log(`  - Shops from org table: ${orgShopsFromOrg.length}`);
-            console.log(`  - Shops from shop table: ${orgShopsFromShopTable.length}`);
-            console.log(`  - Total unique shops: ${uniqueShops.length}`);
-            console.log(`  - Shop IDs: ${uniqueShops.map(s => s.shopId).join(', ')}`);
-            
             organizationStatsMap[org.organizationId] = {
                 organizationId: org.organizationId,
                 organizationName: org.organizationName,
@@ -238,13 +181,8 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
                 weeklyVideos: 0,
                 shopStats: []
             };
-            console.log(`Initialized organizationStatsMap for ${org.organizationId}: organizationName=${org.organizationName}`);
-            
-            console.log(`Final shopCount for ${org.organizationId}: ${organizationStatsMap[org.organizationId].shopCount}`);
-
             // 販売店ごとの統計も初期化
             uniqueShops.forEach(shop => {
-                console.log(`Adding shop to ${org.organizationId}: shopId=${shop.shopId}, shopName=${shop.shopName}`);
                 organizationStatsMap[org.organizationId].shopStats.push({
                     shopId: shop.shopId,
                     shopName: shop.shopName,
@@ -271,21 +209,13 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         startOfWeek.setDate(now.getDate() + daysToMonday);
         startOfWeek.setHours(0, 0, 0, 0);
 
-        // 動画データから統計を計算
-        console.log('Processing videos:', allVideos.length);
-        console.log('Available organizations:', Object.keys(organizationStatsMap));
-        console.log('Sample video data:', allVideos.slice(0, 3));
-        
         // すべての動画を処理
         allVideos.forEach(video => {
             const orgId = video.organizationId;
             const shopId = video.shopId;
 
-            console.log(`Processing video: orgId=${orgId}, shopId=${shopId}, fileSize=${video.fileSize}`);
-
             // SYSTEM動画はスキップ（カウントしない）
             if (orgId === 'SYSTEM') {
-                console.log('Skipping SYSTEM video:', video.videoId);
                 return;
             }
             
@@ -313,14 +243,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
                     if (videoDate >= startOfWeek) {
                         shopStat.weeklyCount++;
                     }
-                    console.log(`Updated shop stat: ${shopId} -> videos: ${shopStat.videoCount}, size: ${shopStat.totalSize}`);
-                } else {
-                    console.log(`Shop stat not found for: ${shopId} in org: ${orgId}`);
-                    console.log(`Available shops in org ${orgId}:`, organizationStatsMap[orgId].shopStats.map(s => s.shopId));
                 }
-            } else {
-                console.log(`Organization not found: ${orgId}`);
-                console.log(`Available organizations:`, Object.keys(organizationStatsMap));
             }
         });
 
@@ -353,7 +276,6 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         const totalWeeklyVideos = allVideos.filter(video => new Date(video.uploadDate) >= startOfWeek).length;
 
         const organizationStats = Object.values(organizationStatsMap).map(org => {
-            console.log(`Mapping organization: ${org.organizationId}, organizationName: ${org.organizationName}, shopStats: ${org.shopStats.length}`);
             return {
                 organizationId: org.organizationId,
                 organizationName: org.organizationName,
@@ -377,7 +299,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
         return {
             statusCode: 200,
-            headers: CORS_HEADERS,
+            headers: getCorsHeaders(event),
             body: JSON.stringify({
                 success: true,
                 data: {
@@ -394,15 +316,14 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         };
 
     } catch (error: any) {
-        console.error('Error:', error);
+        console.error('getSystemStats error');
         return {
             statusCode: 500,
-            headers: CORS_HEADERS,
+            headers: getCorsHeaders(event),
             body: JSON.stringify({
                 success: false,
                 error: {
-                    message: 'Internal server error',
-                    details: error.message
+                    message: 'Internal server error'
                 }
             })
         };

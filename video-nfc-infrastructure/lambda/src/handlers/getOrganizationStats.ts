@@ -1,15 +1,10 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
+import { getCorsHeaders } from '../lib/errorHandler';
 
 const client = new DynamoDBClient({});
 const dynamodb = DynamoDBDocumentClient.from(client);
-
-const CORS_HEADERS = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
-    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
-};
 
 interface Video {
     videoId: string;
@@ -34,14 +29,12 @@ interface ShopStat {
 }
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-    console.log('Event:', JSON.stringify(event, null, 2));
-
     try {
         // OPTIONS リクエストの処理
         if (event.httpMethod === 'OPTIONS') {
             return {
                 statusCode: 200,
-                headers: CORS_HEADERS,
+                headers: getCorsHeaders(event),
                 body: JSON.stringify({ message: 'CORS preflight' })
             };
         }
@@ -55,7 +48,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         if (!userGroups.includes('organization-admin')) {
             return {
                 statusCode: 403,
-                headers: CORS_HEADERS,
+                headers: getCorsHeaders(event),
                 body: JSON.stringify({
                     success: false,
                     error: {
@@ -68,7 +61,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         if (!userOrganizationId) {
             return {
                 statusCode: 400,
-                headers: CORS_HEADERS,
+                headers: getCorsHeaders(event),
                 body: JSON.stringify({
                     success: false,
                     error: {
@@ -207,7 +200,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
         return {
             statusCode: 200,
-            headers: CORS_HEADERS,
+            headers: getCorsHeaders(event),
             body: JSON.stringify({
                 success: true,
                 data: {
@@ -224,15 +217,14 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         };
 
     } catch (error: any) {
-        console.error('Error:', error);
+        console.error('getOrganizationStats error');
         return {
             statusCode: 500,
-            headers: CORS_HEADERS,
+            headers: getCorsHeaders(event),
             body: JSON.stringify({
                 success: false,
                 error: {
-                    message: 'Internal server error',
-                    details: error.message
+                    message: 'Internal server error'
                 }
             })
         };

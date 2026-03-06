@@ -1,10 +1,11 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { parseAuthUser } from '../lib/permissions';
-import { handleError, logInfo } from '../lib/errorHandler';
+import { handleError, logInfo, getCorsHeaders } from '../lib/errorHandler';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
-import { CognitoIdentityProviderClient, AdminCreateUserCommand, AdminAddUserToGroupCommand, AdminSetUserPasswordCommand, AdminGetUserCommand } from '@aws-sdk/client-cognito-identity-provider';
+import { CognitoIdentityProviderClient, AdminCreateUserCommand, AdminAddUserToGroupCommand, AdminGetUserCommand } from '@aws-sdk/client-cognito-identity-provider';
 import { generateTempPassword } from '../lib/password';
+import { parseBody, createShopSchema } from '../lib/validation';
 
 const client = new DynamoDBClient({});
 const dynamodb = DynamoDBDocumentClient.from(client);
@@ -17,18 +18,15 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     logInfo('販売店作成開始', {}, event);
     
     const user = parseAuthUser(event);
-    const body = JSON.parse(event.body || '{}');
-    
+
+    const result = parseBody(createShopSchema, event);
+    if (!result.success) return result.response;
+    const body = result.data;
+    const { shopName, organizationId, email, contactPerson, contactEmail, contactPhone } = body;
+
     // 権限チェック: system-admin または organization-admin
     if (!user.groups.includes('system-admin') && !user.groups.includes('organization-admin')) {
       throw new Error('販売店の作成は管理者のみ実行できます');
-    }
-    
-    // 必須フィールドの検証
-    const { shopName, organizationId, email, contactPerson, contactEmail, contactPhone } = body;
-    
-    if (!shopName || !organizationId || !email || !contactPerson) {
-      throw new Error('shopName, organizationId, email, contactPerson は必須です');
     }
     
     // organization-adminの場合のみ、自社の販売店のみ作成可能
@@ -78,10 +76,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       logInfo('既存ユーザーのため販売店作成を拒否', { username }, event);
       return {
         statusCode: 409,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
+        headers: getCorsHeaders(event),
         body: JSON.stringify({
           success: false,
           error: 'このメールアドレスは既に登録されています。別のメールアドレスをご使用ください。',
@@ -162,21 +157,17 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       logInfo('DynamoDBトランザクションエラー', { error: dbError.message }, event);
       return {
         statusCode: 500,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
+        headers: getCorsHeaders(event),
         body: JSON.stringify({
           success: false,
-          error: '販売店データの保存に失敗しました',
-          details: dbError.message
+          error: '販売店データの保存に失敗しました'
         }),
       };
     }
 
     // DynamoDB成功後にCognitoユーザーを作成（シンプル版）
     try {
-      // 新規ユーザー作成
+      // 新規ユーザー作成（招待メールをCognitoが自動送信）
       await cognitoClient.send(new AdminCreateUserCommand({
         UserPoolId: USER_POOL_ID,
         Username: username,
@@ -190,7 +181,6 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
           { Name: 'custom:role', Value: 'shop-admin' },
         ],
         TemporaryPassword: tempPassword,
-        MessageAction: 'SUPPRESS', // メール送信を抑制
       }));
 
       // ユーザーをshop-adminグループに追加
@@ -198,14 +188,6 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         UserPoolId: USER_POOL_ID,
         Username: username,
         GroupName: 'shop-admin',
-      }));
-
-      // パスワードを永続化（初回ログイン時に変更を強制しない）
-      await cognitoClient.send(new AdminSetUserPasswordCommand({
-        UserPoolId: USER_POOL_ID,
-        Username: username,
-        Password: tempPassword,
-        Permanent: true,
       }));
 
       logInfo('販売店ユーザーアカウント作成成功', { username, shopId, organizationId }, event);
@@ -254,14 +236,10 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       
       return {
         statusCode: 500,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
+        headers: getCorsHeaders(event),
         body: JSON.stringify({
           success: false,
-          error: 'ユーザーアカウントの作成に失敗しました',
-          details: cognitoError.message
+          error: 'ユーザーアカウントの作成に失敗しました'
         }),
       };
     }
@@ -269,19 +247,15 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     // 成功レスポンス
     return {
       statusCode: 201,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
+      headers: getCorsHeaders(event),
       body: JSON.stringify({
         success: true,
         data: {
           shopId,
           shopName,
           email,
-          tempPassword, // 新規ユーザーのパスワード
-          loginUrl: process.env.LOGIN_URL || 'https://your-app.com/login',
-          message: '販売店と新規ユーザーを作成しました',
+          loginUrl: process.env.LOGIN_URL || process.env.FRONTEND_URL || '',
+          message: '販売店と新規ユーザーを作成しました。招待メールが送信されました。',
         },
       }),
     };

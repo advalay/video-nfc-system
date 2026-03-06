@@ -262,8 +262,8 @@ export default function OrganizationsPage() {
     organizationId: string;
     organizationName: string;
     email: string;
-    tempPassword: string;
     loginUrl: string;
+    message?: string;
   } | null>(null);
 
   // 販売店作成モーダル関連
@@ -274,8 +274,8 @@ export default function OrganizationsPage() {
     shopId: string;
     shopName: string;
     email: string;
-    tempPassword: string;
     loginUrl: string;
+    message?: string;
   } | null>(null);
 
   // 権限チェック
@@ -380,8 +380,8 @@ export default function OrganizationsPage() {
     organizationId: string;
     organizationName: string;
     email: string;
-    tempPassword: string;
     loginUrl: string;
+    message?: string;
   }) => {
     setCreatedOrganizationInfo(organizationInfo);
     setShowCreatedModal(true);
@@ -401,8 +401,8 @@ export default function OrganizationsPage() {
     shopId: string;
     shopName: string;
     email: string;
-    tempPassword: string;
     loginUrl: string;
+    message?: string;
   }) => {
     setCreatedShopInfo(shopInfo);
     setShowShopCreatedModal(true);
