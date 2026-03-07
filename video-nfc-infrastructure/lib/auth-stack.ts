@@ -18,13 +18,18 @@ export class AuthStack extends cdk.Stack {
 
     // Cognito User Pool
     this.userPool = new cognito.UserPool(this, 'UserPool', {
-      userPoolName: `video-nfc-users-${environment}`,
+      userPoolName: `video-nfc-${environment}-users`,
       selfSignUpEnabled: false, // 管理者がユーザーを作成するため
       signInAliases: {
         email: true,
       },
       autoVerify: {
         email: true,
+      },
+      mfa: cognito.Mfa.OPTIONAL,
+      mfaSecondFactor: {
+        sms: true,
+        otp: false,
       },
       passwordPolicy: {
         minLength: 8,
@@ -33,65 +38,94 @@ export class AuthStack extends cdk.Stack {
         requireDigits: true,
         requireSymbols: true,
       },
+      // 既存UserPoolのカスタム属性を維持（Cognitoは一度作成したスキーマ属性を削除できない）
+      customAttributes: {
+        agencyId: new cognito.StringAttribute({ minLen: 1, maxLen: 256, mutable: true }),
+        organizationId: new cognito.StringAttribute({ minLen: 1, maxLen: 256, mutable: true }),
+        shopId: new cognito.StringAttribute({ minLen: 1, maxLen: 256, mutable: true }),
+        role: new cognito.StringAttribute({ minLen: 1, maxLen: 50, mutable: true }),
+        organizationName: new cognito.StringAttribute({ minLen: 1, maxLen: 256, mutable: true }),
+        shopName: new cognito.StringAttribute({ minLen: 1, maxLen: 256, mutable: true }),
+      },
       accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
       removalPolicy: environment === 'prod' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
     });
 
-    // User Pool Client
-    this.userPoolClient = new cognito.UserPoolClient(this, 'UserPoolClient', {
-      userPool: this.userPool,
-      userPoolClientName: `video-nfc-client-${environment}`,
+    // User Pool Client（既存の論理IDを維持するためaddClientを使用）
+    this.userPoolClient = this.userPool.addClient('UserPoolClient', {
+      userPoolClientName: `video-nfc-${environment}-client`,
       generateSecret: false, // ブラウザから直接アクセスするため
       authFlows: {
         adminUserPassword: true,
+        userPassword: true,
         userSrp: true,
         custom: true,
       },
+      preventUserExistenceErrors: true,
+      enableTokenRevocation: true,
+      authSessionValidity: cdk.Duration.minutes(3),
+      accessTokenValidity: cdk.Duration.minutes(1440),
+      idTokenValidity: cdk.Duration.minutes(1440),
+      refreshTokenValidity: cdk.Duration.minutes(43200),
     });
 
     // Groups
     new cognito.CfnUserPoolGroup(this, 'SystemAdminGroup', {
       userPoolId: this.userPool.userPoolId,
       groupName: 'system-admin',
-      description: 'System Administrators',
-      precedence: 0,
+      description: 'システム管理者グループ（全権限）',
+      precedence: 1,
     });
 
     new cognito.CfnUserPoolGroup(this, 'OrganizationAdminGroup', {
       userPoolId: this.userPool.userPoolId,
       groupName: 'organization-admin',
-      description: 'Organization Administrators',
-      precedence: 10,
+      description: '代理店管理者グループ（配下の全販売店を管理）',
+      precedence: 2,
     });
 
-    new cognito.CfnUserPoolGroup(this, 'ShopUserGroup', {
+    new cognito.CfnUserPoolGroup(this, 'ShopAdminGroup', {
       userPoolId: this.userPool.userPoolId,
-      groupName: 'shop-user', // Note: cdk-outputs says ShopUserGroupName: shop-user. But could be shop-admin? README says shop-admin. cdk-outputs says ShopUserGroupName: shop-user. Sticking to cdk-outputs.
-      description: 'Shop Users',
-      precedence: 20,
+      groupName: 'shop-admin',
+      description: '販売店管理者グループ（自店舗を管理）',
+      precedence: 3,
     });
 
-    // Outputs
+    // Outputs（既存のExport名を維持）
     new cdk.CfnOutput(this, 'UserPoolId', {
+      description: 'Cognito User Pool ID',
       value: this.userPool.userPoolId,
-      exportName: `video-nfc-auth-${environment}-UserPoolId`,
+      exportName: `${environment}-UserPoolId`,
     });
 
     new cdk.CfnOutput(this, 'UserPoolClientId', {
+      description: 'Cognito User Pool Client ID',
       value: this.userPoolClient.userPoolClientId,
-      exportName: `video-nfc-auth-${environment}-UserPoolClientId`,
+      exportName: `${environment}-UserPoolClientId`,
+    });
+
+    new cdk.CfnOutput(this, 'UserPoolArn', {
+      description: 'Cognito User Pool ARN',
+      value: this.userPool.userPoolArn,
+      exportName: `${environment}-UserPoolArn`,
     });
 
     new cdk.CfnOutput(this, 'SystemAdminGroupName', {
+      description: 'システム管理者グループ',
       value: 'system-admin',
+      exportName: `${environment}-SystemAdminGroupName`,
     });
 
     new cdk.CfnOutput(this, 'OrganizationAdminGroupName', {
-        value: 'organization-admin',
+      description: '組織管理者グループ',
+      value: 'organization-admin',
+      exportName: `${environment}-OrganizationAdminGroupName`,
     });
 
-    new cdk.CfnOutput(this, 'ShopUserGroupName', {
-        value: 'shop-user',
+    new cdk.CfnOutput(this, 'ShopAdminGroupName', {
+      description: '販売店管理者グループ',
+      value: 'shop-admin',
+      exportName: `${environment}-ShopAdminGroupName`,
     });
   }
 }
