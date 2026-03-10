@@ -60,10 +60,10 @@ export default function UploadPage() {
       return false;
     }
 
-    // サイズチェック (350MB)
-    const maxSize = 350 * 1024 * 1024; // 350MB
+    // サイズチェック (50MB)
+    const maxSize = 50 * 1024 * 1024; // 50MB
     if (file.size > maxSize) {
-      toast.error('ファイルサイズは350MB以下にしてください');
+      toast.error('ファイルサイズは50MB以下にしてください');
       return false;
     }
 
@@ -225,7 +225,7 @@ export default function UploadPage() {
                       </div>
                       <div className="text-sm text-gray-500">
                         <p>対応形式: MP4, MP3</p>
-                        <p>最大サイズ: 350MB</p>
+                        <p>最大サイズ: 50MB</p>
                       </div>
                     </div>
                   )}
