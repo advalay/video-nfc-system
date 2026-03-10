@@ -68,7 +68,7 @@ mainStack.addDependency(authStack);
 
 // Monitoring Stack（CloudWatch Alarms、SNS、Dashboard）
 // アラート送信先メールアドレスを環境変数から取得
-const alertEmail = process.env.ALERT_EMAIL || 'admin@example.com';
+const alertEmail = process.env.ALERT_EMAIL || 'advalay.company@gmail.com';
 
 const monitoringStack = new MonitoringStack(app, `VideoNfcMonitoringStack-${environment}`, {
   ...commonProps,
