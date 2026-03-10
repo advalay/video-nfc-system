@@ -1,15 +1,31 @@
 import { APIGatewayProxyHandler, APIGatewayProxyResult } from 'aws-lambda';
-import AWS from 'aws-sdk';
-import { v4 as uuidv4 } from 'uuid';
+import { S3Client } from '@aws-sdk/client-s3';
+import { createPresignedPost } from '@aws-sdk/s3-presigned-post';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient, PutCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
+import { randomUUID } from 'crypto';
 
-// AWS SDK v2設定（チェックサム問題を回避）
-const s3 = new AWS.S3();
-const dynamodb = new AWS.DynamoDB.DocumentClient();
+const s3Client = new S3Client({});
+const dynamoClient = new DynamoDBClient({});
+const docClient = DynamoDBDocumentClient.from(dynamoClient);
 
 const bucketName = process.env.S3_BUCKET_NAME!;
 const tableName = process.env.DYNAMODB_TABLE_VIDEO!;
 
+const getCorsHeaders = (event: any): Record<string, string> => {
+  const origin = event.headers?.Origin || event.headers?.origin || '';
+  const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').filter(Boolean);
+  const allowedOrigin = allowedOrigins.includes(origin) ? origin : (allowedOrigins[0] || '');
+  return {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Credentials': 'true',
+  };
+};
+
 export const handler: APIGatewayProxyHandler = async (event): Promise<APIGatewayProxyResult> => {
+  const headers = getCorsHeaders(event);
+
   try {
     // REST APIの認証情報を取得
     const claims = event.requestContext.authorizer?.claims;
@@ -25,10 +41,7 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
         !userGroups.includes('system-admin')) {
       return {
         statusCode: 403,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
+        headers,
         body: JSON.stringify({
           success: false,
           error: {
@@ -45,17 +58,14 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
     const contentType: string = body.contentType;
     const title: string = body.title || fileName;
     const description: string = body.description || '';
-    const shopId: string = body.shopId; // マルチショップ対応: リクエストボディから取得
-    const organizationId: string = body.organizationId; // リクエストボディから取得
+    const shopId: string = body.shopId;
+    const organizationId: string = body.organizationId;
 
     // shopId と organizationId が必須
     if (!shopId || !organizationId) {
       return {
         statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
+        headers,
         body: JSON.stringify({
           success: false,
           error: {
@@ -69,21 +79,18 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
     // system-admin以外は、UserShopRelationテーブルで権限チェック
     if (!userGroups.includes('system-admin')) {
       const userShopRelationTable = process.env.DYNAMODB_TABLE_USER_SHOP_RELATION!;
-      const relationResult = await dynamodb.get({
+      const relationResult = await docClient.send(new GetCommand({
         TableName: userShopRelationTable,
         Key: {
           userId: userEmail,
           shopId: shopId,
         },
-      }).promise();
+      }));
 
       if (!relationResult.Item) {
         return {
           statusCode: 403,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-          },
+          headers,
           body: JSON.stringify({
             success: false,
             error: {
@@ -98,10 +105,7 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
     if (!fileName || !contentType || !fileSize) {
       return {
         statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
+        headers,
         body: JSON.stringify({
           success: false,
           error: {
@@ -113,80 +117,73 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
     }
 
     // videoIdを生成
-    const videoId = uuidv4();
-    const timestamp = Date.now();
+    const videoId = randomUUID();
     const s3Key = `videos/${organizationId}/${shopId}/${videoId}/${fileName}`;
 
-    // S3署名付きURL生成（AWS SDK v2使用）
-    // 注: Object Lock有効バケットでは署名URLでのアップロードが制限される
-    // そのため、Pre-signed POST URLを使用する必要がある
-    const params = {
+    // S3 Pre-signed POST URL生成（AWS SDK v3）
+    const { url: uploadUrl, fields } = await createPresignedPost(s3Client, {
       Bucket: bucketName,
+      Key: s3Key,
+      Conditions: [
+        ['content-length-range', 0, 10 * 1024 * 1024 * 1024], // 最大10GB
+        ['eq', '$Content-Type', contentType],
+      ],
       Fields: {
-        key: s3Key,
         'Content-Type': contentType,
       },
       Expires: 3600,
-      Conditions: [
-        ['content-length-range', 0, 10 * 1024 * 1024 * 1024], // 最大10GB
-      ],
-    };
-    
-    const uploadUrl = s3.createPresignedPost(params);
+    });
 
     // 請求月（YYYY-MM形式）
     const billingMonth = new Date().toISOString().slice(0, 7);
 
     // DynamoDBにメタデータを保存
     const now = new Date().toISOString();
-    await dynamodb.put({
+    await docClient.send(new PutCommand({
       TableName: tableName,
       Item: {
         videoId,
-        
+
         // 組織情報
         organizationId,
         shopId,
         shopName,
         organizationName,
-        
+
         // 動画情報
         fileName,
         fileSize,
         s3Key,
         title,
         description,
-        
+
         // アップロード情報
         uploader: userEmail,
         uploaderRole: userRole,
         uploadDate: now,
         uploadedAt: now,
-        
+
         // ステータス（即完了）
         status: 'completed',
-        
+
         // 請求情報
         billingMonth,
         billingStatus: 'pending',
-        
+
         // タイムスタンプ
         createdAt: now,
         updatedAt: now,
       },
-    }).promise();
+    }));
 
     return {
       statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
+      headers,
       body: JSON.stringify({
         success: true,
         data: {
-          uploadUrl: uploadUrl.url,
-          fields: uploadUrl.fields,
+          uploadUrl,
+          fields,
           videoId,
           s3Key,
           expiresIn: 3600,
@@ -194,13 +191,10 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
       }),
     };
   } catch (err) {
-    console.error('Error generating upload URL:', err);
+    console.error('Error generating upload URL:', (err as Error).message);
     return {
       statusCode: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
+      headers,
       body: JSON.stringify({
         success: false,
         error: {
@@ -211,5 +205,3 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
     };
   }
 };
-
-

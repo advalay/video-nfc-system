@@ -11,17 +11,27 @@ const TABLE_NAME = process.env.DYNAMODB_TABLE_VIDEO!;
 const S3_BUCKET_NAME = process.env.S3_BUCKET_NAME!;
 const ASSETS_BUCKET_NAME = process.env.ASSETS_BUCKET_NAME!;
 
+const getCorsHeaders = (event: any): Record<string, string> => {
+  const origin = event.headers?.Origin || event.headers?.origin || '';
+  const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').filter(Boolean);
+  const allowedOrigin = allowedOrigins.includes(origin) ? origin : (allowedOrigins[0] || '');
+  return {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Credentials': 'true',
+  };
+};
+
 export const handler: APIGatewayProxyHandler = async (event): Promise<APIGatewayProxyResult> => {
+  const headers = getCorsHeaders(event);
+
   try {
     const videoId = event.pathParameters?.videoId;
 
     if (!videoId) {
       return {
         statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
+        headers,
         body: JSON.stringify({
           success: false,
           error: {
@@ -43,10 +53,7 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
     if (!result.Item) {
       return {
         statusCode: 404,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
+        headers,
         body: JSON.stringify({
           success: false,
           error: {
@@ -63,14 +70,11 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
       const uploadTime = new Date(uploadDate).getTime();
       const now = Date.now();
       const hoursPassed = (now - uploadTime) / (1000 * 60 * 60);
-      
+
       if (hoursPassed >= 24) {
         return {
           statusCode: 403,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-          },
+          headers,
           body: JSON.stringify({
             success: false,
             error: {
@@ -89,10 +93,9 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
     const userEmail = (claims?.email as string) || 'unknown';
     const sourceIp = (event.requestContext as any)?.identity?.sourceIp || (event.headers?.['x-forwarded-for'] || '').split(',')[0] || 'unknown';
 
-    // 組織管理者と販売店管理者のいずれかのみ削除可能
     const isOrganizationAdmin = userGroups.includes('organization-admin');
     const isShopAdmin = userGroups.includes('shop-admin');
-    
+
     if (!isOrganizationAdmin && !isShopAdmin) {
       console.warn(JSON.stringify({
         level: 'WARN',
@@ -108,10 +111,7 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
 
       return {
         statusCode: 403,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
+        headers,
         body: JSON.stringify({
           success: false,
           error: {
@@ -125,11 +125,11 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
     // 動画の所有者をチェック
     const videoOrganizationId = result.Item.organizationId;
     const videoShopId = result.Item.shopId;
-    
+
     // 組織管理者の場合: 自分の組織の動画のみ削除可能
     if (isOrganizationAdmin) {
       const userOrganizationId = claims?.['custom:organizationId'] as string;
-      
+
       if (videoOrganizationId !== userOrganizationId) {
         console.warn(JSON.stringify({
           level: 'WARN',
@@ -146,10 +146,7 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
 
         return {
           statusCode: 403,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-          },
+          headers,
           body: JSON.stringify({
             success: false,
             error: {
@@ -160,11 +157,11 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
         };
       }
     }
-    
+
     // 販売店管理者の場合: 自分の店舗の動画のみ削除可能
     if (isShopAdmin) {
       const userShopId = (claims?.['custom:shopId'] as string) || '';
-      
+
       if (!userShopId) {
         console.warn(JSON.stringify({
           level: 'WARN',
@@ -180,10 +177,7 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
 
         return {
           statusCode: 403,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-          },
+          headers,
           body: JSON.stringify({
             success: false,
             error: {
@@ -193,7 +187,7 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
           }),
         };
       }
-      
+
       if (videoShopId && videoShopId !== userShopId) {
         console.warn(JSON.stringify({
           level: 'WARN',
@@ -210,10 +204,7 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
 
         return {
           statusCode: 403,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-          },
+          headers,
           body: JSON.stringify({
             success: false,
             error: {
@@ -225,10 +216,7 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
       }
     }
 
-    // 6時間制限は廃止。48時間ルール（上部）に一本化済み
-
     // S3から動画ファイルを削除
-    // 注意: Object Lock が有効な場合、削除できない可能性があります
     let s3DeleteResult: { video?: boolean; thumbnail?: boolean } = {};
     try {
       if (result.Item.s3Key) {
@@ -240,7 +228,6 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
         s3DeleteResult.video = true;
       }
 
-      // サムネイルも削除
       if (result.Item.thumbnailS3Key) {
         const deleteThumbnailCommand = new DeleteObjectCommand({
           Bucket: ASSETS_BUCKET_NAME,
@@ -261,7 +248,6 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
         error: (s3Error as Error)?.message || 'Unknown S3 error',
         timestamp: new Date().toISOString(),
       }));
-      // Object Lockなどで削除できない場合もメタデータは削除する
     }
 
     // DynamoDBからメタデータを削除
@@ -287,10 +273,7 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
 
     return {
       statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
+      headers,
       body: JSON.stringify({
         success: true,
         data: {
@@ -310,10 +293,7 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
     }));
     return {
       statusCode: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
+      headers: getCorsHeaders(event),
       body: JSON.stringify({
         success: false,
         error: {
@@ -324,4 +304,3 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
     };
   }
 };
-

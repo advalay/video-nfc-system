@@ -1,19 +1,21 @@
 import { APIGatewayProxyHandler, APIGatewayProxyResult } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, QueryCommand, ScanCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, QueryCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
 
 const dynamoClient = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(dynamoClient);
 
 const TABLE_NAME = process.env.DYNAMODB_TABLE_VIDEO!;
 
-// CORSヘッダーを定義
-const CORS_HEADERS = {
-  'Content-Type': 'application/json',
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token',
-  'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
-  'Access-Control-Allow-Credentials': 'true'
+const getCorsHeaders = (event: any): Record<string, string> => {
+  const origin = event.headers?.Origin || event.headers?.origin || '';
+  const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').filter(Boolean);
+  const allowedOrigin = allowedOrigins.includes(origin) ? origin : (allowedOrigins[0] || '');
+  return {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Credentials': 'true',
+  };
 };
 
 interface ListVideosQueryParams {
@@ -24,11 +26,13 @@ interface ListVideosQueryParams {
 }
 
 export const handler: APIGatewayProxyHandler = async (event): Promise<APIGatewayProxyResult> => {
+  const headers = getCorsHeaders(event);
+
   try {
     const queryParams: ListVideosQueryParams = event.queryStringParameters || {};
     const limit = queryParams.limit ? parseInt(queryParams.limit, 10) : 50;
     const search = queryParams.search;
-    
+
     let lastEvaluatedKey;
     if (queryParams.lastEvaluatedKey) {
       try {
@@ -36,7 +40,7 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
       } catch (e) {
         return {
           statusCode: 400,
-          headers: CORS_HEADERS,
+          headers,
           body: JSON.stringify({
             success: false,
             error: {
@@ -48,27 +52,15 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
       }
     }
 
-    // 開発環境では認証をスキップ
-    let claims, userGroups: string[], organizationId, shopId, customRole;
-    
-    if (process.env.ENVIRONMENT === 'dev' && event.headers?.['x-development-mode'] === 'true') {
-      console.log('Development mode: Skipping authentication');
-      claims = null;
-      userGroups = ['system-admin'];
-      organizationId = null;
-      shopId = null;
-    } else {
-      // ユーザー情報を取得（Cognitoから）
-      claims = event.requestContext?.authorizer?.claims;
-      userGroups = claims?.['cognito:groups'] || [];
-      organizationId = claims?.['custom:organizationId'];
-      shopId = claims?.['custom:shopId'];
-      customRole = claims?.['custom:role'];
-      console.log('ListVideos auth:', { userGroups, organizationId, shopId, customRole });
-    }
+    // ユーザー情報を取得（Cognitoから）
+    const claims = event.requestContext?.authorizer?.claims;
+    const userGroups: string[] = claims?.['cognito:groups'] || [];
+    const organizationId = claims?.['custom:organizationId'];
+    const shopId = claims?.['custom:shopId'];
+    const customRole = claims?.['custom:role'];
 
     let result;
-    
+
     if (userGroups.includes('system-admin') || customRole === 'system-admin') {
       // system-admin: 全動画を閲覧可能
       const command = new ScanCommand({
@@ -78,12 +70,10 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
       });
       result = await docClient.send(command);
     } else if ((userGroups.includes('organization-admin') || customRole === 'organization-admin') && organizationId) {
-      // organization-admin: 自分の代理店配下の全動画を閲覧可能（全販売店含む）
-      // クエリパラメータでshopIdが指定されている場合は、その販売店の動画のみ取得
+      // organization-admin: 自分の代理店配下の全動画を閲覧可能
       const filterShopId = queryParams.shopId;
-      
+
       if (filterShopId) {
-        // 特定の販売店の動画のみ取得（フィルター機能）
         const command = new QueryCommand({
           TableName: TABLE_NAME,
           IndexName: 'shopId-uploadDate-index',
@@ -93,11 +83,10 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
           },
           Limit: limit,
           ExclusiveStartKey: lastEvaluatedKey,
-          ScanIndexForward: false, // 新しい順
+          ScanIndexForward: false,
         });
         result = await docClient.send(command);
       } else {
-        // 全ての配下販売店の動画を取得
         const command = new QueryCommand({
           TableName: TABLE_NAME,
           IndexName: 'organizationId-uploadDate-index',
@@ -107,7 +96,7 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
           },
           Limit: limit,
           ExclusiveStartKey: lastEvaluatedKey,
-          ScanIndexForward: false, // 新しい順
+          ScanIndexForward: false,
         });
         result = await docClient.send(command);
       }
@@ -122,13 +111,13 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
         },
         Limit: limit,
         ExclusiveStartKey: lastEvaluatedKey,
-        ScanIndexForward: false, // 新しい順
+        ScanIndexForward: false,
       });
       result = await docClient.send(command);
     } else {
       return {
         statusCode: 403,
-        headers: CORS_HEADERS,
+        headers,
         body: JSON.stringify({
           success: false,
           error: {
@@ -143,7 +132,7 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
     let items = result.Items || [];
     if (search) {
       const searchLower = search.toLowerCase();
-      items = items.filter((item: any) => 
+      items = items.filter((item: any) =>
         item.title?.toLowerCase().includes(searchLower) ||
         item.description?.toLowerCase().includes(searchLower) ||
         item.videoId?.toLowerCase().includes(searchLower)
@@ -151,37 +140,33 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
     }
 
     // 表示用に既存データを正規化
-    // VideoMetadataテーブルに既にshopName/organizationNameが保存されているため、
-    // 追加のDynamoDBクエリは不要
     const normalized = items.map((item: any) => ({
       ...item,
       uploadedAt: item.uploadedAt || item.uploadDate,
       status: item.status || 'completed',
-      // shopNameとorganizationNameはVideoMetadataテーブルから取得済み
-      // 既存データで空の場合はフォールバック
       shopName: item.shopName || item.shopId || '不明な店舗',
       organizationName: item.organizationName || item.organizationId || '不明な組織',
     }));
 
     return {
       statusCode: 200,
-      headers: CORS_HEADERS,
+      headers,
       body: JSON.stringify({
         success: true,
         data: {
           videos: normalized,
           totalCount: items.length,
-          lastEvaluatedKey: result.LastEvaluatedKey 
+          lastEvaluatedKey: result.LastEvaluatedKey
             ? encodeURIComponent(JSON.stringify(result.LastEvaluatedKey))
             : null,
         },
       }),
     };
   } catch (error) {
-    console.error('Error listing videos:', error);
+    console.error('Error listing videos:', (error as Error).message);
     return {
       statusCode: 500,
-      headers: CORS_HEADERS,
+      headers,
       body: JSON.stringify({
         success: false,
         error: {
@@ -192,4 +177,3 @@ export const handler: APIGatewayProxyHandler = async (event): Promise<APIGateway
     };
   }
 };
-
